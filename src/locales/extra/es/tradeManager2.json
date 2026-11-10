@@ -1,0 +1,9 @@
+{
+  "tradeManager2": {
+    "aiReviewFailed": "Falló la revisión con IA",
+    "noResponse": "Sin respuesta",
+    "aiTipFailed": "Falló el consejo de IA: inténtalo de nuevo",
+    "eg": "p. ej. {{value}}",
+    "price": "Precio"
+  }
+}

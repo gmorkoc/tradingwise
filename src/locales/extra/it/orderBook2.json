@@ -1,0 +1,15 @@
+{
+  "orderBook2": {
+    "close": "Chiudi",
+    "hide": "Nascondi order book",
+    "recentTrades": "Scambi recenti",
+    "expand": "Espandi",
+    "precision": "Precisione",
+    "exchange": "Exchange",
+    "priceUsd": "Prezzo (USD)",
+    "amountCoin": "Quantità ({{coin}})",
+    "totalUsd": "Totale (USD)",
+    "spread": "Spread",
+    "time": "Ora"
+  }
+}

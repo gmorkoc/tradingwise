@@ -1,0 +1,171 @@
+{
+  "coinTabs": {
+    "tabs": {
+      "overview": "Grafik",
+      "chart": "Grafik",
+      "stats": "İstatistikler",
+      "cycles": "Piyasa Döngüleri",
+      "news": "Haberler",
+      "technicals": "Teknikler",
+      "seasonals": "Mevsimsellik",
+      "markets": "Piyasalar",
+      "fundamentals": "Temeller",
+      "traders": "En İyi Trader'lar"
+    },
+    "sub": {
+      "overview": "Canlı grafik, istatistikler ve ProVision",
+      "chart": "Fiyat, aralıklar ve çizim araçları",
+      "stats": "Piyasa değeri, hacim, arz ve bağlantılar",
+      "cycles": "Puell Multiple, Pi Cycle Top, Rainbow",
+      "news": "Bu coin için son başlıklar",
+      "technicals": "Osilatör ve ortalamalardan al/sat okuması",
+      "seasonals": "Her ay yıl yıl nasıl geçti",
+      "markets": "Nerede ve hangi hacimle işlem görüyor",
+      "fundamentals": "Piyasa değeri, arz ve hakkında",
+      "traders": "En büyük pozisyonlar, kazananlar ve kaybedenler"
+    },
+    "coinSections": "Coin bölümleri",
+    "proVisionOff": "ProVision'ı kapat",
+    "proVisionOn": "ProVision'ı aç — bu grafiğe çizer",
+    "more": "Daha fazla",
+    "backToSections": "Bölümlere dön",
+    "explore": "{{name}} keşfet",
+    "loading": "Yükleniyor…",
+    "notEnoughData": "Yeterli veri yok",
+    "oscillators": "Osilatörler",
+    "movingAverages": "Hareketli ortalamalar",
+    "vol24": "24s hacim",
+    "ago": {
+      "m": "{{n}} dk önce",
+      "h": "{{n}} sa önce",
+      "d": "{{n}} g önce"
+    },
+    "news": {
+      "loading": "{{name}} haberleri yükleniyor…",
+      "emptyTitle": "Şu an haber yok",
+      "emptyText": "Biraz sonra tekrar bakın — başlıklar birkaç dakikada bir yenilenir.",
+      "title": "{{name}} Haberleri",
+      "sortAria": "Haberleri sırala",
+      "top": "Öne çıkan",
+      "latest": "En yeni",
+      "noCoinNews": "Şu an {{name}} ile ilgili özel başlık yok — kriptodaki son haberler burada."
+    },
+    "verdict": {
+      "strongBuy": "Güçlü Al",
+      "buy": "Al",
+      "strongSell": "Güçlü Sat",
+      "sell": "Sat",
+      "neutral": "Nötr"
+    },
+    "desk": {
+      "kicker": "Teknik sinyal",
+      "votesBuy": "al",
+      "votesNeutral": "nötr",
+      "votesSell": "sat",
+      "vsBarsAgo": "{{n}} mum öncesine göre",
+      "history": "Sinyal geçmişi · son {{n}} mum",
+      "histScale": "+100 al / −100 sat",
+      "everyIndicator": "Tüm göstergeler",
+      "rsiNA": "mevcut değil",
+      "rsiOversold": "aşırı satım ({{v}})",
+      "rsiOverbought": "aşırı alım ({{v}})",
+      "rsiNeutral": "nötr ({{v}})",
+      "readMaAbove": "Fiyat {{total}} hareketli ortalamanın {{n}} tanesinin üstünde",
+      "readMaBelow": "Fiyat {{total}} hareketli ortalamanın {{n}} tanesinin altında",
+      "macdAbove": "MACD sinyalin üstünde",
+      "macdBelow": "MACD sinyalin altında",
+      "read": "{{ma}} · RSI {{rsi}} · {{macd}} · 10 mumda momentum {{mom}}%."
+    },
+    "osc": {
+      "macdBullUp": "Yükseliş yönlü ve güçleniyor — çubuklar sıfırın üstünde büyüyor.",
+      "macdBullFade": "Hâlâ yükseliş yönlü, ancak çubuklar küçülüyor.",
+      "macdBearUp": "Düşüş yönlü ve güçleniyor — çubuklar sıfırın altında büyüyor.",
+      "macdBearFade": "Hâlâ düşüş yönlü, ancak satış baskısı azalıyor.",
+      "rsiNA": "Yeterli veri yok.",
+      "rsiOversold": "Aşırı satım — satıcıların gücü tükeniyor olabilir.",
+      "rsiOverbought": "Aşırı alım — alıcılar zorlanıyor olabilir.",
+      "rsiMid": "30 ile 70 arasında — iki yönde de uç değer yok.",
+      "stoch": "Fiyat 14 mumluk aralığının %{{k}} seviyesinde.",
+      "low": "Düşük {{v}}",
+      "high": "Yüksek {{v}}",
+      "momUp": "10 mum öncesine göre %{{v}} yukarıda.",
+      "momDown": "10 mum öncesine göre %{{v}} aşağıda."
+    },
+    "ma": {
+      "sub": "Fiyat {{px}}, {{total}} ortalamanın <b>{{n}}</b> tanesinin üstünde",
+      "priceBelow": "Fiyat altında",
+      "priceAbove": "Fiyat üstünde"
+    },
+    "mtf": {
+      "timeframe": "Zaman dilimi",
+      "movingAvgs": "Hareketli ort.",
+      "summary": "Özet",
+      "vsEma": "EMA {{n}}'ye göre"
+    },
+    "table": {
+      "indicator": "Gösterge",
+      "value": "Değer",
+      "action": "İşlem",
+      "bbWidth": "Bollinger genişliği"
+    },
+    "levels": {
+      "price": "Fiyat",
+      "pivot": "Pivot",
+      "longStop": "Long stop · 1.5 ATR",
+      "shortStop": "Short stop · 1.5 ATR"
+    },
+    "frames": {
+      "15min": "15 dk",
+      "1h": "1 saat",
+      "4h": "4 saat",
+      "1day": "1 gün",
+      "1week": "1 hafta"
+    },
+    "tech": {
+      "title": "{{name}} Teknikleri",
+      "notEnoughText": "Bu coin bu zaman diliminde henüz yeterli muma sahip değil.",
+      "reading": "Göstergeler okunuyor…",
+      "acrossTf": "Tüm zaman dilimlerinde",
+      "allIndicators": "Tüm göstergeler",
+      "keyLevels": "Kilit seviyeler · klasik pivotlar",
+      "disclaimer": "Gösterge okumalarıdır, finansal tavsiye değildir."
+    },
+    "seasonals": {
+      "emptyTitle": "Mevsimsel veri yok",
+      "emptyText": "{{name}} Binance'te listelenmediği için aylık geçmişini oluşturamıyoruz.",
+      "building": "Aylık geçmiş oluşturuluyor…",
+      "title": "{{name}} Mevsimselliği",
+      "note": "Her yıl için aylık getiri (açılış → kapanış). Bu ay: <m>{{month}}</m> tarihsel olarak ortalama <v>{{avg}}</v> getirdi.",
+      "year": "Yıl",
+      "avg": "Ort."
+    },
+    "markets": {
+      "stillLoading": "Borsa verileri hâlâ yükleniyor…",
+      "finding": "Nerede işlem gördüğü bulunuyor…",
+      "title": "{{name}} Piyasaları",
+      "exchange": "Borsa",
+      "pair": "Parite",
+      "price": "Fiyat",
+      "trust": "Güven",
+      "trustAria": "Güven {{v}}",
+      "trustUnknown": "Güven bilinmiyor"
+    },
+    "fund": {
+      "stillLoading": "Temel veriler hâlâ yükleniyor…",
+      "loading": "Temel veriler yükleniyor…",
+      "title": "{{name}} Temelleri",
+      "marketCap": "Piyasa değeri",
+      "fdv": "Tam seyreltilmiş değer",
+      "volMcap": "Hacim / piyasa değeri",
+      "circ": "Dolaşımdaki arz",
+      "ofMax": "Maksimum arzın %{{pct}}'si ({{n}})",
+      "ofTotal": "Toplam arzın %{{pct}}'si ({{n}})",
+      "ath": "Tüm zamanların en yükseği",
+      "atl": "Tüm zamanların en düşüğü",
+      "fromAth": "{{date}} · ATH'ye göre %{{pct}}",
+      "sinceAtl": "{{date}} · o zamandan beri +%{{pct}}",
+      "about": "{{name}} hakkında",
+      "website": "Resmi web sitesi ↗"
+    }
+  }
+}

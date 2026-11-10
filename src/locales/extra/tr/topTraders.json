@@ -1,0 +1,29 @@
+{
+  "topTraders": {
+    "justNow": "az önce",
+    "agoM": "{{n}} dk önce",
+    "agoH": "{{n}} sa önce",
+    "chart": "Grafik",
+    "trader": "Trader",
+    "pnl": "Gerçekleşmemiş K/Z",
+    "value": "Pozisyon Değeri",
+    "entry": "Giriş",
+    "liq": "Tasfiye",
+    "liqSortTip": "Tasfiyeye olan uzaklığa göre sıralar",
+    "funding": "Fonlama",
+    "acct": "Hesap Değeri",
+    "openOnHl": "Bu trader'ı Hyperliquid'de aç",
+    "loading": "En iyi trader'lar yükleniyor…",
+    "unavailable": "En iyi trader verileri henüz mevcut değil.",
+    "none": {
+      "all": "Şu anda {{coin}} üzerinde en iyi trader pozisyonu yok.",
+      "winners": "Şu anda {{coin}} üzerinde kazanan en iyi trader pozisyonu yok.",
+      "losers": "Şu anda {{coin}} üzerinde kaybeden en iyi trader pozisyonu yok."
+    },
+    "range": "{{from}}–{{to}} / {{total}}",
+    "rangeEmpty": "0 / 0",
+    "foot": "30 günlük K/Z'ye göre Hyperliquid en iyi trader'ları · {{ago}} güncellendi",
+    "prev": "Önceki sayfa",
+    "next": "Sonraki sayfa"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "positionIntel": {
+    "groups": { "whaleAccount": "Smart Money", "whalePosition": "Whales", "retail": "Retail" },
+    "longs": "Longs",
+    "shorts": "Shorts",
+    "title": "Position Intelligence",
+    "info": "Long/short split of Smart Money (top accounts), Whales (top positions by size) and Retail (all accounts), averaged across OKX and Gate.io. 5-minute data, refreshed every minute.",
+    "aboutAria": "About Position Intelligence",
+    "lockedTitle": "See how Smart Money is positioned",
+    "lockedSub": "Long/short breakdowns from Smart Money, Whales and Retail traders across OKX and Gate.io.",
+    "unlock": "Unlock",
+    "proRequired": "Pro plan required",
+    "freeRequired": "Free account required to start",
+    "empty": "Positioning data unavailable for {{coin}}.",
+    "foot": "OKX + Gate.io · 5m data, refreshes every minute · Whale sizes from Gate.io"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "btcMoveToast": {
+    "live": "CANLI",
+    "whaleAlert": "BALİNA UYARISI",
+    "bullish": "YÜKSELİŞ",
+    "bearish": "DÜŞÜŞ",
+    "priceAlert": "{{coin}} FİYAT UYARISI",
+    "inLastMove": "son harekette {{change}} ({{pct}}%)",
+    "dismiss": "Kapat"
+  }
+}

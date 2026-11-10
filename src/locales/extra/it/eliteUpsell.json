@@ -1,0 +1,16 @@
+{
+  "eliteUpsell": {
+    "close": "Chiudi",
+    "nowOnPre": "Ora sei su ",
+    "nowOnPost": ".",
+    "done": "Fatto",
+    "onProPre": "Sei su ",
+    "onProPost": " · tutte le funzioni restano",
+    "chargedPre": "Ti verranno addebitati ",
+    "chargedMid": " oggi, in prorata per il resto del periodo di fatturazione. Poi ",
+    "monthlyPrice": "{{price}}/mese",
+    "chargedPost": " alla normale data di rinnovo.",
+    "payUpgrade": "Paga {{amount}} e passa a Elite",
+    "goBack": "Torna indietro"
+  }
+}

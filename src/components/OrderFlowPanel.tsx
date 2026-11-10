@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { CoinSymbol, fetchBn, isBinanceBanned } from "../services/coinglass";
 import type { ChartEvent } from "./ChartEventAnnotations";
-import { formatRelativeTime } from "./ChartEventAnnotations";
+import { formatRelativeTime, eventTitle, eventBody } from "./ChartEventAnnotations";
 import { OrderBook } from "./OrderBook";
 import "../styles/OrderFlowPanel.css";
 
@@ -82,6 +83,7 @@ const SNAPSHOT_INTERVAL_MS = 15 * 60 * 1000;
 // support/resistance/zone events already driving the on-chart dots,
 // ChartEventAnnotations.tsx) instead of a wall of numbers.
 export function OrderFlowPanel({ coin, events, view: controlledView, hideLiveBadge }: Props) {
+  const { t } = useTranslation();
   // Uncontrolled (every call site except the 2col layout's own Paper
   // Trading/Flow/Book tab switcher, App.tsx) now shows both reads on
   // live depth stacked — Flow Pressure then Order Book, always, no
@@ -180,12 +182,12 @@ export function OrderFlowPanel({ coin, events, view: controlledView, hideLiveBad
 
   const flowHeader = (
     <div className="ofp-header">
-      <span className="ofp-title">Order Flow Pressure</span>
+      <span className="ofp-title">{t("orderFlowPanel.title")}</span>
       <div className="ofp-header-right">
         {!loading && !unavailable && (
-          <span className="ofp-spread">Spread {fmtSpread(spread)} ({spreadBps.toFixed(4)} bps)</span>
+          <span className="ofp-spread">{t("orderFlowPanel.spread")} {fmtSpread(spread)} ({spreadBps.toFixed(4)} bps)</span>
         )}
-        <span className="ptc-live-badge"><span className="ptc-pulse-dot" />LIVE</span>
+        <span className="ptc-live-badge"><span className="ptc-pulse-dot" />{t("orderFlowPanel.live")}</span>
       </div>
     </div>
   );
@@ -200,7 +202,7 @@ export function OrderFlowPanel({ coin, events, view: controlledView, hideLiveBad
           </div>
         </>
       )}
-      {!loading && unavailable && <div className="ofp-loading">Order flow unavailable for {coin}.</div>}
+      {!loading && unavailable && <div className="ofp-loading">{t("orderFlowPanel.unavailable", { coin })}</div>}
 
       {!loading && !unavailable && (
         <>
@@ -209,22 +211,23 @@ export function OrderFlowPanel({ coin, events, view: controlledView, hideLiveBad
             <div className="ofp-bar-ask" style={{ width: `${askPct}%` }} />
           </div>
           <div className="ofp-bar-labels">
-            <span className="ofp-bar-label ofp-bar-label--bid">{bidPct}% buyers · {fmtPrice(bestBid)}</span>
-            <span className="ofp-bar-label ofp-bar-label--ask">{askPct}% sellers · {fmtPrice(bestAsk)}</span>
+            <span className="ofp-bar-label ofp-bar-label--bid">{t("orderFlowPanel.buyers", { pct: bidPct })} · {fmtPrice(bestBid)}</span>
+            <span className="ofp-bar-label ofp-bar-label--ask">{t("orderFlowPanel.sellers", { pct: askPct })} · {fmtPrice(bestAsk)}</span>
           </div>
         </>
       )}
 
-      <div className="ofp-feed-label">Today's Story</div>
+      <div className="ofp-feed-label">{t("orderFlowPanel.todaysStory")}</div>
       <div className="ofp-feed">
         {history.length === 0 && (
-          <div className="ofp-feed-empty">No notable signals on this chart right now.</div>
+          <div className="ofp-feed-empty">{t("orderFlowPanel.noSignals")}</div>
         )}
         {history.map(({ key, ev }, i) => (
           <div key={key} className="ofp-feed-item" style={{ animationDelay: `${Math.min(i, 8) * 0.07}s` }}>
             <span className="ofp-feed-dot" style={{ background: eventColor(ev) }} />
             <div className="ofp-feed-body">
-              <span className="ofp-feed-text"><b>{ev.title}</b> — {ev.body}</span>
+              {/* Shown translated; colour logic above still matches the English fields. */}
+              <span className="ofp-feed-text"><b>{eventTitle(ev)}</b> — {eventBody(ev)}</span>
               {/* ev.time (unix seconds, buildChartEvents/ChartEventAnnotations.tsx)
                   — when THAT signal actually became true (its own candle's
                   close time), not snapshotAt (when this 15-min tick ran;
@@ -251,7 +254,7 @@ export function OrderFlowPanel({ coin, events, view: controlledView, hideLiveBad
               show, stacked, separated by a plain divider. */}
           <div className="ofp-section-divider" />
           <div className="ofp-header">
-            <span className="ofp-title">Order Book</span>
+            <span className="ofp-title">{t("orderFlowPanel.orderBook")}</span>
           </div>
           <div className="ofp-ladder-wrap">
             <OrderBook coin={coin} embedded />
@@ -265,12 +268,12 @@ export function OrderFlowPanel({ coin, events, view: controlledView, hideLiveBad
                 it. The spread takes the title's spot on the left instead. */}
             {view === "flow" && !loading && !unavailable && (
               <span className="ofp-spread ofp-spread--title">
-                Spread {fmtSpread(spread)} <span className="ofp-spread-bps">({spreadBps.toFixed(4)} bps)</span>
+                {t("orderFlowPanel.spread")} {fmtSpread(spread)} <span className="ofp-spread-bps">({spreadBps.toFixed(4)} bps)</span>
               </span>
             )}
             {!hideLiveBadge && (
               <div className="ofp-header-right" style={{ marginLeft: "auto" }}>
-                <span className="ptc-live-badge"><span className="ptc-pulse-dot" />LIVE</span>
+                <span className="ptc-live-badge"><span className="ptc-pulse-dot" />{t("orderFlowPanel.live")}</span>
               </div>
             )}
           </div>

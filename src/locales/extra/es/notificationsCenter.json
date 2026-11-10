@@ -1,0 +1,14 @@
+{
+  "notificationsCenter": {
+    "title": "Notificaciones",
+    "sub": "Señales de compra/venta, alertas de precio, alertas de estrategia y noticias",
+    "markAllRead": "Marcar todo como leído",
+    "close": "Cerrar",
+    "loading": "Cargando…",
+    "empty": "Aún no hay notificaciones: aquí aparecerán las señales de compra/venta, alertas de precio, alertas de estrategia y noticias.",
+    "now": "ahora",
+    "minsAgo": "hace {{n}} min",
+    "hoursAgo": "hace {{n}} h",
+    "daysAgo": "hace {{n}} d"
+  }
+}

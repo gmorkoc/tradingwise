@@ -1,0 +1,9 @@
+{
+  "tradeManager2": {
+    "aiReviewFailed": "AI review failed",
+    "noResponse": "No response",
+    "aiTipFailed": "AI tip failed — try again",
+    "eg": "e.g. {{value}}",
+    "price": "Price"
+  }
+}

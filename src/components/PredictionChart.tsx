@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from "react";
+import { useTranslation } from "react-i18next";
 import {
   createChart,
   CandlestickSeries,
@@ -38,6 +39,7 @@ const TF_COLORS: Record<string, string> = {
 
 
 export const PredictionChart = forwardRef<PredictionChartHandle, Props>(({ coin, currentPrice, prediction, theme }, ref) => {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef     = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
@@ -103,7 +105,7 @@ export const PredictionChart = forwardRef<PredictionChartHandle, Props>(({ coin,
       lineWidth:        1,
       lineStyle:        LineStyle.Solid,
       axisLabelVisible: true,
-      title:            "Now",
+      title:            t("predictionChart.now"),
     });
 
     // timeframe range bands (high = dashed, low = dotted)
@@ -117,10 +119,10 @@ export const PredictionChart = forwardRef<PredictionChartHandle, Props>(({ coin,
 
     // support / resistance
     prediction.supportLevels?.forEach((price, i) => {
-      candleSeries.createPriceLine({ price, color: "#22c55e", lineWidth: 1, lineStyle: LineStyle.SparseDotted, axisLabelVisible: i === 0, title: i === 0 ? "Support" : "" });
+      candleSeries.createPriceLine({ price, color: "#22c55e", lineWidth: 1, lineStyle: LineStyle.SparseDotted, axisLabelVisible: i === 0, title: i === 0 ? t("predictionChart.support") : "" });
     });
     prediction.resistanceLevels?.forEach((price, i) => {
-      candleSeries.createPriceLine({ price, color: "#fb7185", lineWidth: 1, lineStyle: LineStyle.SparseDotted, axisLabelVisible: i === 0, title: i === 0 ? "Resistance" : "" });
+      candleSeries.createPriceLine({ price, color: "#fb7185", lineWidth: 1, lineStyle: LineStyle.SparseDotted, axisLabelVisible: i === 0, title: i === 0 ? t("predictionChart.resistance") : "" });
     });
 
     // projected scenario path lines + scenario target price lines
@@ -194,14 +196,14 @@ export const PredictionChart = forwardRef<PredictionChartHandle, Props>(({ coin,
       chartRef.current = null;
       candleSeriesRef.current = null;
     };
-  }, [coin, currentPrice, prediction, theme]);
+  }, [coin, currentPrice, prediction, theme, t]);
 
   const scenarios = prediction.scenarios ?? [];
 
   return (
     <div className="aip-pred-chart-wrap">
       <div className="aip-pred-chart-header">
-        <span className="aip-pred-chart-title">Price Prediction Chart</span>
+        <span className="aip-pred-chart-title">{t("predictionChart.title")}</span>
         <div className="aip-pred-chart-legend">
           {scenarios.map(sc => {
             const cfg = SCENARIO_CFG[sc.direction] ?? SCENARIO_CFG.sideways;

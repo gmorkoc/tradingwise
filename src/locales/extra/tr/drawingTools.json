@@ -1,0 +1,21 @@
+{
+  "drawingTools": {
+    "tools": {
+      "cursor": "İmleç",
+      "brush": "Serbest Fırça",
+      "trendline": "Trend Çizgisi",
+      "hline": "Yatay Çizgi",
+      "vline": "Dikey Çizgi",
+      "rect": "Dikdörtgen",
+      "fib": "Fibonacci",
+      "text": "Metin",
+      "eraser": "Silgi"
+    },
+    "saveChart": "Grafiği Kaydet",
+    "resetView": "Görünümü Sıfırla",
+    "magnetOn": "Mıknatıs Açık",
+    "magnetOff": "Mıknatıs Kapalı",
+    "clearAll": "Tümünü Temizle",
+    "labelPrompt": "Etiket metni:"
+  }
+}

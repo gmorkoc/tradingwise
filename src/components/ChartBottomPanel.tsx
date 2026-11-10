@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 import {
   fetchPortfolio, fetchClosedPositions, fetchAgentPerformance, closePosition,
@@ -55,6 +56,7 @@ function when(iso: string | null | undefined): string {
 const REASON: Record<string, string> = { manual: "Manual", take_profit: "Take profit", stop_loss: "Stop loss", liquidation: "Liquidated" };
 
 export function ChartBottomPanel({ coin, onSelectCoin, onOpenAuth, onOpenPaperTrading }: Props) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [tab, setTab] = useState<Tab>(() => {
     try {
@@ -173,42 +175,42 @@ export function ChartBottomPanel({ coin, onSelectCoin, onOpenAuth, onOpenPaperTr
     if (!user) {
       return (
         <div className="cbp-gate">
-          <p>Sign in to see your paper trading positions, history and performance.</p>
-          <button type="button" className="cbp-gate-btn" onClick={onOpenAuth}>Sign in</button>
+          <p>{t("chartBottom.gate.signInAccount")}</p>
+          <button type="button" className="cbp-gate-btn" onClick={onOpenAuth}>{t("chartBottom.gate.signIn")}</button>
         </div>
       );
     }
     if (portfolio && !activated) {
       return (
         <div className="cbp-gate">
-          <p>Activate paper trading to start tracking positions here.</p>
-          <button type="button" className="cbp-gate-btn" onClick={onOpenPaperTrading}>Activate paper trading</button>
+          <p>{t("chartBottom.gate.activateText")}</p>
+          <button type="button" className="cbp-gate-btn" onClick={onOpenPaperTrading}>{t("chartBottom.gate.activate")}</button>
         </div>
       );
     }
-    if (!portfolio) return <div className="cbp-empty">Loading…</div>;
+    if (!portfolio) return <div className="cbp-empty">{t("chartBottom.loading")}</div>;
     return null;
   };
 
   const renderPositions = () => {
     const gate = accountGate();
     if (gate) return gate;
-    if (!positions.length) return <div className="cbp-empty">No open positions.</div>;
+    if (!positions.length) return <div className="cbp-empty">{t("chartBottom.noPositions")}</div>;
     return (
       <div className="gm-table-wrap">
         <table className="gm-table cbp-table">
           <thead>
             <tr>
-              <SortTh label="Coin" k="coin" sort={posSort} />
-              <SortTh label="Side" k="side" sort={posSort} />
-              <SortTh className="gm-th gm-th--r" label="Size" k="size" sort={posSort} />
-              <SortTh className="gm-th gm-th--r" label="Entry" k="entry" sort={posSort} />
-              <SortTh className="gm-th gm-th--r" label="Mark" k="mark" sort={posSort} />
-              <SortTh className="gm-th gm-th--r" label="PnL" k="pnl" sort={posSort} />
-              <SortTh className="gm-th gm-th--r" label="Margin" k="margin" sort={posSort} />
-              <SortTh className="gm-th gm-th--r" label="Liq. price" k="liq" sort={posSort} />
-              <th className="gm-th gm-th--r">TP / SL</th>
-              <SortTh className="gm-th gm-th--r" label="Opened" k="opened" sort={posSort} />
+              <SortTh label={t("chartBottom.col.coin")} k="coin" sort={posSort} />
+              <SortTh label={t("chartBottom.col.side")} k="side" sort={posSort} />
+              <SortTh className="gm-th gm-th--r" label={t("chartBottom.col.size")} k="size" sort={posSort} />
+              <SortTh className="gm-th gm-th--r" label={t("chartBottom.col.entry")} k="entry" sort={posSort} />
+              <SortTh className="gm-th gm-th--r" label={t("chartBottom.col.mark")} k="mark" sort={posSort} />
+              <SortTh className="gm-th gm-th--r" label={t("chartBottom.col.pnl")} k="pnl" sort={posSort} />
+              <SortTh className="gm-th gm-th--r" label={t("chartBottom.col.margin")} k="margin" sort={posSort} />
+              <SortTh className="gm-th gm-th--r" label={t("chartBottom.col.liq")} k="liq" sort={posSort} />
+              <th className="gm-th gm-th--r">{t("chartBottom.col.tpsl")}</th>
+              <SortTh className="gm-th gm-th--r" label={t("chartBottom.col.opened")} k="opened" sort={posSort} />
               <th className="gm-th gm-th--r" />
             </tr>
           </thead>
@@ -220,8 +222,8 @@ export function ChartBottomPanel({ coin, onSelectCoin, onOpenAuth, onOpenPaperTr
               const key = `${p.coin}-${p.market}-${p.side}`;
               return (
                 <tr key={key} className="gm-tr" onClick={() => onSelectCoin(p.coin)}>
-                  <td className="gm-td"><b>{p.coin}</b><span className="cbp-muted"> {p.market === "futures" ? `${p.leverage}x` : "Spot"}</span></td>
-                  <td className={`gm-td ${p.side === "long" ? "gm-pct--pos" : "gm-pct--neg"}`}>{p.side === "long" ? "Long" : "Short"}</td>
+                  <td className="gm-td"><b>{p.coin}</b><span className="cbp-muted"> {p.market === "futures" ? `${p.leverage}x` : t("chartBottom.spot")}</span></td>
+                  <td className={`gm-td ${p.side === "long" ? "gm-pct--pos" : "gm-pct--neg"}`}>{p.side === "long" ? t("chartBottom.long") : t("chartBottom.short")}</td>
                   <td className="gm-td gm-td--r">{p.qty.toLocaleString("en-US", { maximumFractionDigits: 6 })}</td>
                   <td className="gm-td gm-td--r">{fmtPrice(p.avgEntryPrice)}</td>
                   <td className="gm-td gm-td--r">{mark !== undefined ? fmtPrice(mark) : "—"}</td>
@@ -241,7 +243,7 @@ export function ChartBottomPanel({ coin, onSelectCoin, onOpenAuth, onOpenPaperTr
                       disabled={closing === key}
                       onClick={(e) => { e.stopPropagation(); onClose(p); }}
                     >
-                      {closing === key ? "Closing…" : "Close"}
+                      {closing === key ? t("chartBottom.closing") : t("chartBottom.close")}
                     </button>
                   </td>
                 </tr>
@@ -256,36 +258,36 @@ export function ChartBottomPanel({ coin, onSelectCoin, onOpenAuth, onOpenPaperTr
   const renderHistory = () => {
     const gate = accountGate();
     if (gate) return gate;
-    if (!closed) return <div className="cbp-empty">Loading…</div>;
-    if (!closed.length) return <div className="cbp-empty">No closed trades yet.</div>;
+    if (!closed) return <div className="cbp-empty">{t("chartBottom.loading")}</div>;
+    if (!closed.length) return <div className="cbp-empty">{t("chartBottom.noClosed")}</div>;
     return (
       <div className="gm-table-wrap">
         <table className="gm-table cbp-table">
           <thead>
             <tr>
-              <SortTh label="Coin" k="coin" sort={histSort} />
-              <SortTh label="Side" k="side" sort={histSort} />
-              <SortTh className="gm-th gm-th--r" label="Size" k="size" sort={histSort} />
-              <SortTh className="gm-th gm-th--r" label="Entry" k="entry" sort={histSort} />
-              <SortTh className="gm-th gm-th--r" label="Exit" k="exit" sort={histSort} />
-              <SortTh className="gm-th gm-th--r" label="Realized PnL" k="pnl" sort={histSort} />
-              <SortTh className="gm-th gm-th--r" label="Reason" k="reason" sort={histSort} />
-              <SortTh className="gm-th gm-th--r" label="Opened" k="opened" sort={histSort} />
-              <SortTh className="gm-th gm-th--r" label="Closed" k="closed" sort={histSort} />
+              <SortTh label={t("chartBottom.col.coin")} k="coin" sort={histSort} />
+              <SortTh label={t("chartBottom.col.side")} k="side" sort={histSort} />
+              <SortTh className="gm-th gm-th--r" label={t("chartBottom.col.size")} k="size" sort={histSort} />
+              <SortTh className="gm-th gm-th--r" label={t("chartBottom.col.entry")} k="entry" sort={histSort} />
+              <SortTh className="gm-th gm-th--r" label={t("chartBottom.col.exit")} k="exit" sort={histSort} />
+              <SortTh className="gm-th gm-th--r" label={t("chartBottom.col.realizedPnl")} k="pnl" sort={histSort} />
+              <SortTh className="gm-th gm-th--r" label={t("chartBottom.col.reason")} k="reason" sort={histSort} />
+              <SortTh className="gm-th gm-th--r" label={t("chartBottom.col.opened")} k="opened" sort={histSort} />
+              <SortTh className="gm-th gm-th--r" label={t("chartBottom.col.closed")} k="closed" sort={histSort} />
             </tr>
           </thead>
           <tbody>
             {sortedClosed.map((c, i) => (
               <tr key={`${c.coin}-${c.closedAt}-${i}`} className="gm-tr" onClick={() => onSelectCoin(c.coin)}>
-                <td className="gm-td"><b>{c.coin}</b><span className="cbp-muted"> {c.market === "futures" ? `${c.leverage}x` : "Spot"}</span></td>
-                <td className={`gm-td ${c.side === "long" ? "gm-pct--pos" : "gm-pct--neg"}`}>{c.side === "long" ? "Long" : "Short"}</td>
+                <td className="gm-td"><b>{c.coin}</b><span className="cbp-muted"> {c.market === "futures" ? `${c.leverage}x` : t("chartBottom.spot")}</span></td>
+                <td className={`gm-td ${c.side === "long" ? "gm-pct--pos" : "gm-pct--neg"}`}>{c.side === "long" ? t("chartBottom.long") : t("chartBottom.short")}</td>
                 <td className="gm-td gm-td--r">{c.qty.toLocaleString("en-US", { maximumFractionDigits: 6 })}</td>
                 <td className="gm-td gm-td--r">{fmtPrice(c.avgEntryPrice)}</td>
                 <td className="gm-td gm-td--r">{c.exitPrice !== undefined ? fmtPrice(c.exitPrice) : "—"}</td>
                 <td className={`gm-td gm-td--r ${(c.realizedPnl ?? 0) >= 0 ? "gm-pct--pos" : "gm-pct--neg"}`}>
                   {c.realizedPnl !== undefined ? usd(c.realizedPnl, true) : "—"}
                 </td>
-                <td className="gm-td gm-td--r cbp-muted">{c.closeReason ? REASON[c.closeReason] ?? c.closeReason : "—"}</td>
+                <td className="gm-td gm-td--r cbp-muted">{c.closeReason ? (REASON[c.closeReason] ? t(`chartBottom.reason.${c.closeReason}`, { defaultValue: REASON[c.closeReason] }) : c.closeReason) : "—"}</td>
                 <td className="gm-td gm-td--r cbp-muted">{when(c.openedAt)}</td>
                 <td className="gm-td gm-td--r cbp-muted">{when(c.closedAt)}</td>
               </tr>
@@ -305,11 +307,11 @@ export function ChartBottomPanel({ coin, onSelectCoin, onOpenAuth, onOpenPaperTr
     const equity = cash + margin + unrealized;
     return (
       <div className="cbp-stats">
-        <div className="cbp-stat"><span>Equity</span><b>{usd(equity)}</b></div>
-        <div className="cbp-stat"><span>Cash</span><b>{usd(cash)}</b></div>
-        <div className="cbp-stat"><span>In positions (margin)</span><b>{usd(margin)}</b></div>
-        <div className="cbp-stat"><span>Unrealized PnL</span><b className={unrealized >= 0 ? "gm-pct--pos" : "gm-pct--neg"}>{usd(unrealized, true)}</b></div>
-        <div className="cbp-stat"><span>Open positions</span><b>{positions.length}</b></div>
+        <div className="cbp-stat"><span>{t("chartBottom.stat.equity")}</span><b>{usd(equity)}</b></div>
+        <div className="cbp-stat"><span>{t("chartBottom.stat.cash")}</span><b>{usd(cash)}</b></div>
+        <div className="cbp-stat"><span>{t("chartBottom.stat.inPositions")}</span><b>{usd(margin)}</b></div>
+        <div className="cbp-stat"><span>{t("chartBottom.stat.unrealizedPnl")}</span><b className={unrealized >= 0 ? "gm-pct--pos" : "gm-pct--neg"}>{usd(unrealized, true)}</b></div>
+        <div className="cbp-stat"><span>{t("chartBottom.stat.openPositions")}</span><b>{positions.length}</b></div>
       </div>
     );
   };
@@ -317,33 +319,33 @@ export function ChartBottomPanel({ coin, onSelectCoin, onOpenAuth, onOpenPaperTr
   const renderPerformance = () => {
     const gate = accountGate();
     if (gate) return gate;
-    if (!perf) return <div className="cbp-empty">Loading…</div>;
+    if (!perf) return <div className="cbp-empty">{t("chartBottom.loading")}</div>;
     return (
       <div className="cbp-stats">
-        <div className="cbp-stat"><span>Realized PnL</span><b className={perf.totalPnl >= 0 ? "gm-pct--pos" : "gm-pct--neg"}>{usd(perf.totalPnl, true)}</b></div>
-        <div className="cbp-stat"><span>Win rate</span><b>{perf.winRate !== null ? `${(perf.winRate * (perf.winRate <= 1 ? 100 : 1)).toFixed(1)}%` : "—"}</b></div>
-        <div className="cbp-stat"><span>Closed trades</span><b>{perf.totalClosed}</b></div>
-        <div className="cbp-stat"><span>Wins</span><b className="gm-pct--pos">{perf.wins}</b></div>
-        <div className="cbp-stat"><span>Losses</span><b className="gm-pct--neg">{perf.losses}</b></div>
+        <div className="cbp-stat"><span>{t("chartBottom.col.realizedPnl")}</span><b className={perf.totalPnl >= 0 ? "gm-pct--pos" : "gm-pct--neg"}>{usd(perf.totalPnl, true)}</b></div>
+        <div className="cbp-stat"><span>{t("chartBottom.stat.winRate")}</span><b>{perf.winRate !== null ? `${(perf.winRate * (perf.winRate <= 1 ? 100 : 1)).toFixed(1)}%` : "—"}</b></div>
+        <div className="cbp-stat"><span>{t("chartBottom.stat.closedTrades")}</span><b>{perf.totalClosed}</b></div>
+        <div className="cbp-stat"><span>{t("chartBottom.stat.wins")}</span><b className="gm-pct--pos">{perf.wins}</b></div>
+        <div className="cbp-stat"><span>{t("chartBottom.stat.losses")}</span><b className="gm-pct--neg">{perf.losses}</b></div>
       </div>
     );
   };
 
-  const tabBtn = (t: { key: Tab; label: string }) => (
+  const tabBtn = (tb: { key: Tab; label: string }) => (
     <button
-      key={t.key}
+      key={tb.key}
       type="button"
       role="tab"
-      aria-selected={tab === t.key}
-      className={`cbp-tab${tab === t.key ? " active" : ""}`}
+      aria-selected={tab === tb.key}
+      className={`cbp-tab${tab === tb.key ? " active" : ""}`}
       onClick={(e) => {
-        setTab(t.key);
+        setTab(tb.key);
         // Slide a half-hidden tab fully into view.
         e.currentTarget.scrollIntoView({ behavior: "smooth", inline: "nearest", block: "nearest" });
       }}
     >
-      {t.label}
-      {t.key === "positions" && positions.length > 0 && <span className="cbp-tab-count">{positions.length}</span>}
+      {t(`chartBottom.tabs.${tb.key}`, { defaultValue: tb.label })}
+      {tb.key === "positions" && positions.length > 0 && <span className="cbp-tab-count">{positions.length}</span>}
     </button>
   );
 
@@ -355,10 +357,10 @@ export function ChartBottomPanel({ coin, onSelectCoin, onOpenAuth, onOpenPaperTr
         <div className={`cbp-tabs-scroll-wrap${tabsMore ? " cbp-tabs-scroll-wrap--more" : ""}`}>
         <div className="cbp-tabs-scroll" ref={tabsScrollRef} onScroll={updateTabsMore}>
         {/* Divider between every market tab, and before the account tabs. */}
-        {MARKET_TABS.map((t, i) => (
-          <span key={t.key} style={{ display: "contents" }}>
+        {MARKET_TABS.map((tb, i) => (
+          <span key={tb.key} style={{ display: "contents" }}>
             {i > 0 && <span className="cbp-tabs-divider" />}
-            {tabBtn(t)}
+            {tabBtn(tb)}
           </span>
         ))}
         <span className="cbp-tabs-divider" />
@@ -371,11 +373,11 @@ export function ChartBottomPanel({ coin, onSelectCoin, onOpenAuth, onOpenPaperTr
               className="cbp-tt-filter"
               value={ttFilter}
               onChange={(e) => setTtFilter(e.target.value as TopTradersFilter)}
-              aria-label="Filter top traders"
+              aria-label={t("chartBottom.filterAria")}
             >
-              <option value="winners">Winners</option>
-              <option value="losers">Losers</option>
-              <option value="all">All</option>
+              <option value="winners">{t("chartBottom.filter.winners")}</option>
+              <option value="losers">{t("chartBottom.filter.losers")}</option>
+              <option value="all">{t("chartBottom.filter.all")}</option>
             </select>
           </div>
         )}
@@ -384,8 +386,8 @@ export function ChartBottomPanel({ coin, onSelectCoin, onOpenAuth, onOpenPaperTr
         {tab === "toptraders" && (user ? <TopTradersTable coin={coin} filter={ttFilter} /> : (
           // Top Traders needs an account (free).
           <div className="cbp-gate">
-            <p>Sign in to see what Hyperliquid's top traders are holding on {coin}.</p>
-            <button type="button" className="cbp-gate-btn" onClick={onOpenAuth}>Sign in</button>
+            <p>{t("chartBottom.gate.signInTopTraders", { coin })}</p>
+            <button type="button" className="cbp-gate-btn" onClick={onOpenAuth}>{t("chartBottom.gate.signIn")}</button>
           </div>
         ))}
         {tab === "positions" && renderPositions()}

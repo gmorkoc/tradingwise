@@ -1,0 +1,15 @@
+{
+  "orderBook2": {
+    "close": "Cerrar",
+    "hide": "Ocultar libro de órdenes",
+    "recentTrades": "Operaciones recientes",
+    "expand": "Ampliar",
+    "precision": "Precisión",
+    "exchange": "Exchange",
+    "priceUsd": "Precio (USD)",
+    "amountCoin": "Cantidad ({{coin}})",
+    "totalUsd": "Total (USD)",
+    "spread": "Spread",
+    "time": "Hora"
+  }
+}

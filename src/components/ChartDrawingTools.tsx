@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from 'react';
 import ReactDOM from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import type { IChartApi } from 'lightweight-charts';
 import type { CandleDataPoint } from '../services/coinglass';
 import '../styles/ChartDrawingTools.css';
@@ -216,6 +217,7 @@ export const ChartDrawingTools = forwardRef<ChartDrawingToolsHandle, Props>(func
   { chartRef, seriesRef, containerRef, candlesRef, visible, persistRef, onZoneComplete, onSave, onReset, fullHeightRail, topOffset, contained, hideToolbar }: Props,
   ref,
 ) {
+  const { t } = useTranslation();
   const [tool, setTool]         = useState<DrawingTool>('cursor');
   const [magnet, setMagnet]     = useState(false);
   const [drawings, setDrawings] = useState<Drawing[]>(() => persistRef?.current ?? []);
@@ -580,7 +582,7 @@ export const ChartDrawingTools = forwardRef<ChartDrawingToolsHandle, Props>(func
 
     if (newPending.length >= needed) {
       if (curTool === 'text') {
-        const text = window.prompt('Label text:');
+        const text = window.prompt(t('drawingTools.labelPrompt'));
         if (!text) { setPendingPts([]); return; }
         setDrawings(prev => [...prev, { id: Date.now().toString(), type: curTool, pts: newPending.slice(0, needed), color: '#38bdf8', text }]);
       } else {
@@ -805,7 +807,7 @@ export const ChartDrawingTools = forwardRef<ChartDrawingToolsHandle, Props>(func
               <button
                 className="cdt-btn"
                 onClick={onSave}
-                title="Save Chart"
+                title={t('drawingTools.saveChart')}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
@@ -817,7 +819,7 @@ export const ChartDrawingTools = forwardRef<ChartDrawingToolsHandle, Props>(func
               <button
                 className="cdt-btn"
                 onClick={onReset}
-                title="Reset View"
+                title={t('drawingTools.resetView')}
               >
                 <span aria-hidden="true" style={{ fontSize: 15 }}>⤢</span>
               </button>
@@ -825,21 +827,21 @@ export const ChartDrawingTools = forwardRef<ChartDrawingToolsHandle, Props>(func
             <div className="cdt-separator" />
           </>
         )}
-        {TOOL_LIST.map(t => (
+        {TOOL_LIST.map(tl => (
           <button
-            key={t.id}
-            className={`cdt-btn${tool === t.id ? ' cdt-btn--active' : ''}`}
-            onClick={() => { setTool(t.id); setPendingPts([]); brushActiveRef.current = false; zoneActiveRef.current = false; }}
-            title={t.label}
+            key={tl.id}
+            className={`cdt-btn${tool === tl.id ? ' cdt-btn--active' : ''}`}
+            onClick={() => { setTool(tl.id); setPendingPts([]); brushActiveRef.current = false; zoneActiveRef.current = false; }}
+            title={t(`drawingTools.tools.${tl.id}`, { defaultValue: tl.label })}
           >
-            {t.icon}
+            {tl.icon}
           </button>
         ))}
         <div className="cdt-separator" />
         <button
           className={`cdt-btn cdt-btn--magnet${magnet ? ' cdt-btn--active' : ''}`}
           onClick={() => setMagnet(m => !m)}
-          title={magnet ? 'Magnet On' : 'Magnet Off'}
+          title={magnet ? t('drawingTools.magnetOn') : t('drawingTools.magnetOff')}
         >
           {MAGNET_ICON}
         </button>
@@ -847,7 +849,7 @@ export const ChartDrawingTools = forwardRef<ChartDrawingToolsHandle, Props>(func
         <button
           className="cdt-btn cdt-btn--danger"
           onClick={() => { setDrawings([]); setPendingPts([]); brushActiveRef.current = false; zoneActiveRef.current = false; }}
-          title="Clear All"
+          title={t('drawingTools.clearAll')}
         >
           {TRASH_ICON}
         </button>
@@ -856,7 +858,7 @@ export const ChartDrawingTools = forwardRef<ChartDrawingToolsHandle, Props>(func
 
       {magnet && !hideToolbar && (
         <div className="cdt-magnet-badge" style={{ top: box.top + 8, left: box.left + 50, ...(host ? { position: "absolute" as const, zIndex: 30 } : {}) }}>
-          ⊕ Magnet On
+          ⊕ {t('drawingTools.magnetOn')}
         </div>
       )}
 

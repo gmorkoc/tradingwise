@@ -1,0 +1,22 @@
+{
+  "pushToast": {
+    "buySignal": "Al Sinyali",
+    "sellSignal": "Sat Sinyali",
+    "watchlist": "İzleme listesi",
+    "watchlisted": "Listede",
+    "muted": "Sessizde",
+    "mute": "{{coin}} sessize al",
+    "confidenceFull": {
+      "high": "Yüksek güven",
+      "medium": "Orta güven",
+      "low": "Düşük güven"
+    },
+    "confidence": {
+      "high": "Yüksek",
+      "medium": "Orta",
+      "low": "Düşük"
+    },
+    "disclaimer": "Yalnızca bilgilendirme amaçlıdır. Yatırım tavsiyesi değildir — tüm işlem kararları kendi sorumluluğunuzdadır.",
+    "disclaimerShort": "Yatırım tavsiyesi değildir. Risk size aittir."
+  }
+}

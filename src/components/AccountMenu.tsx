@@ -165,7 +165,7 @@ export const AccountMenu: React.FC<Props> = ({
     if (profile?.full_name && !profile.full_name.includes("@")) {
       return profile.full_name.trim().split(/\s+/)[0];
     }
-    return user.email?.split("@")[0] ?? "Account";
+    return user.email?.split("@")[0] ?? t("accountMenu.account");
   })();
   const firstInitial = firstName[0].toUpperCase();
 
@@ -246,7 +246,7 @@ export const AccountMenu: React.FC<Props> = ({
                   className="acct-dd-tier-chip"
                   style={{ color: tm.text, background: tm.bg }}
                 >
-                  {tm.icon} {tm.label}
+                  {tm.icon} {tm.label === "Free" ? t("accountMenu.free") : tm.label}
                 </span>
                 <span
                   className={`acct-dd-quota-tag${exceeded ? " exceeded" : ""}`}
@@ -295,14 +295,14 @@ export const AccountMenu: React.FC<Props> = ({
             {/* Preferences: Language · Currency · Theme */}
             <div className="acct-dd-pref">
               <button type="button" className="acct-dd-pref-row" onClick={() => setLangOpen((v) => !v)} aria-expanded={langOpen}>
-                <span>Language</span>
+                <span>{t("accountMenu.language")}</span>
                 <span className="acct-dd-pref-val">
                   {curLang.label}
                   <svg className={`acct-dd-chev${langOpen ? " acct-dd-chev--open" : ""}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
                 </span>
               </button>
               {langOpen && (
-                <div className="acct-dd-langs" role="listbox" aria-label="Language">
+                <div className="acct-dd-langs" role="listbox" aria-label={t("accountMenu.language")}>
                   {LANGS.map((l) => (
                     <button
                       key={l.code}
@@ -319,8 +319,8 @@ export const AccountMenu: React.FC<Props> = ({
                 </div>
               )}
               {/* Prices are in US dollars everywhere for now. */}
-              <div className="acct-dd-pref-row acct-dd-pref-row--static" title="Prices are shown in US dollars">
-                <span>Currency</span>
+              <div className="acct-dd-pref-row acct-dd-pref-row--static" title={t("accountMenu.currencyTip")}>
+                <span>{t("accountMenu.currency")}</span>
                 <span className="acct-dd-pref-val">
                   <span className="acct-dd-usd" aria-hidden="true">$</span>
                   USD
@@ -328,8 +328,8 @@ export const AccountMenu: React.FC<Props> = ({
               </div>
               {onSetTheme && (
                 <div className="acct-dd-pref-row acct-dd-pref-row--static">
-                  <span>Theme</span>
-                  <div className="acct-dd-seg" role="radiogroup" aria-label="Theme">
+                  <span>{t("accountMenu.theme")}</span>
+                  <div className="acct-dd-seg" role="radiogroup" aria-label={t("accountMenu.theme")}>
                     {(["light", "dark", "system"] as const).map((m) => (
                       <button
                         key={m}
@@ -339,7 +339,7 @@ export const AccountMenu: React.FC<Props> = ({
                         className={`acct-dd-seg-btn${themeMode === m ? " acct-dd-seg-btn--on" : ""}`}
                         onClick={() => pickTheme(m)}
                       >
-                        {m === "light" ? "Light" : m === "dark" ? "Dark" : "System"}
+                        {t(`accountMenu.themes.${m}`)}
                       </button>
                     ))}
                   </div>

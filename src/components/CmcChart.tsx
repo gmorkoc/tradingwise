@@ -4,6 +4,8 @@
 // a faint coinhintz watermark, and an all-time overview strip below.
 // Data: CoinGecko market_chart (prices / market caps / volumes).
 import { Component, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import i18n from "i18next";
+import { useTranslation } from "react-i18next";
 import {
   createChart, ColorType, BaselineSeries, HistogramSeries, AreaSeries, LineStyle, PriceScaleMode, TickMarkType,
   type IChartApi, type ISeriesApi, type UTCTimestamp, type Time,
@@ -13,13 +15,15 @@ import {
 // Year / month / day marks sit on UTC midnights — read them in UTC, or
 // west-of-UTC viewers see "Dec 31" and every year labelled one early.
 // Clock times stay local.
+// Month names / clock format follow the app language (English → en-US).
+const dateLocale = () => (i18n.language && !i18n.language.startsWith("en") ? i18n.language : "en-US");
 const tickFmt = (time: Time, type: TickMarkType) => {
   const d = new Date((time as number) * 1000);
   switch (type) {
     case TickMarkType.Year: return String(d.getUTCFullYear());
-    case TickMarkType.Month: return d.toLocaleString("en-US", { month: "short", timeZone: "UTC" });
-    case TickMarkType.DayOfMonth: return `${d.getUTCDate()} ${d.toLocaleString("en-US", { month: "short", timeZone: "UTC" })}`;
-    default: return d.toLocaleString("en-US", { hour: "numeric", minute: "2-digit" });
+    case TickMarkType.Month: return d.toLocaleString(dateLocale(), { month: "short", timeZone: "UTC" });
+    case TickMarkType.DayOfMonth: return `${d.getUTCDate()} ${d.toLocaleString(dateLocale(), { month: "short", timeZone: "UTC" })}`;
+    default: return d.toLocaleString(dateLocale(), { hour: "numeric", minute: "2-digit" });
   }
 };
 import { getCoinGeckoId, fetchBn, COINS } from "../services/coinglass";
@@ -33,7 +37,8 @@ export const CMC_RANGES: { id: CmcRange; label: string }[] = [
   { id: "7", label: "1W" },
   { id: "30", label: "1M" },
   { id: "365", label: "1Y" },
-  { id: "max", label: "All" },
+  // Getter: read in the current language each time it's rendered.
+  { id: "max", get label() { return i18n.t("cmcChart.rangeAll"); } },
 ];
 type Pt = { time: UTCTimestamp; value: number };
 type Series3 = { price: Pt[]; mcap: Pt[]; vol: Pt[] };
@@ -235,7 +240,7 @@ const MILESTONES: { d: string; title: string; coins?: string[] }[] = [
 const milestonesFor = (coin: string): ChartEvent[] =>
   MILESTONES.filter((m) => !m.coins || m.coins.includes(coin)).map((m) => ({
     t: Math.floor(Date.parse(`${m.d}T12:00:00Z`) / 1000),
-    title: m.title,
+    title: i18n.t(`cmcChart.milestones.${m.d}`, { defaultValue: m.title }),
     kind: "milestone" as const,
   }));
 type Mark = { x: number; y: number; ev: ChartEvent; more: number; stackIdx: number };
@@ -255,8 +260,8 @@ class CmcChartBoundary extends Component<{ children: ReactNode; resetKey: string
         <div className="cmcc">
           <div className="cmcc-main">
             <div className="cmcc-msg">
-              Chart couldn't load.
-              <button type="button" className="cmcc-retry" onClick={() => this.setState({ err: false })}>Retry</button>
+              {i18n.t("cmcChart.chartFailed")}
+              <button type="button" className="cmcc-retry" onClick={() => this.setState({ err: false })}>{i18n.t("cmcChart.retry")}</button>
             </div>
           </div>
         </div>
@@ -286,6 +291,8 @@ function CmcChartInner({ coin, theme, metric, range, log, onAnalyze, moments, ov
   log: boolean;
   onAnalyze?: () => void;
 }) {
+  const { t, i18n: i18nInst } = useTranslation();
+  const lang = i18nInst.language;
   const boxRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -334,17 +341,18 @@ function CmcChartInner({ coin, theme, metric, range, log, onAnalyze, moments, ov
             t: Math.floor(e.time / 1000),
             title: e.title,
             kind: "macro" as const,
-            body: [e.forecast && `Forecast ${e.forecast}`, e.previous && `Previous ${e.previous}`].filter(Boolean).join(" · ") || undefined,
+            body: [e.forecast && i18n.t("cmcChart.forecast", { value: e.forecast }), e.previous && i18n.t("cmcChart.previous", { value: e.previous })].filter(Boolean).join(" · ") || undefined,
           })));
       })
       .catch(() => {});
     return () => { alive = false; };
-  }, []);
+  }, [lang]);
   const momentEvents = useMemo<ChartEvent[]>(
     () => (moments ?? []).map((m) => ({ t: m.time > 1e12 ? Math.floor(m.time / 1000) : m.time, title: m.title, body: m.body, kind: "moment" as const })),
     [moments],
   );
-  const events = useMemo(() => [...milestonesFor(coin), ...news, ...macro, ...momentEvents], [coin, news, macro, momentEvents]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- lang: re-translate milestone titles
+  const events = useMemo(() => [...milestonesFor(coin), ...news, ...macro, ...momentEvents], [coin, news, macro, momentEvents, lang]);
   const eventsRef = useRef<ChartEvent[]>(events);
   const placeRef = useRef<(() => void) | null>(null);
   const [marks, setMarks] = useState<Mark[]>([]);
@@ -562,7 +570,7 @@ function CmcChartInner({ coin, theme, metric, range, log, onAnalyze, moments, ov
       chartRef.current = null;
       seriesRef.current = null;
     };
-  }, [pts, base, theme, log, range, metric, data]);
+  }, [pts, base, theme, log, range, metric, data, lang]);
 
   // Overview strip (all-time, non-interactive).
   useEffect(() => {
@@ -605,7 +613,7 @@ function CmcChartInner({ coin, theme, metric, range, log, onAnalyze, moments, ov
       if (navChartRef.current === chart) navChartRef.current = null;
       chart.remove();
     };
-  }, [all, metric, theme]);
+  }, [all, metric, theme, lang]);
 
   // ── Timeline picker geometry: time ⇄ x on the overview strip ──
   const navChartRef = useRef<IChartApi | null>(null);
@@ -684,19 +692,19 @@ function CmcChartInner({ coin, theme, metric, range, log, onAnalyze, moments, ov
     setDragSide("r");
   };
   const pickedLabel = endTs
-    ? new Date(endTs * 1000).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })
+    ? new Date(endTs * 1000).toLocaleDateString(dateLocale(), { day: "numeric", month: "short", year: "numeric" })
     : null;
 
   return (
     <div className="cmcc">
       <div className="cmcc-main">
         {error ? (
-          <div className="cmcc-msg">Couldn't load the chart right now.</div>
+          <div className="cmcc-msg">{t("cmcChart.loadError")}</div>
         ) : !pts ? (
-          <div className="cmcc-msg"><span className="cmcc-spin" aria-hidden="true" />Loading…</div>
+          <div className="cmcc-msg"><span className="cmcc-spin" aria-hidden="true" />{t("cmcChart.loading")}</div>
         ) : pts.length < 2 ? (
           <div className="cmcc-msg">
-            {metric === "mcap" ? "Market cap history only goes back one year — pick a later date or switch to Price." : "No data for this period."}
+            {metric === "mcap" ? t("cmcChart.mcapOneYear") : t("cmcChart.noData")}
           </div>
         ) : null}
         <div ref={boxRef} className="cmcc-box" />
@@ -747,18 +755,18 @@ function CmcChartInner({ coin, theme, metric, range, log, onAnalyze, moments, ov
             role="tooltip"
           >
             <span className="cmcc-ev-tip-k">
-              {hover.ev.kind === "milestone" ? "Market milestone"
-                : hover.ev.kind === "macro" ? "US economic data"
-                : hover.ev.kind === "moment" ? "Price moment"
-                : hover.ev.source ?? "News"}
+              {hover.ev.kind === "milestone" ? t("cmcChart.kind.milestone")
+                : hover.ev.kind === "macro" ? t("cmcChart.kind.macro")
+                : hover.ev.kind === "moment" ? t("cmcChart.kind.moment")
+                : hover.ev.source ?? t("cmcChart.kind.news")}
               {" · "}
-              {new Date(hover.ev.t * 1000).toLocaleString("en-US", range === "1" || range === "7"
+              {new Date(hover.ev.t * 1000).toLocaleString(dateLocale(), range === "1" || range === "7"
                 ? { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }
                 : { day: "numeric", month: "short", year: "numeric" })}
             </span>
             <span className="cmcc-ev-tip-t">{hover.ev.title}</span>
             {hover.ev.body && <span className="cmcc-ev-tip-b">{hover.ev.body}</span>}
-            {hover.ev.url && <span className="cmcc-ev-tip-a">Click to read ›</span>}
+            {hover.ev.url && <span className="cmcc-ev-tip-a">{t("cmcChart.clickToRead")} ›</span>}
           </div>
         )}
         {base != null && baseY != null && pts && (
@@ -782,11 +790,11 @@ function CmcChartInner({ coin, theme, metric, range, log, onAnalyze, moments, ov
           onPointerCancel={() => setDragX(null)}
           onDoubleClick={() => { setEndTs(null); setStartTs(null); }}
           role="slider"
-          aria-label="Pick a point in time"
+          aria-label={t("cmcChart.pickTime")}
           aria-valuemin={navFirstRef.current}
           aria-valuemax={navLastRef.current}
           aria-valuenow={shownEnd}
-          aria-valuetext={pickedLabel ?? "Now"}
+          aria-valuetext={pickedLabel ?? t("cmcChart.now")}
           tabIndex={0}
           onKeyDown={(e) => {
             // "All" steps a month at a time; other ranges by their own length.
@@ -805,13 +813,13 @@ function CmcChartInner({ coin, theme, metric, range, log, onAnalyze, moments, ov
         </div>
         {(pickedLabel || startTs != null) && (
           <button type="button" className="cmcc-live" onClick={() => { setEndTs(null); setStartTs(null); }}>
-            {pickedLabel ?? "Custom range"} · Back to now
+            {pickedLabel ?? t("cmcChart.customRange")} · {t("cmcChart.backToNow")}
           </button>
         )}
         {onAnalyze && (
           <button type="button" className="cmcc-analyze" onClick={onAnalyze}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 3v18h18" /><path d="M7 14l4-4 3 3 5-6" /></svg>
-            Analyze Chart
+            {t("cmcChart.analyzeChart")}
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
           </button>
         )}

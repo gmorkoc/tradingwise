@@ -1,0 +1,36 @@
+{
+  "whatsNew": {
+    "badge": "Nuovo",
+    "justUpdated": "si è appena aggiornato!",
+    "expand": "Espandi",
+    "collapse": "Comprimi",
+    "close": "Chiudi",
+    "slideN": "Slide {{n}}",
+    "dontShowAgain": "Non mostrare più",
+    "back": "Indietro",
+    "next": "Avanti",
+    "done": "Fatto",
+    "slides": {
+      "candleInsights": {
+        "title": "Lettura dei grafici di livello istituzionale",
+        "desc": "Onde di Elliott con livelli di invalidazione, concetti smart money ICT, fasi di Wyckoff e Volume Profile, tutto in un'unica lettura con IA.",
+        "cta": "Apri Analisi Candele"
+      },
+      "chartAnalyzer": {
+        "title": "Qualsiasi grafico, qualsiasi piattaforma, una lettura IA",
+        "desc": "Scatta o carica un grafico da TradingView, dal tuo broker o da dove vuoi e ottieni un'analisi tecnica completa: pattern, livelli e un parere concreto.",
+        "cta": "Apri Analizzatore Grafici"
+      },
+      "marketHeatmap": {
+        "title": "Tutto il mercato a colpo d'occhio",
+        "desc": "120 monete dimensionate per capitalizzazione e colorate per variazione 24h: individua subito chi si muove nella nuova Heatmap di mercato.",
+        "cta": "Vedi la Heatmap di mercato"
+      },
+      "dailyBrief": {
+        "title": "Guarda la notizia, non limitarti a leggerla",
+        "desc": "Il tuo Daily Brief ora trova e riproduce un video sul titolo principale: niente più dubbi su cosa sia successo davvero.",
+        "cta": "Apri il Daily Brief"
+      }
+    }
+  }
+}

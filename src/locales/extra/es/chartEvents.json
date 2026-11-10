@@ -1,0 +1,49 @@
+{
+  "chartEvents": {
+    "ago": {
+      "justNow": "ahora mismo",
+      "m": "hace {{n}} min",
+      "h": "hace {{n}} h",
+      "d": "hace {{n}} d",
+      "mo": "hace {{n}} meses",
+      "y": "hace {{n}} años"
+    },
+    "headline": {
+      "oversold": "Zona de sobreventa",
+      "overbought": "Zona de sobrecompra",
+      "supportBreak": "Rompió por debajo del soporte",
+      "resistanceReject": "Rechazado en la resistencia",
+      "resistanceBreakout": "Rompió por encima de la resistencia",
+      "supportBounce": "Rebotó en el soporte",
+      "atSupport": "Probando el soporte",
+      "atResistance": "Probando la resistencia"
+    },
+    "title": {
+      "current": "Sucediendo ahora",
+      "supportBreak": "Bajo el soporte",
+      "resistanceReject": "Resistencia rechazada",
+      "resistanceBreakout": "Ruptura de resistencia",
+      "supportBounce": "Rebote en soporte",
+      "atSupport": "En soporte",
+      "atResistance": "En resistencia"
+    },
+    "body": {
+      "currentOversold": "{{name}} cotiza en zona de sobreventa a {{price}}, lo que sugiere que el movimiento reciente podría estar exagerado a la baja.",
+      "currentOverbought": "{{name}} cotiza en zona de sobrecompra a {{price}}, lo que sugiere que el movimiento reciente podría estar exagerado al alza.",
+      "supportBreak_one": "{{name}} cayó por debajo de {{price}}, un precio por encima del que se mantuvo casi siempre durante la última {{count}} vela.",
+      "supportBreak_other": "{{name}} cayó por debajo de {{price}}, un precio por encima del que se mantuvo casi siempre durante las últimas {{count}} velas.",
+      "resistanceReject": "{{name}} fue rechazado cerca de {{price}} y retrocedió.",
+      "resistanceBreakout_one": "{{name}} superó {{price}}, un precio por debajo del que se mantuvo casi siempre durante la última {{count}} vela.",
+      "resistanceBreakout_other": "{{name}} superó {{price}}, un precio por debajo del que se mantuvo casi siempre durante las últimas {{count}} velas.",
+      "supportBounce": "{{name}} rebotó en el soporte cerca de {{price}} y se recuperó.",
+      "atSupport": "{{name}} está probando el soporte cerca de {{price}}.",
+      "atResistance": "{{name}} está probando la resistencia cerca de {{price}}."
+    },
+    "live": "EN VIVO",
+    "bullishSetup": "Configuración alcista",
+    "bearishSetup": "Configuración bajista",
+    "show": "Mostrar {{title}}",
+    "summary": "resumen",
+    "event": "evento"
+  }
+}

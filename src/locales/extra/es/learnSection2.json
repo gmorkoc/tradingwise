@@ -1,0 +1,22 @@
+{
+  "learnSection2": {
+    "patterns": {
+      "hammer": { "name": "Martillo", "desc": "Cuerpo pequeño cerca del máximo con una larga mecha inferior (2× el cuerpo o más). Tras una tendencia bajista, los compradores empujaron el precio de vuelta al alza: fuerte señal potencial de reversión." },
+      "invertedHammer": { "name": "Martillo invertido", "desc": "Cuerpo pequeño cerca del mínimo con una larga mecha superior. Los compradores intentaron un rally y los vendedores no pudieron mantener la presión: espera una confirmación posterior." },
+      "bullishEngulfing": { "name": "Envolvente alcista", "desc": "Una gran vela verde envuelve por completo el cuerpo de la vela roja anterior. Fuerte señal de reversión: los compradores han tomado el control decisivo a los vendedores." },
+      "piercingLine": { "name": "Línea penetrante", "desc": "La vela verde abre por debajo del mínimo de la vela roja anterior pero cierra por encima de su punto medio. Muestra a los compradores entrando con fuerza tras una caída brusca." },
+      "morningStar": { "name": "Estrella de la mañana", "desc": "Reversión de tres velas: roja grande, vela pequeña indecisa y luego verde grande. Patrón clásico de suelo que muestra una convicción compradora creciente." },
+      "threeWhiteSoldiers": { "name": "Tres soldados blancos", "desc": "Tres velas verdes consecutivas, cada una abriendo cerca del cierre anterior y cerrando más arriba. Señala un giro potente y sostenido hacia la presión compradora." },
+      "bullishHarami": { "name": "Harami alcista", "desc": "Una pequeña vela verde totalmente dentro del cuerpo de la gran vela roja anterior. La tendencia bajista pierde impulso: una reversión podría estar cerca." },
+      "dragonflyDoji": { "name": "Doji libélula", "desc": "Apertura, máximo y cierre cerca del máximo con una mecha inferior muy larga. Los vendedores hundieron el precio, pero los compradores lo recuperaron por completo: fuerte señal de demanda." },
+      "shootingStar": { "name": "Estrella fugaz", "desc": "Cuerpo pequeño cerca del mínimo con una larga mecha superior (2× el cuerpo o más). En techos de mercado, los compradores subieron pero los vendedores los aplastaron: posible reversión." },
+      "hangingMan": { "name": "Hombre colgado", "desc": "Parece un martillo pero se forma en la cima de una tendencia alcista. La larga mecha inferior revela una presión vendedora creciente, aunque los alcistas se recuperaron por ahora." },
+      "bearishEngulfing": { "name": "Envolvente bajista", "desc": "Una gran vela roja envuelve por completo el cuerpo de la vela verde anterior. Fuerte señal de reversión: los vendedores han tomado el control decisivo a los compradores." },
+      "darkCloudCover": { "name": "Cubierta de nube oscura", "desc": "La vela roja abre por encima del máximo de la vela verde anterior pero cierra por debajo de su punto medio. Muestra a los vendedores entrando con fuerza en precios elevados." },
+      "eveningStar": { "name": "Estrella del atardecer", "desc": "Reversión de tres velas: verde grande, vela pequeña indecisa y luego roja grande. Reversión clásica de techo que muestra a los compradores agotados y a los vendedores tomando el control." },
+      "threeBlackCrows": { "name": "Tres cuervos negros", "desc": "Tres velas rojas consecutivas, cada una abriendo cerca del cierre anterior y cerrando más abajo. Señala un giro potente y sostenido hacia una fuerte presión vendedora." },
+      "bearishHarami": { "name": "Harami bajista", "desc": "Una pequeña vela roja totalmente dentro del cuerpo de la gran vela verde anterior. La tendencia alcista pierde fuerza: vigila una ruptura por debajo del soporte." },
+      "gravestoneDoji": { "name": "Doji lápida", "desc": "Apertura, mínimo y cierre cerca del mínimo con una mecha superior muy larga. Los compradores empujaron con fuerza pero los vendedores recuperaron todo: fuerte señal de rechazo por oferta." }
+    }
+  }
+}

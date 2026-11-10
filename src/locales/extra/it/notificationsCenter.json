@@ -1,0 +1,14 @@
+{
+  "notificationsCenter": {
+    "title": "Notifiche",
+    "sub": "Segnali di acquisto/vendita, avvisi di prezzo, avvisi strategia e notizie",
+    "markAllRead": "Segna tutte come lette",
+    "close": "Chiudi",
+    "loading": "Caricamento…",
+    "empty": "Ancora nessuna notifica: qui compariranno segnali di acquisto/vendita, avvisi di prezzo, avvisi strategia e notizie.",
+    "now": "ora",
+    "minsAgo": "{{n}} min fa",
+    "hoursAgo": "{{n}} h fa",
+    "daysAgo": "{{n}} g fa"
+  }
+}

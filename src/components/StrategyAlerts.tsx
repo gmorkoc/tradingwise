@@ -70,7 +70,7 @@ export function StrategyAlerts() {
     setWebPushError(null);
     const result = await subscribeWebPush(user.id);
     setWebPushSubscribed(result.ok);
-    if (!result.ok) setWebPushError(result.error ?? "Couldn't enable browser notifications");
+    if (!result.ok) setWebPushError(result.error ?? t("strategyAlerts2.webPushFailed", "Couldn't enable browser notifications"));
     setWebPushLoading(false);
   }
 
@@ -191,7 +191,7 @@ export function StrategyAlerts() {
       setTab("mystrategies");
       loadMyStrategies();
     } catch (e) {
-      setDeployError(e instanceof Error ? e.message : "Failed to deploy strategy");
+      setDeployError(e instanceof Error ? e.message : t("strategyAlerts2.deployFailed", "Failed to deploy strategy"));
     } finally {
       setDeploying(false);
     }
@@ -216,13 +216,13 @@ export function StrategyAlerts() {
     <div className="sa-root">
       <div className="sa-tabs">
         <button className={`sa-tab${tab === "templates" ? " is-active" : ""}`} onClick={() => setTab("templates")}>
-          ★ {t("strategyAlerts.tabs.templates", "Templates")} <span className="n">{TEMPLATES.length}</span>
+          ★ {t("strategyAlerts2.tabs.templates", "Templates")} <span className="n">{TEMPLATES.length}</span>
         </button>
         <button className={`sa-tab${tab === "builder" ? " is-active" : ""}`} onClick={() => setTab("builder")}>
-          ⚙ {t("strategyAlerts.tabs.builder", "Builder")}
+          ⚙ {t("strategyAlerts2.tabs.builder", "Builder")}
         </button>
         <button className={`sa-tab${tab === "mystrategies" ? " is-active" : ""}`} onClick={() => setTab("mystrategies")}>
-          ◧ {t("strategyAlerts.tabs.mystrategies", "My Strategies")} <span className="n">{strategies.length}</span>
+          ◧ {t("strategyAlerts2.tabs.mystrategies", "My Strategies")} <span className="n">{strategies.length}</span>
         </button>
       </div>
 
@@ -238,14 +238,14 @@ export function StrategyAlerts() {
                 <div className="tpl-desc">{tpl.desc}</div>
                 <div className="tpl-cond-preview">{tpl.previewText}</div>
                 <button className="tpl-use-btn" onClick={() => useTemplate(tpl)}>
-                  {t("strategyAlerts.useTemplate", "Use Template")} →
+                  {t("strategyAlerts2.useTemplate", "Use Template")} →
                 </button>
               </div>
             ))}
             <div className="tpl-card tpl-card--blank" onClick={startFromScratch}>
               <div className="tpl-blank-icon">+</div>
-              <div className="tpl-name">{t("strategyAlerts.startFromScratch", "Start from scratch")}</div>
-              <div className="tpl-desc">{t("strategyAlerts.startFromScratchDesc", "Build a custom condition set from any indicator.")}</div>
+              <div className="tpl-name">{t("strategyAlerts2.startFromScratch", "Start from scratch")}</div>
+              <div className="tpl-desc">{t("strategyAlerts2.startFromScratchDesc", "Build a custom condition set from any indicator.")}</div>
             </div>
           </div>
         )}
@@ -253,23 +253,23 @@ export function StrategyAlerts() {
         {tab === "builder" && (
           <div className="bld-grid">
             <div>
-              <div className="bld-field-label">{t("strategyAlerts.name", "Strategy Name")}</div>
+              <div className="bld-field-label">{t("strategyAlerts2.name", "Strategy Name")}</div>
               <input
                 className="bld-name-input"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder={t("strategyAlerts.namePlaceholder", "e.g. RSI Reversal + Volume Confirm")}
+                placeholder={t("strategyAlerts2.namePlaceholder", "e.g. RSI Reversal + Volume Confirm")}
               />
 
-              <div className="bld-field-label">{t("strategyAlerts.watching", "Watching")}</div>
+              <div className="bld-field-label">{t("strategyAlerts2.watching", "Watching")}</div>
               <div className="bld-coins">
                 {coins.map((sym) => (
                   <span className="coin-chip" key={sym}>
                     {sym}
-                    <button className="coin-chip-x" onClick={() => toggleCoin(sym)}>✕</button>
+                    <button className="coin-chip-x" onClick={() => toggleCoin(sym)} aria-label={t("strategyAlerts2.removeCoin", "Remove {{coin}}", { coin: sym })}>✕</button>
                   </span>
                 ))}
-                <span className="coin-chip add" onClick={() => setCoinPickerOpen((o) => !o)}>+ {t("strategyAlerts.addCoin", "Add coin")}</span>
+                <span className="coin-chip add" onClick={() => setCoinPickerOpen((o) => !o)}>+ {t("strategyAlerts2.addCoin", "Add coin")}</span>
                 {coinPickerOpen && (
                   <div className="coin-picker">
                     {COINS.map((c) => (
@@ -292,16 +292,16 @@ export function StrategyAlerts() {
                 </div>
                 <span className="logic-hint">
                   {logic === "AND"
-                    ? t("strategyAlerts.andHint", "all conditions must be true")
-                    : t("strategyAlerts.orHint", "any condition can be true")}
+                    ? t("strategyAlerts2.andHint", "all conditions must be true")
+                    : t("strategyAlerts2.orHint", "any condition can be true")}
                 </span>
               </div>
 
               <div className="cond-thead">
-                <span className="cond-tcell lbl">{t("strategyAlerts.col.indicator", "Indicator")}</span>
-                <span className="cond-tcell lbl">{t("strategyAlerts.col.type", "Type")}</span>
-                <span className="cond-tcell lbl">{t("strategyAlerts.col.timeframe", "Timeframe")}</span>
-                <span className="cond-tcell lbl">{t("strategyAlerts.col.comparison", "Comparison")}</span>
+                <span className="cond-tcell lbl">{t("strategyAlerts2.col.indicator", "Indicator")}</span>
+                <span className="cond-tcell lbl">{t("strategyAlerts2.col.type", "Type")}</span>
+                <span className="cond-tcell lbl">{t("strategyAlerts2.col.timeframe", "Timeframe")}</span>
+                <span className="cond-tcell lbl">{t("strategyAlerts2.col.comparison", "Comparison")}</span>
                 <span></span>
               </div>
               <div className="cond-table">
@@ -324,8 +324,8 @@ export function StrategyAlerts() {
                       value={cond.type}
                       onChange={(e) => updateCondition(cond.id, { type: e.target.value as ConditionType })}
                     >
-                      <option value="threshold">{t("strategyAlerts.type.threshold", "Threshold")}</option>
-                      <option value="crossover">{t("strategyAlerts.type.crossover", "Crossover")}</option>
+                      <option value="threshold">{t("strategyAlerts2.type.threshold", "Threshold")}</option>
+                      <option value="crossover">{t("strategyAlerts2.type.crossover", "Crossover")}</option>
                     </select>
 
                     <select className="cond-select" value={cond.timeframe} onChange={(e) => updateCondition(cond.id, { timeframe: e.target.value as Timeframe })}>
@@ -343,13 +343,13 @@ export function StrategyAlerts() {
                       ) : (
                         <select className="cond-select cond-select--sm" value={cond.direction ?? "either"} onChange={(e) => updateCondition(cond.id, { direction: e.target.value === "either" ? undefined : (e.target.value as "above" | "below") })}>
                           <option value="either">↕</option>
-                          <option value="above">↗ {t("strategyAlerts.above", "above")}</option>
-                          <option value="below">↘ {t("strategyAlerts.below", "below")}</option>
+                          <option value="above">↗ {t("strategyAlerts2.above", "above")}</option>
+                          <option value="below">↘ {t("strategyAlerts2.below", "below")}</option>
                         </select>
                       )}
                       <select className="cond-select cond-select--sm" value={targetKindValue(cond.target)} onChange={(e) => handleTargetKindChange(cond, e.target.value)}>
-                        <option value="value">{t("strategyAlerts.fixedValue", "Fixed Value")}</option>
-                        <option value="price">Price</option>
+                        <option value="value">{t("strategyAlerts2.fixedValue", "Fixed Value")}</option>
+                        <option value="price">{t("strategyAlerts2.price", "Price")}</option>
                         {INDICATORS.map((id) => <option key={id} value={id}>{INDICATOR_LABELS[id]}</option>)}
                       </select>
                       {cond.target.kind === "value" && (
@@ -360,48 +360,48 @@ export function StrategyAlerts() {
                       )}
                     </div>
 
-                    <button className="cond-remove" onClick={() => removeCondition(cond.id)} disabled={conditions.length === 1}>✕</button>
+                    <button className="cond-remove" onClick={() => removeCondition(cond.id)} disabled={conditions.length === 1} aria-label={t("strategyAlerts2.removeCondition", "Remove condition")}>✕</button>
                   </div>
                 ))}
               </div>
-              <button className="add-cond-btn" onClick={addCondition}>+ {t("strategyAlerts.addCondition", "Add condition")}</button>
+              <button className="add-cond-btn" onClick={addCondition}>+ {t("strategyAlerts2.addCondition", "Add condition")}</button>
             </div>
 
             <div className="bld-side">
               <div className="side-card">
-                <div className="side-card-title">{t("strategyAlerts.livePreview", "Live Preview")}</div>
+                <div className="side-card-title">{t("strategyAlerts2.livePreview", "Live Preview")}</div>
                 {previewLoading ? (
-                  <div className="preview-hit preview-hit--loading">{t("strategyAlerts.checking", "Checking…")}</div>
+                  <div className="preview-hit preview-hit--loading">{t("strategyAlerts2.checking", "Checking…")}</div>
                 ) : previewCount === null ? (
-                  <div className="preview-hit preview-hit--muted">{t("strategyAlerts.noData", "Not enough data yet")}</div>
+                  <div className="preview-hit preview-hit--muted">{t("strategyAlerts2.noData", "Not enough data yet")}</div>
                 ) : (
                   <div className="preview-hit">
-                    ✓ {t("strategyAlerts.wouldHaveFired", "Would have fired {{count}}× recently", { count: previewCount })}
+                    ✓ {t("strategyAlerts2.wouldHaveFired", "Would have fired {{count}}× recently", { count: previewCount })}
                   </div>
                 )}
                 <div className="cooldown-row">
-                  <label>{t("strategyAlerts.cooldown", "Cooldown")}</label>
+                  <label>{t("strategyAlerts2.cooldown", "Cooldown")}</label>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <input type="number" className="cooldown-input" value={cooldown} onChange={(e) => setCooldown(Math.max(1, Number(e.target.value) || 1))} />
-                    <span className="cooldown-unit">min</span>
+                    <span className="cooldown-unit">{t("strategyAlerts2.min", "min")}</span>
                   </div>
                 </div>
                 <div className="channel-line">
-                  {t("strategyAlerts.deliversVia", "Delivers via")} <b>Push + In-App</b>
+                  {t("strategyAlerts2.deliversVia", "Delivers via")} <b>{t("strategyAlerts2.channels", "Push + In-App")}</b>
                 </div>
                 {isWebPushAvailable() && (
                   webPushSubscribed ? (
-                    <div className="webpush-status">✓ {t("strategyAlerts.webPushOn", "Browser notifications on")}</div>
+                    <div className="webpush-status">✓ {t("strategyAlerts2.webPushOn", "Browser notifications on")}</div>
                   ) : (
                     <button className="webpush-enable-btn" onClick={handleEnableWebPush} disabled={webPushLoading}>
-                      🔔 {webPushLoading ? t("strategyAlerts.enabling", "Enabling…") : t("strategyAlerts.enableWebPush", "Enable browser notifications")}
+                      🔔 {webPushLoading ? t("strategyAlerts2.enabling", "Enabling…") : t("strategyAlerts2.enableWebPush", "Enable browser notifications")}
                     </button>
                   )
                 )}
                 {webPushError && <div className="deploy-error">{webPushError}</div>}
                 {deployError && <div className="deploy-error">{deployError}</div>}
                 <button className="deploy-btn" onClick={handleDeploy} disabled={deployDisabled}>
-                  {deploying ? t("strategyAlerts.deploying", "Deploying…") : t("strategyAlerts.deploy", "Deploy Strategy")}
+                  {deploying ? t("strategyAlerts2.deploying", "Deploying…") : t("strategyAlerts2.deploy", "Deploy Strategy")}
                 </button>
               </div>
             </div>
@@ -411,11 +411,11 @@ export function StrategyAlerts() {
         {tab === "mystrategies" && (
           <div>
             {loadingMy ? (
-              <div className="sa-loading">{t("strategyAlerts.loading", "Loading…")}</div>
+              <div className="sa-loading">{t("strategyAlerts2.loading", "Loading…")}</div>
             ) : strategies.length === 0 ? (
               <div className="sa-empty">
-                {t("strategyAlerts.emptyStrategies", "No strategies deployed yet.")}{" "}
-                <button className="sa-empty-link" onClick={() => setTab("templates")}>{t("strategyAlerts.browseTemplates", "Browse templates")}</button>
+                {t("strategyAlerts2.emptyStrategies", "No strategies deployed yet.")}{" "}
+                <button className="sa-empty-link" onClick={() => setTab("templates")}>{t("strategyAlerts2.browseTemplates", "Browse templates")}</button>
               </div>
             ) : (
               <div className="my-list">
@@ -426,17 +426,17 @@ export function StrategyAlerts() {
                       <div className="my-name">{s.name}</div>
                       <div className="my-meta">
                         {s.coins.join(", ")} · {s.conditions.map(conditionLabel).join(` ${s.logic} `)}
-                        {!s.enabled && ` · ${t("strategyAlerts.disabled", "disabled")}`}
+                        {!s.enabled && ` · ${t("strategyAlerts2.disabled", "disabled")}`}
                       </div>
                     </div>
                     <div className="my-actions">
-                      <button className="my-icon-btn" title={t("strategyAlerts.duplicate", "Duplicate")} onClick={() => handleDuplicate(s)}>
+                      <button className="my-icon-btn" title={t("strategyAlerts2.duplicate", "Duplicate")} onClick={() => handleDuplicate(s)}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
                           <rect x="9" y="9" width="13" height="13" rx="2" />
                           <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                         </svg>
                       </button>
-                      <button className="my-icon-btn" title={t("strategyAlerts.delete", "Delete")} onClick={() => handleDelete(s)}>
+                      <button className="my-icon-btn" title={t("strategyAlerts2.delete", "Delete")} onClick={() => handleDelete(s)}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M3 6h18" />
                           <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
@@ -452,10 +452,10 @@ export function StrategyAlerts() {
 
             <div className="fires-head">
               <span className="live-dot" />
-              <span className="fires-title">{t("strategyAlerts.recentFires", "Recent Fires")} — {t("strategyAlerts.live", "live")}</span>
+              <span className="fires-title">{t("strategyAlerts2.recentFires", "Recent Fires")} — {t("strategyAlerts2.live", "live")}</span>
             </div>
             {fires.length === 0 ? (
-              <div className="sa-empty sa-empty--sm">{t("strategyAlerts.noFires", "Nothing has fired yet.")}</div>
+              <div className="sa-empty sa-empty--sm">{t("strategyAlerts2.noFires", "Nothing has fired yet.")}</div>
             ) : (
               <div className="fire-list">
                 {fires.map((f) => (

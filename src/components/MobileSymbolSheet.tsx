@@ -213,13 +213,13 @@ export function MobileSymbolSheet({ coin, theme, quoteVolume24h, ticker, onOpenA
                 </span>
               ) : (
                 <div className="mss-header-text">
-                  <span className="mss-coin-name">{COIN_FULL_NAME[coin] ?? coin} / U.S. dollar</span>
+                  <span className="mss-coin-name">{t("symbolSheet.pairName", { name: COIN_FULL_NAME[coin] ?? coin })}</span>
                   <span className="mss-coin-sub">
                     {coin}USDT • BINANCE <span className="mss-live-dot" aria-hidden="true" />
                   </span>
                 </div>
               )}
-              <button type="button" className="mss-close" onClick={onClose} aria-label={t("chart.close", "Close")}>
+              <button type="button" className="mss-close" onClick={onClose} aria-label={t("symbolSheet.close")}>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18" />
                   <line x1="6" y1="6" x2="18" y2="18" />
@@ -241,12 +241,12 @@ export function MobileSymbolSheet({ coin, theme, quoteVolume24h, ticker, onOpenA
                 </span>
                 <div className={`mss-price-change-row${ticker.change >= 0 ? " mss-price-change--up" : " mss-price-change--down"}`}>
                   {ticker.change >= 0 ? "+" : ""}{Math.round(absToday).toLocaleString("en-US")}{" "}
-                  {ticker.change >= 0 ? "+" : ""}{ticker.change.toFixed(2)}% <span className="mss-price-change-label">{t("chart.today", "today")}</span>
+                  {ticker.change >= 0 ? "+" : ""}{ticker.change.toFixed(2)}% <span className="mss-price-change-label">{t("symbolSheet.today")}</span>
                 </div>
                 {week != null && absWeek != null && (
                   <div className={`mss-price-change-row${week >= 0 ? " mss-price-change--up" : " mss-price-change--down"}`}>
                     {week >= 0 ? "+" : ""}{Math.round(absWeek).toLocaleString("en-US")}{" "}
-                    {week >= 0 ? "+" : ""}{week.toFixed(2)}% <span className="mss-price-change-label">{t("chart.pastWeek", "past week")}</span>
+                    {week >= 0 ? "+" : ""}{week.toFixed(2)}% <span className="mss-price-change-label">{t("symbolSheet.pastWeek")}</span>
                   </div>
                 )}
               </div>
@@ -265,7 +265,7 @@ export function MobileSymbolSheet({ coin, theme, quoteVolume24h, ticker, onOpenA
               onClick={() => setRequestedStyle(STYLE_CYCLE[(STYLE_CYCLE.indexOf(activeStyle) + 1) % STYLE_CYCLE.length])}
             >
               {CHART_STYLE_ICONS[activeStyle]}
-              <span className="mss-chart-tool-label">{t("chart.style", "Candle")}</span>
+              <span className="mss-chart-tool-label">{t("symbolSheet.style")}</span>
             </button>
           </div>
 
@@ -315,7 +315,7 @@ export function MobileSymbolSheet({ coin, theme, quoteVolume24h, ticker, onOpenA
             className="mss-trade-btn"
             onClick={onOpenFullChart}
           >
-            {t("chart.fullChart", "Full Chart")}
+            {t("symbolSheet.fullChart")}
           </button>
 
           <div className="mss-tabs">
@@ -326,14 +326,14 @@ export function MobileSymbolSheet({ coin, theme, quoteVolume24h, ticker, onOpenA
                 className={`mss-tab${tab === key ? " mss-tab--active" : ""}`}
                 onClick={() => setTab(key)}
               >
-                {t(`chart.tab${key.charAt(0).toUpperCase()}${key.slice(1)}`, key.charAt(0).toUpperCase() + key.slice(1))}
+                {t(`symbolSheet.tab${key.charAt(0).toUpperCase()}${key.slice(1)}`)}
               </button>
             ))}
           </div>
 
           {tab === "news" ? (
             newsLoading ? (
-              <div className="mss-tab-empty">{t("chart.loadingNews", "Loading news…")}</div>
+              <div className="mss-tab-empty">{t("symbolSheet.loadingNews")}</div>
             ) : newsToShow.length > 0 ? (
               <div className="mss-news-list">
                 {newsToShow.slice(0, 15).map((item) => (
@@ -353,33 +353,33 @@ export function MobileSymbolSheet({ coin, theme, quoteVolume24h, ticker, onOpenA
                 ))}
               </div>
             ) : (
-              <div className="mss-tab-empty">{t("chart.noNews", "No news right now")}</div>
+              <div className="mss-tab-empty">{t("symbolSheet.noNews")}</div>
             )
           ) : tab !== "overview" ? (
-            <div className="mss-tab-empty">{t("chart.comingSoon", "Coming soon")}</div>
+            <div className="mss-tab-empty">{t("symbolSheet.comingSoon")}</div>
           ) : (
             <>
-              <div className="mss-section-title">{t("chart.overview", "Overview")}</div>
+              <div className="mss-section-title">{t("symbolSheet.overview")}</div>
               <div className="fs-info-list">
                 <div className="fs-info-row">
-                  <span className="fs-info-label">{t("chart.allTimeHigh", "All time high")}</span>
+                  <span className="fs-info-label">{t("symbolSheet.allTimeHigh")}</span>
                   <span className="fs-info-value">{coinMeta?.athUSD != null ? formatLivePrice(coinMeta.athUSD) : "—"}</span>
                 </div>
                 <div className="fs-info-row">
-                  <span className="fs-info-label">{t("chart.circulatingSupply", "Circulating supply")}</span>
+                  <span className="fs-info-label">{t("symbolSheet.circulatingSupply")}</span>
                   <span className="fs-info-value">{coinMeta?.circulatingSupply != null ? `${formatCompactNumber(coinMeta.circulatingSupply)} ${coin}` : "—"}</span>
                 </div>
                 <div className="fs-info-row">
-                  <span className="fs-info-label">{t("chart.totalSupply", "Total supply")}</span>
+                  <span className="fs-info-label">{t("symbolSheet.totalSupply")}</span>
                   <span className="fs-info-value">{coinMeta?.totalSupply != null ? `${formatCompactNumber(coinMeta.totalSupply)} ${coin}` : "—"}</span>
                 </div>
                 <div className="fs-info-row">
-                  <span className="fs-info-label">{t("chart.openInterest", "Open interest")}</span>
+                  <span className="fs-info-label">{t("symbolSheet.openInterest")}</span>
                   <span className="fs-info-value">{oiUSD != null ? formatCompactVolume(oiUSD) : "—"}</span>
                 </div>
               </div>
 
-              <div className="mss-section-title">{t("chart.technicals", "Technicals")}</div>
+              <div className="mss-section-title">{t("symbolSheet.technicals")}</div>
               <div className="fs-gauge">
                 <svg width="160" height="92" viewBox="0 0 160 92">
                   <path d="M10,86 A70,70 0 0 1 23.4,44.8" fill="none" stroke="#ef4444" strokeWidth="14" strokeLinecap="round" />
@@ -402,61 +402,61 @@ export function MobileSymbolSheet({ coin, theme, quoteVolume24h, ticker, onOpenA
                 </div>
               </div>
 
-              <div className="mss-section-title">{t("chart.keyStats", "Key stats")}</div>
+              <div className="mss-section-title">{t("symbolSheet.keyStats")}</div>
               <div className="fs-info-list">
                 <div className="fs-info-row">
-                  <span className="fs-info-label">{t("chart.volume", "Volume")}</span>
+                  <span className="fs-info-label">{t("symbolSheet.volume")}</span>
                   <span className="fs-info-value">{quoteVolume24h !== undefined ? formatCompactVolume(quoteVolume24h) : "—"}</span>
                 </div>
                 <div className="fs-info-row">
-                  <span className="fs-info-label">{t("chart.avgVolume30d", "Average volume (30D)")}</span>
+                  <span className="fs-info-label">{t("symbolSheet.avgVolume30d")}</span>
                   <span className="fs-info-value">—</span>
                 </div>
                 <div className="fs-info-row">
-                  <span className="fs-info-label">{t("chart.marketCap", "Market capitalization")}</span>
+                  <span className="fs-info-label">{t("symbolSheet.marketCap")}</span>
                   <span className="fs-info-value">{coinMeta?.marketCapUSD != null ? formatCompactVolume(coinMeta.marketCapUSD) : "—"}</span>
                 </div>
                 <div className="fs-info-row">
-                  <span className="fs-info-label">{t("chart.fdv", "Fully diluted market cap")}</span>
+                  <span className="fs-info-label">{t("symbolSheet.fdv")}</span>
                   <span className="fs-info-value">{coinMeta?.fdvUSD != null ? formatCompactVolume(coinMeta.fdvUSD) : "—"}</span>
                 </div>
                 <div className="fs-info-row">
-                  <span className="fs-info-label">{t("chart.tradingVolume24h", "Trading volume 24h")}</span>
+                  <span className="fs-info-label">{t("symbolSheet.tradingVolume24h")}</span>
                   <span className="fs-info-value">{quoteVolume24h !== undefined ? formatCompactVolume(quoteVolume24h) : "—"}</span>
                 </div>
                 <div className="fs-info-row">
-                  <span className="fs-info-label">{t("chart.allTimeHigh", "All time high")}</span>
+                  <span className="fs-info-label">{t("symbolSheet.allTimeHigh")}</span>
                   <span className="fs-info-value">{coinMeta?.athUSD != null ? formatLivePrice(coinMeta.athUSD) : "—"}</span>
                 </div>
                 <div className="fs-info-row">
-                  <span className="fs-info-label">{t("chart.circulatingSupply", "Circulating supply")}</span>
+                  <span className="fs-info-label">{t("symbolSheet.circulatingSupply")}</span>
                   <span className="fs-info-value">{coinMeta?.circulatingSupply != null ? `${formatCompactNumber(coinMeta.circulatingSupply)} ${coin}` : "—"}</span>
                 </div>
                 <div className="fs-info-row">
-                  <span className="fs-info-label">{t("chart.totalSupply", "Total supply")}</span>
+                  <span className="fs-info-label">{t("symbolSheet.totalSupply")}</span>
                   <span className="fs-info-value">{coinMeta?.totalSupply != null ? `${formatCompactNumber(coinMeta.totalSupply)} ${coin}` : "—"}</span>
                 </div>
                 <div className="fs-info-row">
-                  <span className="fs-info-label">{t("chart.openInterest", "Open interest")}</span>
+                  <span className="fs-info-label">{t("symbolSheet.openInterest")}</span>
                   <span className="fs-info-value">{oiUSD != null ? formatCompactVolume(oiUSD) : "—"}</span>
                 </div>
               </div>
 
-              <div className="mss-section-title">{t("chart.about", "About")}</div>
+              <div className="mss-section-title">{t("symbolSheet.about")}</div>
               <div className="fs-info-list">
                 <div className="fs-info-row">
-                  <span className="fs-info-label">{t("chart.category", "Category")}</span>
+                  <span className="fs-info-label">{t("symbolSheet.category")}</span>
                   <span className="fs-info-value">{coinMeta?.category ?? "—"}</span>
                 </div>
                 {([
-                  ["chart.website", "Website", coinMeta?.homepage],
-                  ["chart.sourceCode", "Source Code", coinMeta?.sourceCode],
-                  ["chart.explorers", "Explorers", coinMeta?.explorer],
-                  ["chart.whitepaper", "Whitepaper", coinMeta?.whitepaper],
-                  ["chart.community", "Community", coinMeta?.subreddit],
-                ] as const).map(([key, fallback, url]) => (
+                  ["symbolSheet.website", coinMeta?.homepage],
+                  ["symbolSheet.sourceCode", coinMeta?.sourceCode],
+                  ["symbolSheet.explorers", coinMeta?.explorer],
+                  ["symbolSheet.whitepaper", coinMeta?.whitepaper],
+                  ["symbolSheet.community", coinMeta?.subreddit],
+                ] as const).map(([key, url]) => (
                   <div className="fs-info-row" key={key}>
-                    <span className="fs-info-label">{t(key, fallback)}</span>
+                    <span className="fs-info-label">{t(key)}</span>
                     {url ? (
                       <a className="fs-info-link" href={url} target="_blank" rel="noopener noreferrer">
                         {url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}

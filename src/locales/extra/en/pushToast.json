@@ -1,0 +1,22 @@
+{
+  "pushToast": {
+    "buySignal": "Buy Signal",
+    "sellSignal": "Sell Signal",
+    "watchlist": "Watchlist",
+    "watchlisted": "Watchlisted",
+    "muted": "Muted",
+    "mute": "Mute {{coin}}",
+    "confidenceFull": {
+      "high": "High confidence",
+      "medium": "Medium confidence",
+      "low": "Low confidence"
+    },
+    "confidence": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "disclaimer": "For informational purposes only. Not investment advice — all trading decisions are made at your own risk.",
+    "disclaimerShort": "Not investment advice. Trade at your own risk."
+  }
+}

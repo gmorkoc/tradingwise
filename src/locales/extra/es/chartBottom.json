@@ -1,0 +1,65 @@
+{
+  "chartBottom": {
+    "tabs": {
+      "toptraders": "Top Traders",
+      "positions": "Posiciones",
+      "history": "Historial",
+      "balance": "Saldo",
+      "performance": "Rendimiento"
+    },
+    "gate": {
+      "signInAccount": "Inicia sesión para ver tus posiciones, historial y rendimiento de paper trading.",
+      "signIn": "Inicia sesión",
+      "activateText": "Activa el paper trading para empezar a seguir posiciones aquí.",
+      "activate": "Activar paper trading",
+      "signInTopTraders": "Inicia sesión para ver qué tienen los top traders de Hyperliquid en {{coin}}."
+    },
+    "loading": "Cargando…",
+    "noPositions": "No hay posiciones abiertas.",
+    "noClosed": "Aún no hay operaciones cerradas.",
+    "col": {
+      "coin": "Moneda",
+      "side": "Lado",
+      "size": "Tamaño",
+      "entry": "Entrada",
+      "mark": "Mark",
+      "pnl": "PnL",
+      "margin": "Margen",
+      "liq": "Precio liq.",
+      "tpsl": "TP / SL",
+      "opened": "Abierta",
+      "exit": "Salida",
+      "realizedPnl": "PnL realizado",
+      "reason": "Motivo",
+      "closed": "Cerrada"
+    },
+    "spot": "Spot",
+    "long": "Long",
+    "short": "Short",
+    "closing": "Cerrando…",
+    "close": "Cerrar",
+    "reason": {
+      "manual": "Manual",
+      "take_profit": "Take profit",
+      "stop_loss": "Stop loss",
+      "liquidation": "Liquidada"
+    },
+    "stat": {
+      "equity": "Patrimonio",
+      "cash": "Efectivo",
+      "inPositions": "En posiciones (margen)",
+      "unrealizedPnl": "PnL no realizado",
+      "openPositions": "Posiciones abiertas",
+      "winRate": "Tasa de acierto",
+      "closedTrades": "Operaciones cerradas",
+      "wins": "Ganadas",
+      "losses": "Perdidas"
+    },
+    "filterAria": "Filtrar top traders",
+    "filter": {
+      "winners": "Ganadores",
+      "losers": "Perdedores",
+      "all": "Todos"
+    }
+  }
+}

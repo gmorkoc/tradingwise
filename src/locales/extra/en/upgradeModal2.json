@@ -1,0 +1,24 @@
+{
+  "upgradeModal2": {
+    "close": "Close",
+    "back": "Back",
+    "taglines": {
+      "free": "Explore the markets and practice trading.",
+      "pro": "AI insights and signals for active traders.",
+      "elite": "Unlimited AI plus your own trading agent."
+    },
+    "plus": "{{base}}, plus:",
+    "includes": "Includes:",
+    "planUnavailable": "This plan isn't available for purchase right now. Please try again shortly.",
+    "paymentFailed": "Payment failed — your plan was not upgraded.",
+    "paymentFailedSub": "Please update your payment method in billing settings and try again.",
+    "nothingToRestore": "Nothing to restore.",
+    "restored": "Purchases restored",
+    "restoredSub": "Your {{plan}} subscription is active again.",
+    "manageAppStore": "Manage in App Store",
+    "instantAccess": "Instant access",
+    "cancelInAppStore": "Cancel or change your plan any time in the App Store's subscription settings.",
+    "alreadySubscribed": "Already subscribed on this Apple ID?",
+    "restorePurchases": "Restore purchases"
+  }
+}

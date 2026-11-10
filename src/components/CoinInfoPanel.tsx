@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
+import i18n from "../i18n";
 import { CoinRow, COINS_MARKETS_URL, TTL, cgFetch, fmtBig, fmtPrice } from "./GlobalMarkets";
 import { signalOf } from "./MarketSignalTable";
 import { COINS, getCoinGeckoId, fetchFundingRate, getPositionData, type Ticker24h } from "../services/coinglass";
@@ -53,7 +55,7 @@ const dateStr = (s?: string | null) => {
   if (!s) return "";
   const d = new Date(s);
   const yrs = Math.floor((Date.now() - d.getTime()) / (365.25 * 864e5));
-  return `${d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "2-digit" })}${yrs > 0 ? ` (${yrs}y ago)` : ""}`;
+  return `${d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "2-digit" })}${yrs > 0 ? ` ${i18n.t("coinInfo.yearsAgo", { n: yrs, count: yrs })}` : ""}`;
 };
 
 const Info = ({ tip }: { tip: string }) => (
@@ -93,6 +95,7 @@ export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone 
   stats?: ReactNode;
 }) {
   const name = COINS.find((c) => c.symbol === coin)?.name ?? coin;
+  const { t } = useTranslation();
 
   // Top-250 list (shared cache with Markets) + global stats (dominance).
   const [rows, setRows] = useState<MarketRow[] | null>(null);
@@ -201,7 +204,7 @@ export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone 
   const share = async () => {
     const url = window.location.href;
     try {
-      if (navigator.share) await navigator.share({ title: `${name} (${coin}) on coinhintz`, url });
+      if (navigator.share) await navigator.share({ title: t("coinInfo.shareTitle", { name, coin }), url });
       else { await navigator.clipboard.writeText(url); setShared(true); window.setTimeout(() => setShared(false), 1600); }
     } catch { /* cancelled */ }
   };
@@ -213,8 +216,8 @@ export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone 
   const tags = (details?.categories ?? []).filter(Boolean);
 
   return (
-    <aside id={phone ? "coin-sec-stats" : undefined} className={`cip${phone ? " cip--phone" : ""}`} aria-label={`${name} overview`}>
-      {phone && <h2 className="cip-phone-h">{name} Statistics</h2>}
+    <aside id={phone ? "coin-sec-stats" : undefined} className={`cip${phone ? " cip--phone" : ""}`} aria-label={t("coinInfo.overviewAria", { name })}>
+      {phone && <h2 className="cip-phone-h">{t("coinInfo.statsTitle", { name })}</h2>}
       {/* Name row + star / share */}
       <div className="cip-top">
         {/* Coin name block: opens the coin picker. */}
@@ -223,8 +226,8 @@ export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone 
           className="cip-head"
           onClick={(e) => onPickCoin?.(e.currentTarget)}
           disabled={!onPickCoin}
-          aria-label={`${name} — switch coin`}
-          title="Switch coin"
+          aria-label={t("coinInfo.switchCoinAria", { name })}
+          title={t("coinInfo.switchCoin")}
         >
           <img
             className="cip-logo"
@@ -238,10 +241,10 @@ export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone 
           {onPickCoin && <span className="cip-head-chev" aria-hidden="true"><Down /></span>}
         </button>
         <div className="cip-actions">
-          <button type="button" className={`cip-act${watched ? " cip-act--on" : ""}`} onClick={toggleWatch} aria-pressed={watched} title={watched ? "Remove from watchlist" : "Add to watchlist"}>
+          <button type="button" className={`cip-act${watched ? " cip-act--on" : ""}`} onClick={toggleWatch} aria-pressed={watched} title={watched ? t("coinInfo.unwatch") : t("coinInfo.watch")}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill={watched ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true"><path d="M12 2l3 6.6 7 .7-5.3 4.7 1.6 7L12 17.3 5.7 21l1.6-7L2 9.3l7-.7z" /></svg>
           </button>
-          <button type="button" className="cip-act" onClick={share} title={shared ? "Link copied" : "Share"}>
+          <button type="button" className="cip-act" onClick={share} title={shared ? t("coinInfo.linkCopied") : t("coinInfo.share")}>
             {shared ? (
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
             ) : (
@@ -265,8 +268,8 @@ export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone 
             {/* One exchange's spot volume (the live ticker) — the stats card
                 below has the all-exchange total. */}
             {ticker?.quoteVolume != null && (
-              <div className="chart-bar-stat" title={`24h spot volume on Binance (${coin}/USDT). The stats card below shows all exchanges combined.`}>
-                <span className="chart-bar-stat-label">Binance 24h Vol</span>
+              <div className="chart-bar-stat" title={t("coinInfo.binanceVolTip", { coin })}>
+                <span className="chart-bar-stat-label">{t("coinInfo.binanceVol")}</span>
                 <span className="chart-bar-stat-value">{fmtUsd(ticker.quoteVolume)}</span>
               </div>
             )}
@@ -277,54 +280,54 @@ export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone 
       {/* Stats card: Spot | Derivatives */}
       <div className="cip-card">
         <div className="cip-seg" role="tablist">
-          <button type="button" role="tab" aria-selected={mode === "spot"} className={`cip-seg-btn${mode === "spot" ? " cip-seg-btn--on" : ""}`} onClick={() => setMode("spot")}>Spot</button>
-          <button type="button" role="tab" aria-selected={mode === "deriv"} className={`cip-seg-btn${mode === "deriv" ? " cip-seg-btn--on" : ""}`} onClick={() => setMode("deriv")}>Derivatives</button>
+          <button type="button" role="tab" aria-selected={mode === "spot"} className={`cip-seg-btn${mode === "spot" ? " cip-seg-btn--on" : ""}`} onClick={() => setMode("spot")}>{t("coinInfo.spot")}</button>
+          <button type="button" role="tab" aria-selected={mode === "deriv"} className={`cip-seg-btn${mode === "deriv" ? " cip-seg-btn--on" : ""}`} onClick={() => setMode("deriv")}>{t("coinInfo.derivatives")}</button>
         </div>
         {mode === "spot" ? (
           <div className="cip-grid">
-            <Cell full label="Market cap" tip="Price × circulating supply.">
+            <Cell full label={t("coinInfo.marketCap")} tip={t("coinInfo.marketCapTip")}>
               {fmtUsd(r?.market_cap)} <Chg v={r?.market_cap_change_percentage_24h} />
             </Cell>
-            <Cell label="Volume (24h)" tip="Total traded value across exchanges in the last 24 hours.">
+            <Cell label={t("coinInfo.volume24")} tip={t("coinInfo.volume24Tip")}>
               {fmtUsd(r?.total_volume ?? ticker?.quoteVolume)}
             </Cell>
-            <Cell label="Vol/Mkt Cap (24h)" tip="24h volume as a share of market cap — a liquidity gauge.">
+            <Cell label={t("coinInfo.volMcap")} tip={t("coinInfo.volMcapTip")}>
               {volMcap != null ? `${volMcap.toFixed(2)}%` : "—"}
             </Cell>
-            <Cell full label="FDV" tip="Fully diluted valuation: price × max (or total) supply.">
+            <Cell full label="FDV" tip={t("coinInfo.fdvTip")}>
               {fmtUsd(r?.fully_diluted_valuation)}
             </Cell>
-            <Cell label="Total supply" tip="Coins created so far, minus any burned.">
+            <Cell label={t("coinInfo.totalSupply")} tip={t("coinInfo.totalSupplyTip")}>
               {r?.total_supply ? `${fmtNum(r.total_supply)} ${coin}` : "—"}
             </Cell>
-            <Cell label="Max. supply" tip="The most coins that will ever exist.">
+            <Cell label={t("coinInfo.maxSupply")} tip={t("coinInfo.maxSupplyTip")}>
               {r?.max_supply ? `${fmtNum(r.max_supply)} ${coin}` : "∞"}
             </Cell>
-            <Cell label="Circulating supply" tip="Coins in public hands right now.">
+            <Cell label={t("coinInfo.circSupply")} tip={t("coinInfo.circSupplyTip")}>
               {r?.circulating_supply ? `${fmtNum(r.circulating_supply)} ${coin}` : "—"}
               {circPct != null && (
-                <svg className="cip-ring" width="14" height="14" viewBox="0 0 16 16" aria-label={`${circPct.toFixed(1)}% of max supply`}>
+                <svg className="cip-ring" width="14" height="14" viewBox="0 0 16 16" aria-label={t("coinInfo.ofMaxSupply", { pct: circPct.toFixed(1) })}>
                   <circle cx="8" cy="8" r="6" className="cip-ring-t" />
                   <circle cx="8" cy="8" r="6" className="cip-ring-f" strokeDasharray={`${((circPct / 100) * 37.7).toFixed(1)} 37.7`} transform="rotate(-90 8 8)" />
                 </svg>
               )}
             </Cell>
-            <Cell label="Market dominance" tip="Share of the total crypto market cap.">
+            <Cell label={t("coinInfo.dominance")} tip={t("coinInfo.dominanceTip")}>
               {dominance != null ? `${dominance.toFixed(2)}%` : "—"}
             </Cell>
           </div>
         ) : (
           <div className="cip-grid">
-            <Cell full label="Funding rate" tip="Binance perpetual funding (8h). Positive = longs pay shorts.">
+            <Cell full label={t("coinInfo.funding")} tip={t("coinInfo.fundingTip")}>
               {deriv ? (deriv.funding != null ? <span className={deriv.funding >= 0 ? "cip-up" : "cip-dn"}>{deriv.funding.toFixed(4)}%</span> : "—") : <span className="cip-skel" />}
             </Cell>
-            <Cell label="Accounts long" tip="Share of all Binance futures accounts that are long.">
+            <Cell label={t("coinInfo.accountsLong")} tip={t("coinInfo.accountsLongTip")}>
               {deriv ? (deriv.retail != null ? `${deriv.retail.toFixed(1)}%` : "—") : <span className="cip-skel" />}
             </Cell>
-            <Cell label="Top traders long" tip="Share of Binance's top trader accounts that are long.">
+            <Cell label={t("coinInfo.topLong")} tip={t("coinInfo.topLongTip")}>
               {deriv ? (deriv.top != null ? `${deriv.top.toFixed(1)}%` : "—") : <span className="cip-skel" />}
             </Cell>
-            <Cell full label="Volume (24h)" tip="Spot volume across exchanges.">
+            <Cell full label={t("coinInfo.volume24")} tip={t("coinInfo.spotVolTip")}>
               {fmtUsd(r?.total_volume ?? ticker?.quoteVolume)}
             </Cell>
           </div>
@@ -333,10 +336,10 @@ export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone 
 
       {/* Signal score (in place of CMC's Profile Score) */}
       <div className={`cip-score cip-score--${sig?.tone ?? "none"}`}>
-        <span className="cip-score-k">Signal score <Info tip="Technicals read (moving averages + oscillators) on 7 days of hourly prices. 0 = strong sell, 100 = strong buy." /></span>
+        <span className="cip-score-k">{t("coinInfo.signalScore")} <Info tip={t("coinInfo.signalScoreTip")} /></span>
         <span className="cip-score-v">
           <span className="cip-score-bar" aria-hidden="true"><i style={{ width: `${sig?.score ?? 0}%` }} /></span>
-          <b>{sig ? `${sig.word} ${sig.score}` : "—"}</b>
+          <b>{sig ? `${t(`coinInfo.sigWord.${sig.tone}`)} ${sig.score}` : "—"}</b>
         </span>
       </div>
 
@@ -344,7 +347,7 @@ export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone 
       {onTrade && (
         <button type="button" className="cip-cta" onClick={onTrade}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8" /><path d="M15 7h6v6" /></svg>
-          Paper trade {coin}
+          {t("coinInfo.paperTrade", { coin })}
         </button>
       )}
 
@@ -353,18 +356,18 @@ export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone 
         <div className="cip-rows">
           {(site || L?.whitepaper) && (
             <div className="cip-row">
-              <span className="cip-row-k">Website</span>
+              <span className="cip-row-k">{t("coinInfo.website")}</span>
               <span className="cip-row-v">
                 {site && (
                   <a className="cip-chip" href={site} {...ext}>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20" /></svg>
-                    Website
+                    {t("coinInfo.website")}
                   </a>
                 )}
                 {L?.whitepaper && (
                   <a className="cip-chip" href={L.whitepaper} {...ext}>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6M8 13h8M8 17h5" /></svg>
-                    Whitepaper
+                    {t("coinInfo.whitepaper")}
                   </a>
                 )}
               </span>
@@ -372,7 +375,7 @@ export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone 
           )}
           {(L?.twitter_screen_name || L?.subreddit_url || github) && (
             <div className="cip-row">
-              <span className="cip-row-k">Socials</span>
+              <span className="cip-row-k">{t("coinInfo.socials")}</span>
               <span className="cip-row-v">
                 {L?.twitter_screen_name && (
                   <a className="cip-soc" href={`https://x.com/${L.twitter_screen_name}`} {...ext} aria-label="X">
@@ -394,12 +397,12 @@ export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone 
           )}
           {explorers.length > 0 && (
             <div className="cip-row cip-row--top">
-              <span className="cip-row-k">Explorers</span>
+              <span className="cip-row-k">{t("coinInfo.explorers")}</span>
               <span className="cip-row-v cip-row-v--col">
                 <span className="cip-row-v">
                   <a className="cip-chip" href={explorers[0]} {...ext}>{host(explorers[0])}</a>
                   {explorers.length > 1 && (
-                    <button type="button" className={`cip-more-btn${explorersOpen ? " cip-more-btn--open" : ""}`} onClick={() => setExplorersOpen((v) => !v)} aria-expanded={explorersOpen} aria-label="More explorers">
+                    <button type="button" className={`cip-more-btn${explorersOpen ? " cip-more-btn--open" : ""}`} onClick={() => setExplorersOpen((v) => !v)} aria-expanded={explorersOpen} aria-label={t("coinInfo.moreExplorers")}>
                       <Down />
                     </button>
                   )}
@@ -415,7 +418,7 @@ export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone 
 
       {/* Converter */}
       <section className="cip-sec">
-        <h3>{coin} to USD converter</h3>
+        <h3>{t("coinInfo.converter", { coin })}</h3>
         <div className="cip-conv">
           <label className="cip-conv-row">
             <span>{coin}</span>
@@ -427,7 +430,7 @@ export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone 
                 const a = parseFloat(e.target.value);
                 setUsd(price != null && isFinite(a) ? String(+(a * price).toFixed(2)) : "");
               }}
-              aria-label={`${coin} amount`}
+              aria-label={t("coinInfo.amountAria", { coin })}
             />
           </label>
           <label className="cip-conv-row">
@@ -440,7 +443,7 @@ export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone 
                 const u = parseFloat(e.target.value);
                 setAmt(price && isFinite(u) ? String(+(u / price).toPrecision(8)) : "");
               }}
-              aria-label="USD amount"
+              aria-label={t("coinInfo.amountAria", { coin: "USD" })}
             />
           </label>
         </div>
@@ -449,7 +452,7 @@ export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone 
       {/* Price performance */}
       <section className="cip-sec">
         <h3>
-          Price performance
+          {t("coinInfo.pricePerf")}
           <div className="cip-dd" ref={perfRef}>
             <button type="button" className="cip-dd-btn" onClick={() => setPerfOpen((v) => !v)} aria-expanded={perfOpen}>
               {perf} <Down />
@@ -466,13 +469,13 @@ export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone 
           </div>
         </h3>
         <div className="cip-range">
-          <div><span className="cip-k">Low</span><strong>{lo != null ? fmtPrice(lo) : "—"}</strong></div>
-          <div className="cip-range-r"><span className="cip-k">High</span><strong>{hi != null ? fmtPrice(hi) : "—"}</strong></div>
+          <div><span className="cip-k">{t("coinInfo.low")}</span><strong>{lo != null ? fmtPrice(lo) : "—"}</strong></div>
+          <div className="cip-range-r"><span className="cip-k">{t("coinInfo.high")}</span><strong>{hi != null ? fmtPrice(hi) : "—"}</strong></div>
         </div>
         <span className="cip-range-bar" aria-hidden="true">{rangePos != null && <i style={{ left: `${rangePos}%` }} />}</span>
         <div className="cip-rec">
           <div>
-            <span className="cip-rec-t">All-time high</span>
+            <span className="cip-rec-t">{t("coinInfo.ath")}</span>
             <span className="cip-rec-d">{dateStr(r?.ath_date)}</span>
           </div>
           <div className="cip-rec-r">
@@ -482,7 +485,7 @@ export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone 
         </div>
         <div className="cip-rec">
           <div>
-            <span className="cip-rec-t">All-time low</span>
+            <span className="cip-rec-t">{t("coinInfo.atl")}</span>
             <span className="cip-rec-d">{dateStr(r?.atl_date)}</span>
           </div>
           <div className="cip-rec-r">
@@ -495,13 +498,13 @@ export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone 
       {/* Tags */}
       {tags.length > 0 && (
         <section className="cip-sec">
-          <h3>Tags</h3>
+          <h3>{t("coinInfo.tags")}</h3>
           <div className="cip-tags">
             {(allTags ? tags : tags.slice(0, 3)).map((t) => <span key={t} className="cip-tag">{t}</span>)}
           </div>
           {tags.length > 3 && (
             <button type="button" className="cip-link" onClick={() => setAllTags((v) => !v)}>
-              {allTags ? "Show less" : "Show all"}
+              {allTags ? t("coinInfo.showLess") : t("coinInfo.showAll")}
             </button>
           )}
         </section>

@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import i18n from "../i18n";
 import { supabase } from "../services/supabase";
 import { fmtPrice } from "./GlobalMarkets";
 import "../styles/GlobalMarkets.css";
@@ -58,15 +60,16 @@ function shortAddr(a: string) {
 function ago(iso: string | undefined): string {
   if (!iso) return "";
   const s = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 1000));
-  if (s < 60) return "just now";
+  if (s < 60) return i18n.t("topTraders.justNow");
   const m = Math.round(s / 60);
-  return m < 60 ? `${m}m ago` : `${Math.round(m / 60)}h ago`;
+  return m < 60 ? i18n.t("topTraders.agoM", { n: m }) : i18n.t("topTraders.agoH", { n: Math.round(m / 60) });
 }
 
 export function TopTradersTable({ coin, filter }: { coin: string; filter: TopTradersFilter }) {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [error, setError] = useState(false);
   const [page, setPage] = useState(1);
+  const { t } = useTranslation();
 
   useEffect(() => {
     let alive = true;
@@ -127,14 +130,14 @@ export function TopTradersTable({ coin, filter }: { coin: string; filter: TopTra
           </colgroup>
           <thead>
             <tr>
-              <th className="gm-th">Chart</th>
-              <SortTh label="Trader" k="trader" sort={sort} />
-              <SortTh className="gm-th gm-th--r" label="Unrealized PnL" k="pnl" sort={sort} />
-              <SortTh className="gm-th gm-th--r" label="Position Value" k="value" sort={sort} />
-              <SortTh className="gm-th gm-th--r" label="Entry" k="entry" sort={sort} />
-              <SortTh className="gm-th gm-th--r" label="Liquidation" k="liq" sort={sort} title="Sorts by distance to liquidation" />
-              <SortTh className="gm-th gm-th--r" label="Funding" k="funding" sort={sort} />
-              <SortTh className="gm-th gm-th--r" label="Account Value" k="acct" sort={sort} />
+              <th className="gm-th">{t("topTraders.chart")}</th>
+              <SortTh label={t("topTraders.trader")} k="trader" sort={sort} />
+              <SortTh className="gm-th gm-th--r" label={t("topTraders.pnl")} k="pnl" sort={sort} />
+              <SortTh className="gm-th gm-th--r" label={t("topTraders.value")} k="value" sort={sort} />
+              <SortTh className="gm-th gm-th--r" label={t("topTraders.entry")} k="entry" sort={sort} />
+              <SortTh className="gm-th gm-th--r" label={t("topTraders.liq")} k="liq" sort={sort} title={t("topTraders.liqSortTip")} />
+              <SortTh className="gm-th gm-th--r" label={t("topTraders.funding")} k="funding" sort={sort} />
+              <SortTh className="gm-th gm-th--r" label={t("topTraders.acct")} k="acct" sort={sort} />
             </tr>
           </thead>
           <tbody>
@@ -150,7 +153,7 @@ export function TopTradersTable({ coin, filter }: { coin: string; filter: TopTra
                       href={`https://app.hyperliquid.xyz/explorer/address/${r.address}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      title="Open this trader on Hyperliquid"
+                      title={t("topTraders.openOnHl")}
                     >
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <rect x="3" y="3" width="18" height="18" rx="3" />
@@ -185,22 +188,24 @@ export function TopTradersTable({ coin, filter }: { coin: string; filter: TopTra
             })}
           </tbody>
         </table>
-        {rows === null && <div className="cbp-empty">Loading top traders…</div>}
+        {rows === null && <div className="cbp-empty">{t("topTraders.loading")}</div>}
         {rows !== null && shown.length === 0 && (
           <div className="cbp-empty">
             {error
-              ? "Top traders data isn't available yet."
-              : `No ${filter === "all" ? "" : filter === "winners" ? "winning " : "losing "}top-trader positions on ${coin} right now.`}
+              ? t("topTraders.unavailable")
+              : t(`topTraders.none.${filter}`, { coin })}
           </div>
         )}
       </div>
       <div className="gm-pagination">
         <span className="gm-pagination-info">
-          {shown.length ? `${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, shown.length)} of ${shown.length}` : "0 of 0"}
-          {updated && <span className="ttt-foot-inline"> · Hyperliquid top traders by 30-day PnL · updated {ago(updated)}</span>}
+          {shown.length
+            ? t("topTraders.range", { from: (page - 1) * PAGE_SIZE + 1, to: Math.min(page * PAGE_SIZE, shown.length), total: shown.length })
+            : t("topTraders.rangeEmpty")}
+          {updated && <span className="ttt-foot-inline"> · {t("topTraders.foot", { ago: ago(updated) })}</span>}
         </span>
         <div className="gm-pagination-controls">
-          <button type="button" className="gm-page-btn" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} aria-label="Previous page">‹</button>
+          <button type="button" className="gm-page-btn" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} aria-label={t("topTraders.prev")}>‹</button>
           {Array.from({ length: totalPages }, (_, i) => i + 1)
             .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
             .map((p, i, arr) => (
@@ -209,7 +214,7 @@ export function TopTradersTable({ coin, filter }: { coin: string; filter: TopTra
                 <button type="button" className={`gm-page-btn${p === page ? " gm-page-btn--active" : ""}`} onClick={() => setPage(p)}>{p}</button>
               </span>
             ))}
-          <button type="button" className="gm-page-btn" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))} aria-label="Next page">›</button>
+          <button type="button" className="gm-page-btn" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))} aria-label={t("topTraders.next")}>›</button>
         </div>
       </div>
     </div>

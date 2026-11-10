@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom";
+import { useTranslation } from "react-i18next";
 import type { BtcMoveAlert } from "../hooks/useBtcMoveAlert";
 import type { WhaleToastAlert } from "../hooks/useWhaleToast";
 import { formatLivePrice } from "./PriceChart";
@@ -23,6 +24,7 @@ interface Props {
 }
 
 export function BtcMoveToast({ alert, onDismiss, onClose }: Props) {
+  const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
   const [progress, setProgress] = useState(100);
   const [dragY, setDragY] = useState(0);
@@ -144,9 +146,9 @@ export function BtcMoveToast({ alert, onDismiss, onClose }: Props) {
         {whale ? (
           <div className="btc-toast-body">
             <div className="btc-toast-label">
-              <span className="btc-toast-live"><span className="btc-toast-live-dot" />LIVE</span>
+              <span className="btc-toast-live"><span className="btc-toast-live-dot" />{t("btcMoveToast.live")}</span>
               <span className="btc-toast-tag">
-                WHALE ALERT{whale.sentiment !== "neutral" ? ` · ${whale.sentiment === "bullish" ? "BULLISH" : "BEARISH"}` : ""}
+                {t("btcMoveToast.whaleAlert")}{whale.sentiment !== "neutral" ? ` · ${whale.sentiment === "bullish" ? t("btcMoveToast.bullish") : t("btcMoveToast.bearish")}` : ""}
               </span>
             </div>
             <div className="btc-toast-price">
@@ -157,12 +159,12 @@ export function BtcMoveToast({ alert, onDismiss, onClose }: Props) {
         ) : (
           <div className="btc-toast-body">
             <div className="btc-toast-label">
-              <span className="btc-toast-live"><span className="btc-toast-live-dot" />LIVE</span>
-              <span className="btc-toast-tag">{move!.coin} PRICE ALERT</span>
+              <span className="btc-toast-live"><span className="btc-toast-live-dot" />{t("btcMoveToast.live")}</span>
+              <span className="btc-toast-tag">{t("btcMoveToast.priceAlert", { coin: move!.coin })}</span>
             </div>
             <div className="btc-toast-price">${fmtPrice}</div>
             <div className="btc-toast-change">
-              {isUp ? "▲" : "▼"} {isUp ? "+" : "−"}${fmtChange} ({move!.changePct.toFixed(2)}%) in last move
+              {isUp ? "▲" : "▼"} {t("btcMoveToast.inLastMove", { change: `${isUp ? "+" : "−"}$${fmtChange}`, pct: move!.changePct.toFixed(2) })}
             </div>
           </div>
         )}
@@ -174,7 +176,7 @@ export function BtcMoveToast({ alert, onDismiss, onClose }: Props) {
             e.stopPropagation();
             if (onClose) { setVisible(false); onClose(); } else dismiss();
           }}
-          aria-label="Dismiss"
+          aria-label={t("btcMoveToast.dismiss")}
         >✕</button>
       </div>
 

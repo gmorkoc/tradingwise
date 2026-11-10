@@ -1,0 +1,6 @@
+{
+  "paywallPromo": {
+    "ariaLabel": "{{feature}} — upgrade",
+    "eyebrow": "{{feature}} is part of {{plan}}"
+  }
+}

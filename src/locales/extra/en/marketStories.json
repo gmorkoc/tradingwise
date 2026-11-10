@@ -1,0 +1,23 @@
+{
+  "marketStories": {
+    "eyebrow": { "usFed": "US Fed", "cryptoOdds": "Crypto odds" },
+    "live": "Live",
+    "yes": "Yes",
+    "readMore": "Read more",
+    "volume": "{{value}} volume",
+    "volume24h": "{{value}} 24h volume",
+    "movers": {
+      "topGainer": "Top gainer · 24h",
+      "topLoser": "Top loser · 24h",
+      "gainer": "Gainer · 24h",
+      "loser": "Loser · 24h"
+    },
+    "ariaStories": "Market stories",
+    "previous": "Previous",
+    "next": "Next",
+    "carouselPosition": "Carousel position",
+    "goTo": "Go to {{n}} of {{total}}",
+    "autoPlay": "Auto-play",
+    "ago": { "m": "{{n}}m", "h": "{{n}}h", "d": "{{n}}d" }
+  }
+}

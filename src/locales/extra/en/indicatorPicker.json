@@ -1,0 +1,113 @@
+{
+  "indicatorPicker": {
+    "title": "Indicators",
+    "close": "Close",
+    "back": "Back",
+    "search": "Search",
+    "searchAria": "Search indicators",
+    "clear": "Clear",
+    "personal": "Personal",
+    "favorites": "Favorites",
+    "onChart": "On chart",
+    "buildWithAi": "Build with AI",
+    "buildNew": "Build a new one with AI",
+    "buildSub": "Describe an indicator — the AI builds it for your chart",
+    "builtIn": "Built-in",
+    "allIndicators": "All indicators",
+    "yourIndicators": "Your indicators",
+    "resultsFor": "Results for “{{q}}”",
+    "clearAll": "Clear all",
+    "clearAllCount": "Clear all ({{count}})",
+    "saved_one": "{{count}} saved",
+    "saved_other": "{{count}} saved",
+    "nOn": "{{count}} on",
+    "nIndicators_one": "{{count}} indicator",
+    "nIndicators_other": "{{count}} indicators",
+    "edit": "Edit",
+    "editWithAi": "Edit with AI",
+    "delete": "Delete",
+    "deleteConfirm": "Delete “{{name}}”?",
+    "addFav": "Add to favorites",
+    "removeFav": "Remove from favorites",
+    "kind": {
+      "all": "All",
+      "overlay": "On price",
+      "pane": "Own panel"
+    },
+    "col": {
+      "name": "Name",
+      "type": "Type",
+      "category": "Category"
+    },
+    "empty": {
+      "noMatch": "No indicators match “{{q}}”.",
+      "fav": "Star (★) an indicator to keep it here.",
+      "on": "Nothing on the chart yet.",
+      "mine": "No AI indicators yet — use Build with AI to make one.",
+      "nothing": "Nothing here."
+    },
+    "mineAbout": {
+      "title": "What are My indicators?",
+      "about": "Indicators you built by describing them to the AI. They work on every chart like the built-in ones. Use Edit to change one in plain words, or delete it."
+    },
+    "about": {
+      "all": {
+        "title": "How do indicators work?",
+        "about": "Every indicator available on this chart. Click a row to add it, click again to remove it. Overlays draw on top of the price; panel indicators get their own space under the chart. Star the ones you use most to find them under Favorites."
+      },
+      "fav": {
+        "title": "What are Favorites?",
+        "about": "Your starred indicators, kept here for quick access. Click the ☆ next to any indicator to add it."
+      },
+      "on": {
+        "title": "What's on your chart?",
+        "about": "Everything currently drawn on this chart. Click a row to remove it, or use Clear all."
+      }
+    },
+    "cats": {
+      "movingAverages": {
+        "name": "Moving Averages",
+        "question": "What are moving averages?",
+        "about": "Smooth out price to show the underlying trend. Price above a rising average leans bullish, below a falling one bearish. Faster averages (EMA 9/20) react quickly to turns; slower ones (100/200) act as long-term support and resistance. Crossovers between a fast and slow average are classic trend-change signals."
+      },
+      "trend": {
+        "name": "Trend",
+        "question": "What do trend indicators show?",
+        "about": "Tell you which way the market is heading and how strong that move is. Use them to stay with the trend, spot when it's weakening, and place trailing stops — e.g. Parabolic SAR dots flip sides when the trend turns, and Ichimoku's cloud shows trend, momentum and support in one view."
+      },
+      "momentum": {
+        "name": "Momentum",
+        "question": "What is momentum?",
+        "about": "Measure how fast price is moving and whether that push is speeding up or fading. They flag overbought and oversold conditions, and divergences — price making a new high while momentum doesn't — often warn of a reversal before it shows up in price."
+      },
+      "oscillators": {
+        "name": "Oscillators",
+        "question": "How do oscillators work?",
+        "about": "Swing between fixed levels or around zero, each in its own panel. Extreme readings point to stretched moves likely to snap back; crossing the zero line confirms a shift in direction. Best in ranging markets, and as confirmation alongside a trend tool."
+      },
+      "volatility": {
+        "name": "Volatility",
+        "question": "What does volatility tell you?",
+        "about": "Show how much price is moving, not which way. Bands and channels widen in wild markets and tighten before big moves (a 'squeeze'). ATR-based tools help size stops and positions so a normal wiggle doesn't knock you out of a trade."
+      },
+      "volume": {
+        "name": "Volume",
+        "question": "Why does volume matter?",
+        "about": "Look at the money behind each move. Rising price on rising volume is a move with conviction; price rising on falling volume is suspect. VWAP marks the average price paid today — a fair-value line many traders buy and sell around."
+      },
+      "levelsZones": {
+        "name": "Levels & Zones",
+        "question": "What are levels & zones?",
+        "about": "Draw the prices that matter on the chart: support and resistance, Fibonacci retracements, the day's high and low, and CME gaps. These are where price often reacts — useful for entries, targets and stop placement."
+      },
+      "smartMoney": {
+        "name": "Smart Money",
+        "question": "What is Smart Money?",
+        "about": "Concepts used to track where large players likely bought or sold: order blocks, fair-value gaps, breaks of structure and retests, plus candlestick patterns and Wyckoff phases. They highlight zones price tends to revisit before continuing."
+      },
+      "mine": {
+        "name": "My indicators"
+      }
+    }
+  }
+}

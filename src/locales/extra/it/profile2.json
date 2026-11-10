@@ -1,0 +1,34 @@
+{
+  "profile2": {
+    "nav": {
+      "overview": "Panoramica",
+      "profileInfo": "Informazioni profilo",
+      "security": "Sicurezza",
+      "blocked": "Utenti bloccati",
+      "notifications": "Notifiche",
+      "activity": "Attività",
+      "danger": "Zona pericolosa"
+    },
+    "close": "Chiudi",
+    "planUsage": "Piano e utilizzo",
+    "showPassword": "Mostra password",
+    "hidePassword": "Nascondi password",
+    "blocked": {
+      "title": "Utenti bloccati",
+      "sub": "Gli account bloccati non compaiono nel feed della Chat live e non puoi taggarli.",
+      "empty": "Non hai bloccato nessuno."
+    },
+    "whaleActivity": {
+      "label": "Attività delle balene",
+      "desc": "Un banner quando un grande trasferimento di BTC si muove on-chain, mentre sei nell'app."
+    },
+    "strategyAlerts": {
+      "label": "Avvisi strategia",
+      "desc": "Una notifica push ogni volta che una delle tue strategie attive scatta."
+    },
+    "deleteAccount": "Elimina account",
+    "deleteDesc": "Rimuovi definitivamente il tuo account e tutti i dati.",
+    "deleteFailed": "Impossibile eliminare l'account",
+    "notAuthenticated": "Accesso non effettuato"
+  }
+}

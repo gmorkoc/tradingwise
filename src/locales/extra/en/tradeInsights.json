@@ -1,0 +1,36 @@
+{
+  "tradeInsights": {
+    "aria": "{{coin}} insights",
+    "agoShort": { "m": "{{n}}m", "h": "{{n}}h", "d": "{{n}}d" },
+    "crowd": { "long": "longs crowded", "short": "shorts crowded", "balanced": "balanced positioning" },
+    "sigWord": { "bull": "Long", "bear": "Short", "neutral": "Neutral" },
+    "techRead": "Technicals read {{word}} {{score}}/100",
+    "techLoading": "Technicals still loading",
+    "maAboveBelow": " — price is above {{above}} and below {{below}}",
+    "maAbove": " — price is above {{above}}",
+    "maBelow": " — price is below {{below}}",
+    "crowdClause": ", {{crowd}}",
+    "structLine": "{{tech}}{{ma}}{{crowd}}.",
+    "structUpper": { "bull": "BULLISH STRUCTURE", "bear": "BEARISH STRUCTURE", "mixed": "MIXED STRUCTURE" },
+    "structTitle": { "bull": "Bullish structure", "bear": "Bearish structure", "mixed": "Mixed structure" },
+    "hide": "Hide",
+    "show": "Show",
+    "updated": "Live Hintz · updated {{ago}} ago",
+    "range30": "{{lo}}–{{hi}} in 30 days",
+    "rsi": {
+      "overbought": "RSI {{v}} — overbought, stretched to the upside.",
+      "oversold": "RSI {{v}} — oversold, stretched to the downside.",
+      "up": "RSI {{v}} — momentum leaning up.",
+      "down": "RSI {{v}} — momentum leaning down."
+    },
+    "rangeFallback": "Monthly range and momentum.",
+    "funding": "Funding",
+    "longShare": "{{pct}}% of futures accounts are long — {{crowd}}.",
+    "futuresFallback": "Futures positioning.",
+    "whatsMoving": "What's moving it",
+    "nfa": "Not financial advice",
+    "poweredBy": "Powered by coinhintz signals",
+    "askPrompt": "Give me a full analysis of {{name}} ({{coin}}) right now: trend, key levels, derivatives positioning and what to watch.",
+    "fullAnalysis": "Full Analysis"
+  }
+}

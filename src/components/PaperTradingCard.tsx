@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 import { CoinSymbol, fetchLivePrice } from "../services/coinglass";
 import {
@@ -127,6 +128,7 @@ const PTC_HERO_LINE = [
   [248, 20], [266, 23], [284, 12], [300, 14],
 ];
 function PtcHero() {
+  const { t } = useTranslation();
   const [balance, setBalance] = useState(() =>
     typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
       ? PTC_HERO_BALANCE
@@ -158,11 +160,11 @@ function PtcHero() {
       <div className="ptc-hero-top">
         <span className="ptc-hero-pill">
           <span className="ptc-hero-pill-dot" />
-          100% risk free
+          {t("paperTrading.hero.riskFree")}
         </span>
-        <span className="ptc-hero-pill ptc-hero-pill--ghost">Live prices</span>
+        <span className="ptc-hero-pill ptc-hero-pill--ghost">{t("paperTrading.hero.livePrices")}</span>
       </div>
-      <div className="ptc-hero-balance-label">Virtual balance</div>
+      <div className="ptc-hero-balance-label">{t("paperTrading.hero.virtualBalance")}</div>
       <div className="ptc-hero-balance">
         ${balance.toLocaleString("en-US")}
         <span className="ptc-hero-balance-cents">.00</span>
@@ -185,37 +187,38 @@ function PtcHero() {
         </svg>
         <span className="ptc-hero-end-dot" style={{ left: `${(endX / 300) * 100}%`, top: `${(endY / 90) * 100}%` }} />
         <div className="ptc-hero-chip ptc-hero-chip--a">
-          <span className="ptc-hero-chip-side ptc-hero-chip-side--long">LONG</span>
+          <span className="ptc-hero-chip-side ptc-hero-chip-side--long">{t("paperTrading.longUpper")}</span>
           BTC 10x
           <b>+$2,418</b>
         </div>
         <div className="ptc-hero-chip ptc-hero-chip--b">
-          <span className="ptc-hero-chip-side ptc-hero-chip-side--short">SHORT</span>
+          <span className="ptc-hero-chip-side ptc-hero-chip-side--short">{t("paperTrading.shortUpper")}</span>
           ETH 5x
           <b>+$640</b>
         </div>
       </div>
       <div className="ptc-hero-feats">
-        <span>Spot &amp; futures</span>
-        <span>Up to 20x</span>
-        <span>Reset anytime</span>
+        <span>{t("paperTrading.hero.spotFutures")}</span>
+        <span>{t("paperTrading.hero.upTo", { lev: 20 })}</span>
+        <span>{t("paperTrading.hero.resetAnytime")}</span>
       </div>
     </div>
   );
 }
 
 function PtcPromo({ cta }: { cta: React.ReactNode }) {
+  const { t } = useTranslation();
   return (
     <>
       <PtcHero />
-      <p className="ptc-activate-title">How Paper Trading works</p>
-      <p className="ptc-activate-kicker">Real prices, zero real risk — $100,000 to start.</p>
+      <p className="ptc-activate-title">{t("paperTrading.promo.title")}</p>
+      <p className="ptc-activate-kicker">{t("paperTrading.promo.kicker")}</p>
       <ol className="ptc-activate-steps">
         {[
           {
             n: 1,
-            label: "Create your free account",
-            sub: "Sign up in seconds, no credit card needed — your practice account is ready instantly.",
+            label: t("paperTrading.promo.step1"),
+            sub: t("paperTrading.promo.step1Sub"),
             icon: (
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="9" cy="7" r="4" />
@@ -226,8 +229,8 @@ function PtcPromo({ cta }: { cta: React.ReactNode }) {
           },
           {
             n: 2,
-            label: "Get $100,000 in virtual cash",
-            sub: "A practice balance you can reset anytime to test sizing and entries like a real account.",
+            label: t("paperTrading.promo.step2"),
+            sub: t("paperTrading.promo.step2Sub"),
             icon: (
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 12V7H5a2 2 0 010-4h14v4" />
@@ -238,8 +241,8 @@ function PtcPromo({ cta }: { cta: React.ReactNode }) {
           },
           {
             n: 3,
-            label: "Trade spot & futures, live",
-            sub: "Live market prices. Go long or short with up to 20x leverage and TP/SL — zero real risk.",
+            label: t("paperTrading.promo.step3"),
+            sub: t("paperTrading.promo.step3Sub"),
             icon: (
               <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="6" y1="3" x2="6" y2="9" />
@@ -256,8 +259,8 @@ function PtcPromo({ cta }: { cta: React.ReactNode }) {
           },
           {
             n: 4,
-            label: "Live Hintz on every coin",
-            sub: "Each coin's structure, momentum and the headlines moving it — updated live beside your trades.",
+            label: t("paperTrading.promo.step4"),
+            sub: t("paperTrading.promo.step4Sub"),
             icon: (
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 2l2.4 5.6L20 10l-5.6 2.4L12 18l-2.4-5.6L4 10l5.6-2.4z" />
@@ -279,8 +282,7 @@ function PtcPromo({ cta }: { cta: React.ReactNode }) {
         ))}
       </ol>
       <p className="ptc-activate-sub">
-        Simulated money, simulated trades — not financial advice, and coinhintz isn't responsible for any
-        losses, simulated or otherwise. We'll only ask you to accept this once.
+        {t("paperTrading.promo.disclaimer")}
       </p>
       {cta}
     </>
@@ -290,35 +292,37 @@ function PtcPromo({ cta }: { cta: React.ReactNode }) {
 // Small ⓘ next to each label in the card, with a plain-language
 // explanation on hover (HoverTip — instant, portaled, never clipped).
 const PTC_TIPS: Record<string, string> = {
-  "Cash": "Virtual money you have available to open new trades.",
-  "Open": "How many paper positions you currently have open.",
-  "Realized P&L": "Total profit or loss locked in from positions you've already closed.",
-  "Side": "Long profits when price goes up; short profits when it goes down. Futures also show the leverage used.",
-  "Size": "How much of the coin this position holds.",
-  "Entry": "The average price you opened this position at.",
-  "Current": "The live market price right now \u2014 your P&L is based on this.",
-  "Liquidation": "If price reaches this level, the position is closed automatically and its margin is lost.",
-  "Take Profit": "Price at which the position closes automatically to lock in profit.",
-  "Stop Loss": "Price at which the position closes automatically to limit losses.",
-  "Opened": "When this position was opened or last changed.",
-  "Margin": "The cash set aside from your balance to back this futures position.",
-  "Position Size": "The full size of the position \u2014 your margin multiplied by the leverage.",
-  "Est. Liquidation": "Roughly where the position would be liquidated at this leverage. Higher leverage puts it closer to the entry price.",
-  "Profit at TP": "What you'd make if price reaches your take-profit level.",
-  "Loss at SL": "What you'd lose if price reaches your stop-loss level.",
-  "Amount": "How much to trade. Tap $ to switch between a dollar amount and an amount of the coin.",
-  "Leverage": "Multiplies your position size (and your gains and losses) relative to the margin you put in. Higher leverage means liquidation is closer.",
-  "Order Type": "Market orders fill right away at the live price. Limit and TWAP orders are coming soon.",
-  "Isolated": "Isolated margin: only the margin of this position is at risk if it gets liquidated, not your whole balance.",
-  "Spot / Futures": "Spot buys or sells the coin itself. Futures lets you go long or short with leverage.",
-  "Short": "Profit if the price goes down.",
-  "Long": "Profit if the price goes up.",
-  "Sell": "Sell coins you hold at the live price.",
-  "Buy": "Buy the coin at the live price.",
+  "Cash": "cash",
+  "Open": "open",
+  "Realized P&L": "realizedPnl",
+  "Side": "side",
+  "Size": "size",
+  "Entry": "entry",
+  "Current": "current",
+  "Liquidation": "liquidation",
+  "Take Profit": "takeProfit",
+  "Stop Loss": "stopLoss",
+  "Opened": "opened",
+  "Margin": "margin",
+  "Position Size": "positionSize",
+  "Est. Liquidation": "estLiquidation",
+  "Profit at TP": "profitAtTp",
+  "Loss at SL": "lossAtSl",
+  "Amount": "amount",
+  "Leverage": "leverage",
+  "Order Type": "orderType",
+  "Isolated": "isolated",
+  "Spot / Futures": "spotFutures",
+  "Short": "short",
+  "Long": "long",
+  "Sell": "sell",
+  "Buy": "buy",
 };
+// `text` is a key under paperTrading.tips (see PTC_TIPS above).
 function InfoTip({ text }: { text: string }) {
+  const { t } = useTranslation();
   return (
-    <HoverTip text={text} className="ptc-info">
+    <HoverTip text={t(`paperTrading.tips.${text}`)} className="ptc-info">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <circle cx="12" cy="12" r="10" />
         <line x1="12" y1="16" x2="12" y2="12" />
@@ -328,7 +332,8 @@ function InfoTip({ text }: { text: string }) {
   );
 }
 
-const CTA_STEPS = ["Setting up…", "Opening…", "All set ✓", "Good luck!"];
+// Keys under paperTrading.cta.
+const CTA_STEPS = ["settingUp", "opening", "allSet", "goodLuck"];
 
 // Leverage row + popover picker (reference: Hyperliquid): "Leverage" on
 // the left, "Isolated" tag and an amber "20x ▾" button on the right. The
@@ -337,6 +342,7 @@ const CTA_STEPS = ["Setting up…", "Opening…", "All set ✓", "Good luck!"];
 const LEV_MAX = 20;
 const LEV_TICKS = [1, 5, 10, 15, 20];
 function LeveragePicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(value);
   const ref = useRef<HTMLDivElement>(null);
@@ -353,9 +359,9 @@ function LeveragePicker({ value, onChange }: { value: number; onChange: (v: numb
   return (
     <div className="ptc-lev" ref={ref}>
       <div className="ptc-lev-row">
-        <span className="ptc-lev-label">Leverage<InfoTip text={PTC_TIPS["Leverage"]} /></span>
+        <span className="ptc-lev-label">{t("paperTrading.leverage")}<InfoTip text={PTC_TIPS["Leverage"]} /></span>
         <span className="ptc-lev-right">
-          <span className="ptc-lev-tag">Isolated<InfoTip text={PTC_TIPS["Isolated"]} /></span>
+          <span className="ptc-lev-tag">{t("paperTrading.isolated")}<InfoTip text={PTC_TIPS["Isolated"]} /></span>
           <button type="button" className={`ptc-lev-btn${open ? " open" : ""}`} onClick={() => setOpen((o) => !o)} aria-expanded={open}>
             {value}x
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
@@ -363,7 +369,7 @@ function LeveragePicker({ value, onChange }: { value: number; onChange: (v: numb
         </span>
       </div>
       {open && (
-        <div className="ptc-lev-pop" role="dialog" aria-label="Set leverage">
+        <div className="ptc-lev-pop" role="dialog" aria-label={t("paperTrading.setLeverage")}>
           <div className="ptc-lev-slider">
             <input
               type="range"
@@ -373,7 +379,7 @@ function LeveragePicker({ value, onChange }: { value: number; onChange: (v: numb
               value={draft}
               onChange={(e) => setDraft(Number(e.target.value))}
               style={{ ["--lev-pct" as string]: `${pct}%` }}
-              aria-label="Leverage"
+              aria-label={t("paperTrading.leverage")}
             />
             <div className="ptc-lev-ticks" aria-hidden="true">
               {LEV_TICKS.map((t) => (
@@ -385,10 +391,10 @@ function LeveragePicker({ value, onChange }: { value: number; onChange: (v: numb
             </div>
           </div>
           <p className="ptc-lev-note">
-            Higher leverage amplifies your gains and losses, and increases your risk of liquidation.
+            {t("paperTrading.levNote")}
           </p>
           <button type="button" className="ptc-lev-confirm" onClick={() => { onChange(draft); setOpen(false); }}>
-            Confirm {draft}x
+            {t("paperTrading.confirmLev", { lev: draft })}
           </button>
         </div>
       )}
@@ -401,11 +407,12 @@ function LeveragePicker({ value, onChange }: { value: number; onChange: (v: numb
 // Limit / TWAP are listed but disabled ("Soon") until the paper engine
 // supports resting orders.
 const ORDER_TYPES = [
-  { key: "market", label: "Market", available: true },
-  { key: "limit", label: "Limit", available: false },
-  { key: "twap", label: "TWAP", available: false },
+  { key: "market", available: true },
+  { key: "limit", available: false },
+  { key: "twap", available: false },
 ] as const;
 function OrderTypePicker() {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState<(typeof ORDER_TYPES)[number]["key"]>("market");
   const ref = useRef<HTMLDivElement>(null);
@@ -421,9 +428,9 @@ function OrderTypePicker() {
   return (
     <div className="ptc-lev ptc-ot" ref={ref}>
       <div className="ptc-lev-row">
-        <span className="ptc-lev-label">Order Type<InfoTip text={PTC_TIPS["Order Type"]} /></span>
+        <span className="ptc-lev-label">{t("paperTrading.orderType")}<InfoTip text={PTC_TIPS["Order Type"]} /></span>
         <button type="button" className={`ptc-ot-btn${open ? " open" : ""}`} onClick={() => setOpen((o) => !o)} aria-haspopup="listbox" aria-expanded={open}>
-          {current.label}
+          {t(`paperTrading.orderTypes.${current.key}`)}
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
             {open ? <polyline points="6 15 12 9 18 15" /> : <polyline points="6 9 12 15 18 9" />}
           </svg>
@@ -441,11 +448,11 @@ function OrderTypePicker() {
               className={`ptc-ot-item${value === o.key ? " active" : ""}`}
               onClick={() => { setValue(o.key); setOpen(false); }}
             >
-              {o.label}
+              {t(`paperTrading.orderTypes.${o.key}`)}
               {value === o.key && (
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
               )}
-              {!o.available && <span className="ptc-ot-soon">Soon</span>}
+              {!o.available && <span className="ptc-ot-soon">{t("paperTrading.soon")}</span>}
             </button>
           ))}
         </div>
@@ -459,6 +466,7 @@ function OrderTypePicker() {
 // read/write), with positions opened, watched live, and closed directly
 // here instead of requiring a nav trip to the full page for any of it.
 export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClosed }: Props) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [portfolio, setPortfolio] = useState<PaperPortfolio | null>(null);
   const [perf, setPerf] = useState<AgentPerformance | null>(null);
@@ -664,7 +672,7 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
     if (!user) return;
     const value = Number(cashDraft);
     if (!Number.isFinite(value) || value < 0) {
-      setCashError("Enter a non-negative number.");
+      setCashError(t("paperTrading.errors.nonNegative"));
       return;
     }
     setSavingCash(true);
@@ -674,7 +682,7 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
       await loadPortfolio(user.id);
       setEditingCash(false);
     } catch (err) {
-      setCashError(err instanceof Error ? err.message : "Couldn't update cash balance.");
+      setCashError(err instanceof Error ? err.message : t("paperTrading.errors.cashUpdate"));
     } finally {
       setSavingCash(false);
     }
@@ -697,10 +705,10 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
   const handleSubmitOpen = async (): Promise<boolean> => {
     if (!user) return false;
     const raw = parseFloat(amountUsd);
-    if (!Number.isFinite(raw) || raw <= 0) { setFormError("Enter a valid amount."); return false; }
+    if (!Number.isFinite(raw) || raw <= 0) { setFormError(t("paperTrading.errors.validAmount")); return false; }
     let amount = raw;
     if (amountUnit === "coin") {
-      if (!formPrice) { setFormError("Waiting for a live price…"); return false; }
+      if (!formPrice) { setFormError(t("paperTrading.errors.waitingPrice")); return false; }
       amount = raw * formPrice;
     }
     const lev = market === "futures" ? Math.min(20, Math.max(1, parseFloat(leverage) || 1)) : 1;
@@ -721,7 +729,7 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
       setStopLoss("");
       return true;
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : "Could not open that position.");
+      setFormError(err instanceof Error ? err.message : t("paperTrading.errors.openFailed"));
       return false;
     } finally {
       setSubmitting(false);
@@ -790,7 +798,7 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
       {user && !loading && portfolio?.consentAcceptedAt && (
       <div className="ptc-header">
         <span className="ptc-title">
-          {!inTabRow && "Paper Trading"}
+          {!inTabRow && t("paperTrading.title")}
           {/* Open/Closed switch moved to a button at the bottom of the card
               (.ptc-switch-view-btn). */}
         </span>
@@ -806,10 +814,10 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
                   <path d="M3 3v5h5" />
                   <path d="M12 7v5l3 2" />
                 </svg>
-                View all {closedPositions.length}
+                {t("paperTrading.viewAll", { count: closedPositions.length })}
               </button>
             )}
-            {!inTabRow && <span className="ptc-live-badge"><span className="ptc-pulse-dot" />LIVE</span>}
+            {!inTabRow && <span className="ptc-live-badge"><span className="ptc-pulse-dot" />{t("paperTrading.live")}</span>}
           </div>
         )}
       </div>
@@ -822,11 +830,11 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
               <>
                 <button type="button" className="ptc-activate-cta" onClick={onOpenAuth}>
                   <span className="ptc-activate-cta-shine" />
-                  <span className="ptc-activate-cta-label">Activate Paper Trading</span>
+                  <span className="ptc-activate-cta-label">{t("paperTrading.activate")}</span>
                 </button>
                 <p className="ptc-activate-sub ptc-activate-sub--muted">
-                  Free account required ·{" "}
-                  <button type="button" className="ptc-activate-auth-link" onClick={onOpenAuth}>Sign in or create an account</button>
+                  {t("paperTrading.freeAccountRequired")} ·{" "}
+                  <button type="button" className="ptc-activate-auth-link" onClick={onOpenAuth}>{t("paperTrading.signInOrCreate")}</button>
                 </p>
               </>
             }
@@ -853,7 +861,7 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
               <button type="button" className="ptc-activate-cta" onClick={handleActivate} disabled={activating}>
                 <span className="ptc-activate-cta-shine" />
                 <span className="ptc-activate-cta-label">
-                  {activating ? "Activating…" : "Activate Paper Trading"}
+                  {activating ? t("paperTrading.activating") : t("paperTrading.activate")}
                 </span>
               </button>
             }
@@ -890,7 +898,7 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
                   {portfolio ? `$${portfolio.cashBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : "—"}
                 </button>
               )}
-              <span className="ptc-stat-label">Cash<InfoTip text={PTC_TIPS["Cash"]} /></span>
+              <span className="ptc-stat-label">{t("paperTrading.cash")}<InfoTip text={PTC_TIPS["Cash"]} /></span>
               {cashError && <span className="ptc-cash-error">{cashError}</span>}
             </div>
             {/* Tappable when there are open positions: jumps to the
@@ -899,7 +907,7 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
               className={`ptc-stat ptc-stat--open${openCount > 0 ? " ptc-stat--link" : ""}`}
               role={openCount > 0 ? "button" : undefined}
               tabIndex={openCount > 0 ? 0 : undefined}
-              aria-label={openCount > 0 ? `Show ${openCount} open position${openCount === 1 ? "" : "s"}` : undefined}
+              aria-label={openCount > 0 ? t(openCount === 1 ? "paperTrading.showOpenOne" : "paperTrading.showOpenMany", { count: openCount }) : undefined}
               onClick={(e) => {
                 if ((e.target as HTMLElement).closest(".ptc-info")) return; // the ⓘ keeps its own tooltip
                 showOpenPositions();
@@ -910,7 +918,7 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z" /><path d="m2 17 10 5 10-5" /><path d="m2 12 10 5 10-5" /></svg>
               </span>
               <span className="ptc-stat-value">{openCount}</span>
-              <span className="ptc-stat-label">Open<InfoTip text={PTC_TIPS["Open"]} />
+              <span className="ptc-stat-label">{t("paperTrading.open")}<InfoTip text={PTC_TIPS["Open"]} />
                 {openCount > 0 && (
                   <svg className="ptc-stat-link-chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18" /></svg>
                 )}
@@ -927,7 +935,7 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
               <span className={`ptc-stat-value${perf && perf.totalPnl !== 0 ? (perf.totalPnl > 0 ? " ptc-up" : " ptc-down") : ""}`}>
                 {perf ? fmtUsd(perf.totalPnl) : "—"}
               </span>
-              <span className="ptc-stat-label">Realized P&L<InfoTip text={PTC_TIPS["Realized P&L"]} /></span>
+              <span className="ptc-stat-label">{t("paperTrading.realizedPnl")}<InfoTip text={PTC_TIPS["Realized P&L"]} /></span>
             </div>
           </div>
 
@@ -937,8 +945,8 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
                   tabs, Long/Short segment, label/value rows, one amount
                   field with a % slider, optional TP/SL, one solid button. */}
               <div className={`ptc-hl-tabs ptc-hl-tabs--${market}`} role="tablist">
-                <button type="button" role="tab" aria-selected={market === "futures"} className={`ptc-hl-tab${market === "futures" ? " active" : ""}`} onClick={() => setMarket("futures")}>Futures</button>
-                <button type="button" role="tab" aria-selected={market === "spot"} className={`ptc-hl-tab${market === "spot" ? " active" : ""}`} onClick={() => setMarket("spot")}>Spot</button>
+                <button type="button" role="tab" aria-selected={market === "futures"} className={`ptc-hl-tab${market === "futures" ? " active" : ""}`} onClick={() => setMarket("futures")}>{t("paperTrading.futures")}</button>
+                <button type="button" role="tab" aria-selected={market === "spot"} className={`ptc-hl-tab${market === "spot" ? " active" : ""}`} onClick={() => setMarket("spot")}>{t("paperTrading.spot")}</button>
                 {/* One underline that slides between the two tabs. */}
                 <span className="ptc-hl-tabs-bar" aria-hidden="true" />
                 <span className="ptc-hl-tabs-info"><InfoTip text={PTC_TIPS["Spot / Futures"]} /></span>
@@ -952,7 +960,7 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
                   className={`ptc-hl-side-btn ptc-hl-side-btn--buy${side === "buy" ? " active" : ""}`}
                   onClick={() => setSide("buy")}
                 >
-                  <span key={`b-${market}`} className="ptc-hl-swap">{market === "futures" ? "Long" : "Buy"}</span>
+                  <span key={`b-${market}`} className="ptc-hl-swap">{market === "futures" ? t("paperTrading.long") : t("paperTrading.buy")}</span>
                   <InfoTip text={market === "futures" ? PTC_TIPS["Long"] : PTC_TIPS["Buy"]} />
                 </button>
                 <button
@@ -960,7 +968,7 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
                   className={`ptc-hl-side-btn ptc-hl-side-btn--sell${side === "sell" ? " active" : ""}`}
                   onClick={() => setSide("sell")}
                 >
-                  <span key={`s-${market}`} className="ptc-hl-swap">{market === "futures" ? "Short" : "Sell"}</span>
+                  <span key={`s-${market}`} className="ptc-hl-swap">{market === "futures" ? t("paperTrading.short") : t("paperTrading.sell")}</span>
                   <InfoTip text={market === "futures" ? PTC_TIPS["Short"] : PTC_TIPS["Sell"]} />
                 </button>
               </div>
@@ -978,13 +986,13 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
                 </div>
                 <OrderTypePicker />
                 <div className="ptc-lev-row">
-                  <span className="ptc-lev-label">Price<InfoTip text={PTC_TIPS["Current"]} /></span>
+                  <span className="ptc-lev-label">{t("paperTrading.price")}<InfoTip text={PTC_TIPS["Current"]} /></span>
                   <span className="ptc-hl-value">
                     {formPrice !== undefined ? `$${formPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : "—"}
                   </span>
                 </div>
                 <div className="ptc-lev-row">
-                  <span className="ptc-lev-label">Available to Trade<InfoTip text={PTC_TIPS["Cash"]} /></span>
+                  <span className="ptc-lev-label">{t("paperTrading.availableToTrade")}<InfoTip text={PTC_TIPS["Cash"]} /></span>
                   <span className="ptc-hl-value">
                     {portfolio ? `$${portfolio.cashBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : "—"}
                   </span>
@@ -997,7 +1005,7 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
                   type="text"
                   inputMode="decimal"
                   placeholder="0.00"
-                  aria-label="Amount"
+                  aria-label={t("paperTrading.amount")}
                   value={amountUnit === "usd" ? formatUsdAmountDisplay(amountUsd) : amountUsd}
                   onChange={(e) => setAmountUsd(sanitizeAmountInput(e.target.value.replace(/,/g, "")))}
                 />
@@ -1013,7 +1021,7 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
                     }
                     setAmountUnit(nextUnit);
                   }}
-                  title={amountUnit === "usd" ? `Switch to ${coin}` : "Switch to USD"}
+                  title={t("paperTrading.switchTo", { unit: amountUnit === "usd" ? coin : "USD" })}
                 >
                   {amountUnit === "usd" ? "USD" : coin}
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
@@ -1043,13 +1051,13 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
                         value={pct}
                         onChange={(e) => setPct(Number(e.target.value))}
                         style={{ ["--hl-pct" as string]: `${pct}%` }}
-                        aria-label="Percent of available balance"
+                        aria-label={t("paperTrading.pctOfBalance")}
                       />
                       <div className="ptc-hl-pct-marks" aria-hidden="true">
                         {[0, 25, 50, 75, 100].map((m) => (
                           <button key={m} type="button" tabIndex={-1} className={`ptc-hl-pct-mark${pct >= m ? " on" : ""}`} style={{ left: `${m}%` }} onClick={() => setPct(m)}>
                             <i />
-                            <b>{m === 100 ? "Max" : `${m}%`}</b>
+                            <b>{m === 100 ? t("paperTrading.max") : `${m}%`}</b>
                           </button>
                         ))}
                       </div>
@@ -1061,30 +1069,30 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
 
               <label className="ptc-hl-check">
                 <input type="checkbox" checked={showTpSl} onChange={(e) => setShowTpSl(e.target.checked)} />
-                <span>Take Profit / Stop Loss</span>
+                <span>{t("paperTrading.tpSl")}</span>
               </label>
               {showTpSl && (
                 <div className="ptc-form-row">
                   <label className="ptc-field">
-                    <span>Take Profit<InfoTip text={PTC_TIPS["Take Profit"]} /></span>
-                    <input type="number" min="0" placeholder="TP price" value={takeProfit} onChange={(e) => setTakeProfit(e.target.value)} />
+                    <span>{t("paperTrading.takeProfit")}<InfoTip text={PTC_TIPS["Take Profit"]} /></span>
+                    <input type="number" min="0" placeholder={t("paperTrading.tpPrice")} value={takeProfit} onChange={(e) => setTakeProfit(e.target.value)} />
                   </label>
                   <label className="ptc-field">
-                    <span>Stop Loss<InfoTip text={PTC_TIPS["Stop Loss"]} /></span>
-                    <input type="number" min="0" placeholder="SL price" value={stopLoss} onChange={(e) => setStopLoss(e.target.value)} />
+                    <span>{t("paperTrading.stopLoss")}<InfoTip text={PTC_TIPS["Stop Loss"]} /></span>
+                    <input type="number" min="0" placeholder={t("paperTrading.slPrice")} value={stopLoss} onChange={(e) => setStopLoss(e.target.value)} />
                   </label>
                 </div>
               )}
               {futuresPreview && (
                 <div className="ptc-futures-preview">
-                  <div className="ptc-detail-row"><span>Margin<InfoTip text={PTC_TIPS["Margin"]} /></span><strong>${futuresPreview.margin.toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong></div>
-                  <div className="ptc-detail-row"><span>Position Size<InfoTip text={PTC_TIPS["Position Size"]} /></span><strong>{futuresPreview.qty.toLocaleString(undefined, { maximumFractionDigits: 6 })} {coin} (${futuresPreview.notional.toLocaleString(undefined, { maximumFractionDigits: 2 })})</strong></div>
-                  <div className="ptc-detail-row"><span>Est. Liquidation<InfoTip text={PTC_TIPS["Est. Liquidation"]} /></span><strong className="ptc-down">${futuresPreview.liq.toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong></div>
+                  <div className="ptc-detail-row"><span>{t("paperTrading.margin")}<InfoTip text={PTC_TIPS["Margin"]} /></span><strong>${futuresPreview.margin.toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong></div>
+                  <div className="ptc-detail-row"><span>{t("paperTrading.positionSize")}<InfoTip text={PTC_TIPS["Position Size"]} /></span><strong>{futuresPreview.qty.toLocaleString(undefined, { maximumFractionDigits: 6 })} {coin} (${futuresPreview.notional.toLocaleString(undefined, { maximumFractionDigits: 2 })})</strong></div>
+                  <div className="ptc-detail-row"><span>{t("paperTrading.estLiquidation")}<InfoTip text={PTC_TIPS["Est. Liquidation"]} /></span><strong className="ptc-down">${futuresPreview.liq.toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong></div>
                   {futuresPreview.tpProfit !== null && (
-                    <div className="ptc-detail-row"><span>Profit at TP<InfoTip text={PTC_TIPS["Profit at TP"]} /></span><strong className="ptc-up">{fmtUsd(futuresPreview.tpProfit)}</strong></div>
+                    <div className="ptc-detail-row"><span>{t("paperTrading.profitAtTp")}<InfoTip text={PTC_TIPS["Profit at TP"]} /></span><strong className="ptc-up">{fmtUsd(futuresPreview.tpProfit)}</strong></div>
                   )}
                   {futuresPreview.slLoss !== null && (
-                    <div className="ptc-detail-row"><span>Loss at SL<InfoTip text={PTC_TIPS["Loss at SL"]} /></span><strong className="ptc-down">{fmtUsd(futuresPreview.slLoss)}</strong></div>
+                    <div className="ptc-detail-row"><span>{t("paperTrading.lossAtSl")}<InfoTip text={PTC_TIPS["Loss at SL"]} /></span><strong className="ptc-down">{fmtUsd(futuresPreview.slLoss)}</strong></div>
                   )}
                 </div>
               )}
@@ -1107,9 +1115,9 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
                       ctaStep === 1 ? " ptc-cta-label--in" : ctaStep !== null ? " ptc-cta-label--step" : ctaGo ? " ptc-cta-label--in" : ""
                     }`}
                   >
-                    {ctaStep !== null ? CTA_STEPS[ctaStep] : market === "futures"
-                      ? `${side === "buy" ? "Long" : "Short"} ${coin} · ${Math.min(20, Math.max(1, Math.round(parseFloat(leverage) || 1)))}x`
-                      : `${side === "buy" ? "Buy" : "Sell"} ${coin}`}
+                    {ctaStep !== null ? t(`paperTrading.cta.${CTA_STEPS[ctaStep]}`) : market === "futures"
+                      ? t(side === "buy" ? "paperTrading.cta.long" : "paperTrading.cta.short", { coin, lev: Math.min(20, Math.max(1, Math.round(parseFloat(leverage) || 1))) })
+                      : t(side === "buy" ? "paperTrading.cta.buy" : "paperTrading.cta.sell", { coin })}
                   </span>
                 </button>
               </div>
@@ -1124,7 +1132,7 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
                 onClick={() => setPositionsOpen((o) => !o)}
                 aria-expanded={positionsOpen}
               >
-                Current Positions
+                {t("paperTrading.currentPositions")}
                 <span className="ptc-positions-count">{openCount}</span>
                 <svg className="ptc-positions-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
               </button>
@@ -1147,7 +1155,7 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
                     >
                       <div className="ptc-position-main">
                         <span className={`ptc-position-side ptc-position-side--${pos.side}`}>
-                          {pos.side === "long" ? "LONG" : "SHORT"}
+                          {pos.side === "long" ? t("paperTrading.longUpper") : t("paperTrading.shortUpper")}
                         </span>
                         <span className="ptc-position-coin">{pos.coin}</span>
                         {pos.leverage > 1 && <span className="ptc-position-lev">{fmtLev(pos.leverage)}x</span>}
@@ -1165,7 +1173,7 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
                           onClick={(e) => { e.stopPropagation(); handleClose(pos); }}
                           disabled={closingKey === key}
                         >
-                          {closingKey === key ? "…" : "Close"}
+                          {closingKey === key ? "…" : t("paperTrading.close")}
                         </button>
                         <span className={`ptc-chevron${isExpanded ? " ptc-chevron--open" : ""}`}>▾</span>
                       </div>
@@ -1191,7 +1199,7 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
                         <div className="ptc-gauge-wrap">
                           <div className="ptc-range-bar">
                             <div className="ptc-range-track">
-                              <span className="ptc-range-entry-tick" style={{ left: `${bar.entryPct}%` }} title={`Entry $${pos.avgEntryPrice.toLocaleString()}`} />
+                              <span className="ptc-range-entry-tick" style={{ left: `${bar.entryPct}%` }} title={t("paperTrading.entryAt", { price: `$${pos.avgEntryPrice.toLocaleString()}` })} />
                               <span className="ptc-range-marker" style={{ left: `${bar.pct}%` }} />
                             </div>
                             <div className="ptc-range-labels">
@@ -1208,20 +1216,20 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
                         rendering it would just pop in/out with no slide. */}
                     <div className={`ptc-position-detail${isExpanded ? " ptc-position-detail--open" : ""}`}>
                       <div className="ptc-position-detail-inner">
-                        <div className="ptc-detail-row"><span>Side<InfoTip text={PTC_TIPS["Side"]} /></span><strong>{pos.market === "futures" ? `${pos.side === "long" ? "LONG" : "SHORT"} ${fmtLev(pos.leverage)}x` : "SPOT"}</strong></div>
-                        <div className="ptc-detail-row"><span>Size<InfoTip text={PTC_TIPS["Size"]} /></span><strong>{pos.qty.toLocaleString(undefined, { maximumFractionDigits: 6 })} {pos.coin}</strong></div>
-                        <div className="ptc-detail-row"><span>Entry<InfoTip text={PTC_TIPS["Entry"]} /></span><strong>${pos.avgEntryPrice.toLocaleString()}</strong></div>
-                        <div className="ptc-detail-row"><span>Current<InfoTip text={PTC_TIPS["Current"]} /></span><strong>{livePrice ? `$${livePrice.toLocaleString()}` : "—"}</strong></div>
+                        <div className="ptc-detail-row"><span>{t("paperTrading.side")}<InfoTip text={PTC_TIPS["Side"]} /></span><strong>{pos.market === "futures" ? `${pos.side === "long" ? t("paperTrading.longUpper") : t("paperTrading.shortUpper")} ${fmtLev(pos.leverage)}x` : t("paperTrading.spotUpper")}</strong></div>
+                        <div className="ptc-detail-row"><span>{t("paperTrading.size")}<InfoTip text={PTC_TIPS["Size"]} /></span><strong>{pos.qty.toLocaleString(undefined, { maximumFractionDigits: 6 })} {pos.coin}</strong></div>
+                        <div className="ptc-detail-row"><span>{t("paperTrading.entry")}<InfoTip text={PTC_TIPS["Entry"]} /></span><strong>${pos.avgEntryPrice.toLocaleString()}</strong></div>
+                        <div className="ptc-detail-row"><span>{t("paperTrading.current")}<InfoTip text={PTC_TIPS["Current"]} /></span><strong>{livePrice ? `$${livePrice.toLocaleString()}` : "—"}</strong></div>
                         {pos.market === "futures" && pos.liquidationPrice != null && (
-                          <div className="ptc-detail-row"><span>Liquidation<InfoTip text={PTC_TIPS["Liquidation"]} /></span><strong>${pos.liquidationPrice.toLocaleString()}</strong></div>
+                          <div className="ptc-detail-row"><span>{t("paperTrading.liquidation")}<InfoTip text={PTC_TIPS["Liquidation"]} /></span><strong>${pos.liquidationPrice.toLocaleString()}</strong></div>
                         )}
                         {pos.takeProfitPrice != null && (
-                          <div className="ptc-detail-row"><span>Take Profit<InfoTip text={PTC_TIPS["Take Profit"]} /></span><strong className="ptc-up">${pos.takeProfitPrice.toLocaleString()}</strong></div>
+                          <div className="ptc-detail-row"><span>{t("paperTrading.takeProfit")}<InfoTip text={PTC_TIPS["Take Profit"]} /></span><strong className="ptc-up">${pos.takeProfitPrice.toLocaleString()}</strong></div>
                         )}
                         {pos.stopLossPrice != null && (
-                          <div className="ptc-detail-row"><span>Stop Loss<InfoTip text={PTC_TIPS["Stop Loss"]} /></span><strong className="ptc-down">${pos.stopLossPrice.toLocaleString()}</strong></div>
+                          <div className="ptc-detail-row"><span>{t("paperTrading.stopLoss")}<InfoTip text={PTC_TIPS["Stop Loss"]} /></span><strong className="ptc-down">${pos.stopLossPrice.toLocaleString()}</strong></div>
                         )}
-                        <div className="ptc-detail-row"><span>Opened<InfoTip text={PTC_TIPS["Opened"]} /></span><strong>{new Date(pos.updatedAt).toLocaleString()}</strong></div>
+                        <div className="ptc-detail-row"><span>{t("paperTrading.opened")}<InfoTip text={PTC_TIPS["Opened"]} /></span><strong>{new Date(pos.updatedAt).toLocaleString()}</strong></div>
                       </div>
                     </div>
                   </div>
@@ -1239,14 +1247,14 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
               the very bottom). */}
           {positionsView === "closed" && (
             <div className="ptc-closed-list">
-              {closedLoading && <p className="ptc-closed-empty">Loading…</p>}
+              {closedLoading && <p className="ptc-closed-empty">{t("paperTrading.loading")}</p>}
               {!closedLoading && closedPositions && closedPositions.length === 0 && (
-                <p className="ptc-closed-empty">No closed positions yet.</p>
+                <p className="ptc-closed-empty">{t("paperTrading.noClosed")}</p>
               )}
               {!closedLoading && closedPositions && closedPositions.slice(0, 5).map((item, i) => (
                 <div key={`${item.coin}-${item.closedAt}-${i}`} className="ptc-closed-row">
                   <span className={`ptc-position-side ptc-position-side--${item.side}`}>
-                    {item.side === "long" ? "LONG" : "SHORT"}
+                    {item.side === "long" ? t("paperTrading.longUpper") : t("paperTrading.shortUpper")}
                   </span>
                   <span className="ptc-position-coin">{item.coin}</span>
                   {item.leverage > 1 && <span className="ptc-position-lev">{fmtLev(item.leverage)}x</span>}
@@ -1272,7 +1280,7 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
             <span className="ptc-agent-nudge-icon" aria-hidden="true">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 5.6L20 10l-5.6 2.4L12 18l-2.4-5.6L4 10l5.6-2.4z" /></svg>
             </span>
-            <span className="ptc-agent-nudge-link">Not sure what to trade? <b>Ask Agent ready</b></span>
+            <span className="ptc-agent-nudge-link">{t("paperTrading.agentNudge")} <b>{t("paperTrading.agentNudgeCta")}</b></span>
           </button>
 
           {/* Promotes the full Trade Manager page (App.tsx: setActiveSection
@@ -1280,7 +1288,7 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
               the full page has the richer flows (beginner wizard, AI review)
               this one deliberately doesn't try to replicate. */}
           <button type="button" className="ptc-page-link" onClick={onOpen}>
-            Want more tools? Open the full Trade Manager →
+            {t("paperTrading.moreTools")}
           </button>
           <button
             type="button"
@@ -1299,7 +1307,7 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
                 <path d="M15 7h6v6" />
               </svg>
             )}
-            {positionsView === "open" ? "Closed Positions" : "Current Positions"}
+            {positionsView === "open" ? t("paperTrading.closedPositions") : t("paperTrading.currentPositions")}
           </button>
         </>
       )}

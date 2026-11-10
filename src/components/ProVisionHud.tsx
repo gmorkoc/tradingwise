@@ -4,6 +4,7 @@
 // timeframes, track record) in a dropdown panel under it.
 // Phones ("card"): everything stacked, on the page.
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { PvResult } from "../services/proVision";
 import "../styles/ProVisionHud.css";
 
@@ -30,6 +31,7 @@ const ROWS = ["MA", "DMI", "Ichimoku", "RSI", "Stoch", "MACD", "Volume"];
 const SEG = 5;
 
 export function ProVisionHud({ result, mtf, onRow, trialLeft, onKeep, onHowTo, notice, layout = "bar" }: Props) {
+  const { t } = useTranslation();
   const card = layout === "card";
   // Desktop: the details dropdown. Closes on an outside click or Escape.
   const [open, setOpen] = useState(false);
@@ -63,7 +65,7 @@ export function ProVisionHud({ result, mtf, onRow, trialLeft, onKeep, onHowTo, n
     return () => el.removeEventListener("wheel", onWheel);
   }, []);
   const vb = result.verdict.bias as Bias;
-  const word = vb === "bull" ? "Bullish" : vb === "bear" ? "Bearish" : "Mixed";
+  const word = vb === "bull" ? t("pvHud.bullish") : vb === "bear" ? t("pvHud.bearish") : t("pvHud.mixed");
   const buy = result.volume.buyPct;
   const sell = result.volume.sellPct;
   const st = result.stats;
@@ -74,17 +76,17 @@ export function ProVisionHud({ result, mtf, onRow, trialLeft, onKeep, onHowTo, n
     <>
       <div className="pvh-line pvh-line--2">
         <div className="pvh-sec-head">
-          <span>Buyers vs sellers</span>
-          <span className="pvh-track-n">last 20 candles</span>
+          <span>{t("pvHud.buyersVsSellers")}</span>
+          <span className="pvh-track-n">{t("pvHud.last20")}</span>
         </div>
-        <div className="pvh-flow" title="Order flow, last 20 candles">
+        <div className="pvh-flow" title={t("pvHud.flowTitle")}>
           <span className="pvh-flow-bar" aria-hidden="true"><i style={{ width: `${buy}%` }} /></span>
-          <span className="pvh-flow-txt">{buy >= sell ? `Buyers ${buy}%` : `Sellers ${sell}%`}</span>
+          <span className="pvh-flow-txt">{buy >= sell ? t("pvHud.buyersPct", { pct: buy }) : t("pvHud.sellersPct", { pct: sell })}</span>
         </div>
         {mtf.length > 0 && (
-          <div className="pvh-tf" aria-label="Timeframes">
+          <div className="pvh-tf" aria-label={t("pvHud.timeframes")}>
             {mtf.map((m) => (
-              <span key={m.label} className={`pvh-tf-item pvh-tf--${m.bias ?? "none"}`} title={`${m.label}: ${m.bias === "bull" ? "bullish" : m.bias === "bear" ? "bearish" : m.bias ? "mixed" : "loading"}`}>
+              <span key={m.label} className={`pvh-tf-item pvh-tf--${m.bias ?? "none"}`} title={`${m.label}: ${m.bias === "bull" ? t("pvHud.bullishLc") : m.bias === "bear" ? t("pvHud.bearishLc") : m.bias ? t("pvHud.mixedLc") : t("pvHud.loadingLc")}`}>
                 <i aria-hidden="true" />{m.label}
               </span>
             ))}
@@ -93,16 +95,16 @@ export function ProVisionHud({ result, mtf, onRow, trialLeft, onKeep, onHowTo, n
       </div>
       <div className="pvh-line pvh-line--2 pvh-line--3">
         {/* Track record: every past signal on this chart, scored after fees. */}
-        <div className="pvh-track" aria-label="Track record">
+        <div className="pvh-track" aria-label={t("pvHud.trackRecord")}>
           <div className="pvh-track-head">
-            <span>Track record</span>
-            <span className="pvh-track-n">{st.total} signal{st.total === 1 ? "" : "s"}</span>
+            <span>{t("pvHud.trackRecord")}</span>
+            <span className="pvh-track-n">{t("pvHud.signals", { count: st.total })}</span>
           </div>
           <div className="pvh-track-grid">
-            <span><em>Hit rate</em><b>{st.winRate === null ? "—" : `${st.winRate}%`}</b></span>
-            <span><em>Won / lost</em><b><i className="pvh-up">{st.worked}</i> / <i className="pvh-dn">{st.failed}</i></b></span>
-            <span><em>Avg win</em><b className="pvh-up">{pct(st.avgWinPct)}</b></span>
-            <span><em>Avg loss</em><b className="pvh-dn">{pct(st.avgLossPct)}</b></span>
+            <span><em>{t("pvHud.hitRate")}</em><b>{st.winRate === null ? "—" : `${st.winRate}%`}</b></span>
+            <span><em>{t("pvHud.wonLost")}</em><b><i className="pvh-up">{st.worked}</i> / <i className="pvh-dn">{st.failed}</i></b></span>
+            <span><em>{t("pvHud.avgWin")}</em><b className="pvh-up">{pct(st.avgWinPct)}</b></span>
+            <span><em>{t("pvHud.avgLoss")}</em><b className="pvh-dn">{pct(st.avgLossPct)}</b></span>
           </div>
         </div>
         {notice && (
@@ -115,10 +117,10 @@ export function ProVisionHud({ result, mtf, onRow, trialLeft, onKeep, onHowTo, n
             {onHowTo && (
               <button type="button" className="pvh-link pvh-link--how" onClick={onHowTo}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3" /><path d="M12 17h.01" /></svg>
-                How it works
+                {t("pvHud.howItWorks")}
               </button>
             )}
-            {trialLeft && onKeep && <button type="button" className="pvh-link pvh-link--keep" onClick={onKeep}>Enjoying? Keep it · {trialLeft} left ›</button>}
+            {trialLeft && onKeep && <button type="button" className="pvh-link pvh-link--keep" onClick={onKeep}>{t("pvHud.keepIt", { left: trialLeft })}</button>}
           </div>
         )}
       </div>
@@ -134,32 +136,32 @@ export function ProVisionHud({ result, mtf, onRow, trialLeft, onKeep, onHowTo, n
           className="pvh-close pvh-close--shell pvh-expand"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
-          aria-label={open ? "Hide Signal Check details" : "Show Signal Check details"}
+          aria-label={open ? t("pvHud.hideDetails") : t("pvHud.showDetails")}
         >
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
         </button>
       )}
-      <div className={`pvh ${card ? "pvh--card" : "pvh--bar"} pvh--${vb}`} role="group" aria-label="ProVision Signal Check">
+      <div className={`pvh ${card ? "pvh--card" : "pvh--bar"} pvh--${vb}`} role="group" aria-label={t("pvHud.groupLabel")}>
         <div className="pvh-line" ref={lineRef}>
           <div className="pvh-head">
             <span className="pvh-icon" aria-hidden="true">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12h4l3-7 4 14 3-7h4" /></svg>
             </span>
-            <span className="pvh-title">Signal Check</span>
+            <span className="pvh-title">{t("pvHud.title")}</span>
             <b className="pvh-score">{result.bullStrength}<span>/100</span></b>
           </div>
           <div className="pvh-verdict">
             <span className="pvh-dot" aria-hidden="true" />
-            {word} · {result.verdict.agree} of {result.verdict.total}
+            {t("pvHud.verdictOf", { word, agree: result.verdict.agree, total: result.verdict.total })}
           </div>
           <div className="pvh-rows">
             {ROWS.map((name, r) => {
               const b = (result.checks[r] ?? "neutral") as Bias;
               const s = result.checkStrength[r] ?? 0.5;
               const lit = b === "neutral" ? 0 : Math.max(1, Math.round(Math.abs((s - 0.5) * 2) * SEG));
-              const label = r === 3 && result.checkReadout[3]?.big ? `RSI ${result.checkReadout[3].big}` : name;
+              const label = r === 3 && result.checkReadout[3]?.big ? `RSI ${result.checkReadout[3].big}` : name === "Volume" ? t("pvHud.volume") : name;
               return (
-                <button key={name} type="button" className={`pvh-row pvh-row--${b}`} onClick={() => onRow(r)} title={`${label}: ${b === "bull" ? "bullish" : b === "bear" ? "bearish" : "neutral"}`}>
+                <button key={name} type="button" className={`pvh-row pvh-row--${b}`} onClick={() => onRow(r)} title={`${label}: ${b === "bull" ? t("pvHud.bullishLc") : b === "bear" ? t("pvHud.bearishLc") : t("pvHud.neutralLc")}`}>
                   <span className="pvh-row-name">{label}</span>
                   <span className="pvh-bar" aria-hidden="true" style={{ ["--row" as string]: r }}>
                     {Array.from({ length: SEG }, (_, i) => (
@@ -180,7 +182,7 @@ export function ProVisionHud({ result, mtf, onRow, trialLeft, onKeep, onHowTo, n
       </div>
       {/* Desktop: details in a dropdown panel under the strip. */}
       {!card && open && (
-        <div className="pvh-drop" role="region" aria-label="Signal Check details">
+        <div className="pvh-drop" role="region" aria-label={t("pvHud.detailsLabel")}>
           <div className={`pvh pvh--card pvh--${vb}`}>{details}</div>
         </div>
       )}
@@ -192,6 +194,7 @@ export function ProVisionHud({ result, mtf, onRow, trialLeft, onKeep, onHowTo, n
 // a readable indicator list, buyers vs sellers, timeframes, track record.
 const ROW_NAMES = ["MA 20/200", "DMI", "Ichimoku", "RSI", "Stochastic", "MACD", "Volume"];
 export function ProVisionSignalPanel({ result, mtf, onRow, trialLeft, onKeep, onHowTo, wide }: Props) {
+  const { t } = useTranslation();
   const vb = result.verdict.bias as Bias;
   const score = Math.round(Math.max(0, Math.min(100, result.bullStrength)));
   const buy = result.volume.buyPct;
@@ -199,8 +202,8 @@ export function ProVisionSignalPanel({ result, mtf, onRow, trialLeft, onKeep, on
   const st = result.stats;
   const pct = (v: number | null) => (v === null ? "—" : `${v > 0 ? "+" : ""}${v.toFixed(1)}%`);
   const value = (r: number) =>
-    r < 6 ? (result.tiles[r]?.value ?? "").replace(/\s*[↑↓▲▼]$/, "") : `${buy >= sell ? "Buyers" : "Sellers"} ${Math.max(buy, sell)}%`;
-  const tag = (b: Bias | null | undefined) => (b === "bull" ? "BUY" : b === "bear" ? "SELL" : "—");
+    r < 6 ? (result.tiles[r]?.value ?? "").replace(/\s*[↑↓▲▼]$/, "") : t(buy >= sell ? "pvHud.buyersPct" : "pvHud.sellersPct", { pct: Math.max(buy, sell) });
+  const tag = (b: Bias | null | undefined) => (b === "bull" ? t("pvHud.tagBuy") : b === "bear" ? t("pvHud.tagSell") : "—");
   const bullN = result.checks.filter((c) => c === "bull").length;
   const bearN = result.checks.filter((c) => c === "bear").length;
   const neutN = result.checks.length - bullN - bearN;
@@ -210,36 +213,36 @@ export function ProVisionSignalPanel({ result, mtf, onRow, trialLeft, onKeep, on
       <div className="pvp2-hero">
         <div className="pvp2-hero-top">
           <div className="pvp2-hero-l">
-            <span className="pvp2-kicker">Signal</span>
-            <span className="pvp2-verdict">{vb === "bull" ? "Long bias" : vb === "bear" ? "Short bias" : "Neutral"}</span>
+            <span className="pvp2-kicker">{t("pvHud.signal")}</span>
+            <span className="pvp2-verdict">{vb === "bull" ? t("pvHud.longBias") : vb === "bear" ? t("pvHud.shortBias") : t("pvHud.neutral")}</span>
           </div>
           <div className="pvp2-hero-r">
             <span className="pvp2-score">{score}<small>/100</small></span>
-            <span className="pvp2-sub">{result.verdict.agree}/{result.verdict.total} confluence</span>
+            <span className="pvp2-sub">{t("pvHud.confluence", { agree: result.verdict.agree, total: result.verdict.total })}</span>
           </div>
         </div>
         <div className="pvp2-meter" aria-hidden="true">
           <div className="pvp2-meter-track"><i className="pvp2-meter-dot" style={{ left: `${score}%` }} /></div>
-          <div className="pvp2-meter-scale"><span>Strong sell</span><span>Sell</span><span>Neutral</span><span>Buy</span><span>Strong buy</span></div>
+          <div className="pvp2-meter-scale"><span>{t("pvHud.strongSell")}</span><span>{t("pvHud.sell")}</span><span>{t("pvHud.neutral")}</span><span>{t("pvHud.buy")}</span><span>{t("pvHud.strongBuy")}</span></div>
         </div>
         <div className="pvp2-tally">
-          <span><em>Buy</em><b className="pvp2-up">{bullN}</b></span>
-          <span><em>Neutral</em><b>{neutN}</b></span>
-          <span><em>Sell</em><b className="pvp2-dn">{bearN}</b></span>
+          <span><em>{t("pvHud.buy")}</em><b className="pvp2-up">{bullN}</b></span>
+          <span><em>{t("pvHud.neutral")}</em><b>{neutN}</b></span>
+          <span><em>{t("pvHud.sell")}</em><b className="pvp2-dn">{bearN}</b></span>
         </div>
       </div>
 
       <section className="pvp2-sec">
-        <h4>Indicators</h4>
+        <h4>{t("pvHud.indicators")}</h4>
         <div className="pvp2-table">
-          <div className="pvp2-th"><span>Name</span><span>Value</span><span>Strength</span><span>Action</span></div>
+          <div className="pvp2-th"><span>{t("pvHud.colName")}</span><span>{t("pvHud.colValue")}</span><span>{t("pvHud.colStrength")}</span><span>{t("pvHud.colAction")}</span></div>
           {ROW_NAMES.map((name, r) => {
             const b = (result.checks[r] ?? "neutral") as Bias;
             const s = result.checkStrength[r] ?? 0.5;
             const mag = b === "neutral" ? 0 : Math.max(0.12, Math.min(1, Math.abs((s - 0.5) * 2)));
             return (
               <button key={name} type="button" className={`pvp2-row pvp2-row--${b}`} onClick={() => onRow(r)}>
-                <span className="pvp2-row-name">{name}</span>
+                <span className="pvp2-row-name">{name === "Stochastic" ? t("pvHud.stochastic") : name === "Volume" ? t("pvHud.volume") : name}</span>
                 <span className="pvp2-row-val">{value(r) || "—"}</span>
                 <span className="pvp2-div" aria-hidden="true">
                   <i className={b === "bear" ? "l" : "r"} style={{ width: `${(mag * 50).toFixed(1)}%` }} />
@@ -254,7 +257,7 @@ export function ProVisionSignalPanel({ result, mtf, onRow, trialLeft, onKeep, on
       {/* Order flow + timeframes share a column in the wide layout. */}
       <div className="pvp2-col">
       <section className="pvp2-sec">
-        <h4>Order flow <span>20 bars</span></h4>
+        <h4>{t("pvHud.orderFlow")} <span>{t("pvHud.bars20")}</span></h4>
         <div className="pvp2-flow">
           <span className="pvp2-up">{buy}%</span>
           <div className="pvp2-flow-bar" aria-hidden="true">
@@ -263,12 +266,12 @@ export function ProVisionSignalPanel({ result, mtf, onRow, trialLeft, onKeep, on
           </div>
           <span className="pvp2-dn">{sell}%</span>
         </div>
-        <div className="pvp2-flow-cap"><span>Buy vol</span><span>Δ {buy - sell > 0 ? "+" : ""}{buy - sell}%</span><span>Sell vol</span></div>
+        <div className="pvp2-flow-cap"><span>{t("pvHud.buyVol")}</span><span>Δ {buy - sell > 0 ? "+" : ""}{buy - sell}%</span><span>{t("pvHud.sellVol")}</span></div>
       </section>
 
       {mtf.length > 0 && (
         <section className="pvp2-sec">
-          <h4>Multi-timeframe</h4>
+          <h4>{t("pvHud.multiTf")}</h4>
           <div className="pvp2-tf" style={{ gridTemplateColumns: `repeat(${mtf.length}, minmax(0, 1fr))` }}>
             {mtf.map((m) => (
               <span key={m.label} className={`pvp2-tf-cell pvp2-tf--${m.bias ?? "none"}`}>
@@ -282,21 +285,21 @@ export function ProVisionSignalPanel({ result, mtf, onRow, trialLeft, onKeep, on
       </div>
 
       <section className="pvp2-sec">
-        <h4>Track record <span>{st.total} signal{st.total === 1 ? "" : "s"}</span></h4>
+        <h4>{t("pvHud.trackRecord")} <span>{t("pvHud.signals", { count: st.total })}</span></h4>
         <div className="pvp2-stats">
-          <span><em>Win rate</em><b>{st.winRate === null ? "—" : `${st.winRate}%`}</b></span>
-          <span><em>W / L</em><b><i className="pvp2-up">{st.worked}</i>/<i className="pvp2-dn">{st.failed}</i></b></span>
-          <span><em>Avg win</em><b className="pvp2-up">{pct(st.avgWinPct)}</b></span>
-          <span><em>Avg loss</em><b className="pvp2-dn">{pct(st.avgLossPct)}</b></span>
+          <span><em>{t("pvHud.winRate")}</em><b>{st.winRate === null ? "—" : `${st.winRate}%`}</b></span>
+          <span><em>{t("pvHud.wl")}</em><b><i className="pvp2-up">{st.worked}</i>/<i className="pvp2-dn">{st.failed}</i></b></span>
+          <span><em>{t("pvHud.avgWin")}</em><b className="pvp2-up">{pct(st.avgWinPct)}</b></span>
+          <span><em>{t("pvHud.avgLoss")}</em><b className="pvp2-dn">{pct(st.avgLossPct)}</b></span>
         </div>
       </section>
 
       <div className="pvp2-foot">
-        {trialLeft && onKeep && <button type="button" className="pvp2-keep" onClick={onKeep}>Enjoying? Keep it · {trialLeft} left ›</button>}
+        {trialLeft && onKeep && <button type="button" className="pvp2-keep" onClick={onKeep}>{t("pvHud.keepIt", { left: trialLeft })}</button>}
         {onHowTo && (
           <button type="button" className="pvp2-how" onClick={onHowTo}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3" /><path d="M12 17h.01" /></svg>
-            How it works
+            {t("pvHud.howItWorks")}
           </button>
         )}
       </div>

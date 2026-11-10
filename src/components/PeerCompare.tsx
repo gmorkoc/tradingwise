@@ -70,8 +70,7 @@ export function PeerCompare({ coin, theme = "light" }: Props) {
   const [tickers, setTickers] = useState<Map<string, Ticker24h>>(new Map());
   const [selected, setSelected] = useState<string[]>([]);
   const [range, setRange] = useState(RANGES[0]);
-  const rowRef = useRef<HTMLDivElement>(null);
-  const [edge, setEdge] = useState({ left: false, right: true });
+  const coinChange = tickers.get(coin)?.change;
 
   // New coin → start fresh (its peers differ).
   useEffect(() => { setSelected([]); }, [coin]);
@@ -89,18 +88,13 @@ export function PeerCompare({ coin, theme = "light" }: Props) {
   const toggle = (s: string) =>
     setSelected(cur => cur.includes(s) ? cur.filter(x => x !== s) : cur.length >= MAX_SELECTED ? cur : [...cur, s]);
 
-  const updateEdges = () => {
-    const el = rowRef.current;
-    if (!el) return;
-    setEdge({ left: el.scrollLeft > 4, right: el.scrollLeft + el.clientWidth < el.scrollWidth - 4 });
-  };
-  useEffect(() => { updateEdges(); }, [peers, tickers]);
-  const scrollBy = (dir: 1 | -1) => rowRef.current?.scrollBy({ left: dir * rowRef.current.clientWidth * 0.8, behavior: "smooth" });
-
   return (
     <section className={`pc pc--${theme}`} aria-label={t("peerCompare.title")}>
       <div className="pc-head">
-        <h2 className="pc-title">{t("peerCompare.title")}</h2>
+        <div className="pc-head-text">
+          <h2 className="pc-title">{t("peerCompare.title")}</h2>
+          <span className="pc-hint">{t("peerCompare.hint", { n: MAX_SELECTED, coin })}</span>
+        </div>
         <button
           type="button"
           className={`pc-head-btn${selected.length ? " pc-head-btn--clear" : ""}`}
@@ -110,53 +104,46 @@ export function PeerCompare({ coin, theme = "light" }: Props) {
         </button>
       </div>
 
-      <div className="pc-row-wrap">
-        {edge.left && <button type="button" className="pc-arrow pc-arrow--left" aria-label={t("peerCompare.scrollLeft")} onClick={() => scrollBy(-1)}>‹</button>}
-        <div className="pc-row" ref={rowRef} onScroll={updateEdges}>
-          {peers.map(p => {
-            const tk = tickers.get(p.symbol);
-            const on = selected.includes(p.symbol);
-            const color = on ? PEER_COLORS[selected.indexOf(p.symbol)] : undefined;
-            const full = !on && selected.length >= MAX_SELECTED;
-            return (
-              <div
-                key={p.symbol}
-                className={`pc-card${on ? " pc-card--on" : ""}${full ? " pc-card--full" : ""}`}
-                style={color ? ({ "--pc-c": color } as React.CSSProperties) : undefined}
-                role="button"
-                tabIndex={0}
-                aria-pressed={on}
-                // Card and ⊕ do the same thing: add/remove it from the
-                // comparison (never switch the main chart's coin).
-                onClick={() => { if (!full) toggle(p.symbol); }}
-                onKeyDown={e => { if ((e.key === "Enter" || e.key === " ") && !full) { e.preventDefault(); toggle(p.symbol); } }}
-              >
-                <div className="pc-card-top">
-                  <CoinLogo symbol={p.symbol} />
-                  <div className="pc-card-id">
-                    <span className="pc-card-sym">{p.symbol}USD</span>
-                    <span className="pc-card-name">{p.name}</span>
-                  </div>
-                  <button
-                    type="button"
-                    className={`pc-toggle${on ? " pc-toggle--on" : ""}`}
-                    aria-pressed={on}
-                    disabled={full}
-                    title={full ? t("peerCompare.maxCoins", { n: MAX_SELECTED }) : on ? t("peerCompare.remove") : t("peerCompare.add")}
-                    onClick={e => { e.stopPropagation(); toggle(p.symbol); }}
-                  >
-                    {on ? "✓" : "+"}
-                  </button>
-                </div>
-                <div className="pc-card-price">
-                  {tk ? <><TickPrice price={tk.price} /><span className="pc-ccy">USD</span></> : <span className="pc-skel" />}
-                </div>
-                <div className={`pc-card-chg${tk ? (tk.change >= 0 ? " up" : " down") : ""}`}>{tk ? fmtPct(tk.change) : " "}</div>
-              </div>
-            );
-          })}
-        </div>
-        {edge.right && <button type="button" className="pc-arrow pc-arrow--right" aria-label={t("peerCompare.scrollRight")} onClick={() => scrollBy(1)}>›</button>}
+      {/* Compact peer list (no carousel): checkbox in the line colour ·
+          coin · price · 24h change · performance vs the coin you're on. */}
+      <div className="pc-list" role="list">
+        {peers.map(p => {
+          const tk = tickers.get(p.symbol);
+          const on = selected.includes(p.symbol);
+          const color = on ? PEER_COLORS[selected.indexOf(p.symbol)] : undefined;
+          const full = !on && selected.length >= MAX_SELECTED;
+          const rel = tk && coinChange != null ? tk.change - coinChange : null;
+          return (
+            <button
+              key={p.symbol}
+              type="button"
+              role="listitem"
+              className={`pc-item${on ? " pc-item--on" : ""}${full ? " pc-item--full" : ""}`}
+              style={color ? ({ "--pc-c": color } as React.CSSProperties) : undefined}
+              aria-pressed={on}
+              disabled={full}
+              title={full ? t("peerCompare.maxCoins", { n: MAX_SELECTED }) : on ? t("peerCompare.remove") : t("peerCompare.add")}
+              // Adds/removes it from the comparison — never switches the main chart's coin.
+              onClick={() => toggle(p.symbol)}
+            >
+              <span className="pc-check" aria-hidden="true">
+                {on && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 7" /></svg>}
+              </span>
+              <CoinLogo symbol={p.symbol} />
+              <span className="pc-id">
+                <b>{p.symbol}</b>
+                <em>{p.name}</em>
+              </span>
+              <span className="pc-nums">
+                <span className="pc-price">{tk ? <TickPrice price={tk.price} /> : <span className="pc-skel" />}</span>
+                <span className={`pc-chg${tk ? (tk.change >= 0 ? " up" : " down") : ""}`}>{tk ? fmtPct(tk.change) : " "}</span>
+              </span>
+              <span className={`pc-rel${rel == null ? "" : rel >= 0 ? " up" : " down"}`} title={t("peerCompare.vsTitle", { coin })}>
+                {rel == null ? "—" : t("peerCompare.vs", { pct: fmtPct(rel), coin })}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {selected.length > 0 && (

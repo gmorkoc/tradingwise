@@ -1,0 +1,36 @@
+{
+  "whatsNew": {
+    "badge": "Yeni",
+    "justUpdated": "güncellendi!",
+    "expand": "Genişlet",
+    "collapse": "Daralt",
+    "close": "Kapat",
+    "slideN": "Slayt {{n}}",
+    "dontShowAgain": "Bir daha gösterme",
+    "back": "Geri",
+    "next": "İleri",
+    "done": "Tamam",
+    "slides": {
+      "candleInsights": {
+        "title": "Kurumsal düzeyde grafik okuma",
+        "desc": "Geçersizlik seviyeleriyle Elliott Dalgası, ICT akıllı para kavramları, Wyckoff evreleri ve Hacim Profili — hepsi tek bir YZ destekli okumada.",
+        "cta": "Mum Analizi'ni aç"
+      },
+      "chartAnalyzer": {
+        "title": "Her grafik, her platform, tek YZ okuması",
+        "desc": "TradingView'dan, aracı kurumundan ya da herhangi bir yerden bir grafiği çek veya yükle — formasyonlar, seviyeler ve net bir yorumla tam teknik analiz al.",
+        "cta": "Grafik Analizörü'nü aç"
+      },
+      "marketHeatmap": {
+        "title": "Tüm piyasayı tek bakışta gör",
+        "desc": "Piyasa değerine göre boyutlanan, 24s değişime göre renklenen 120 coin — yeni Piyasa Isı Haritası'nda hareket edenleri anında yakala.",
+        "cta": "Piyasa Isı Haritası'nı gör"
+      },
+      "dailyBrief": {
+        "title": "Haberi sadece okuma, izle",
+        "desc": "Günlük Özet artık manşet haber için bir video bulup oynatıyor — gerçekte ne olduğunu tahmin etmeye son.",
+        "cta": "Günlük Özet'i aç"
+      }
+    }
+  }
+}

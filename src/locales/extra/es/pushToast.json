@@ -1,0 +1,22 @@
+{
+  "pushToast": {
+    "buySignal": "Señal de compra",
+    "sellSignal": "Señal de venta",
+    "watchlist": "Lista de seguimiento",
+    "watchlisted": "En tu lista",
+    "muted": "Silenciada",
+    "mute": "Silenciar {{coin}}",
+    "confidenceFull": {
+      "high": "Confianza alta",
+      "medium": "Confianza media",
+      "low": "Confianza baja"
+    },
+    "confidence": {
+      "high": "Alta",
+      "medium": "Media",
+      "low": "Baja"
+    },
+    "disclaimer": "Solo con fines informativos. No es asesoramiento de inversión: todas las decisiones de trading se toman bajo tu propio riesgo.",
+    "disclaimerShort": "No es asesoramiento de inversión. Opera bajo tu propio riesgo."
+  }
+}

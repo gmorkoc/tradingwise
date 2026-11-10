@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { CoinRow, TABLE_PAGE_SIZE, fmtBig, fmtPrice, Sparkline, cgFetch, TTL } from "./GlobalMarkets";
 import { DEFAULT_IDS } from "./Watchlist";
 import "../styles/GlobalMarkets.css";
@@ -60,6 +61,7 @@ interface Props {
 
 // The filter dropdown on its own, for parents that place it elsewhere.
 export function TopCryptoFilter({ filter, onChange, count }: { filter: Filter; onChange: (f: Filter) => void; count?: number }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -73,7 +75,7 @@ export function TopCryptoFilter({ filter, onChange, count }: { filter: Filter; o
     <div className="tct-filter" ref={ref}>
       <button type="button" className="tct-filter-btn" onClick={() => setOpen((o) => !o)} aria-haspopup="listbox" aria-expanded={open}>
         <span className="tct-filter-icon">{active.icon}</span>
-        <span className="tct-filter-label">{active.label}</span>
+        <span className="tct-filter-label">{t(`topCrypto.filters.${active.key}`, active.label)}</span>
         {count !== undefined && <span className="tct-filter-count">{count}</span>}
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
       </button>
@@ -89,7 +91,7 @@ export function TopCryptoFilter({ filter, onChange, count }: { filter: Filter; o
               onClick={() => { onChange(f.key); setOpen(false); }}
             >
               <span className="tct-filter-icon">{f.icon}</span>
-              {f.label}
+              {t(`topCrypto.filters.${f.key}`, f.label)}
             </button>
           ))}
         </div>
@@ -99,6 +101,7 @@ export function TopCryptoFilter({ filter, onChange, count }: { filter: Filter; o
 }
 
 export function TopCryptoTable({ coins: coinsProp, onSelectCoin, filterable = false, hideTitle = false, filter: filterProp, onCountChange }: Props) {
+  const { t } = useTranslation();
   const [ownCoins, setOwnCoins] = useState<CoinRow[]>([]);
   const [tablePage, setTablePage] = useState(1);
   const [error, setError] = useState<string | null>(null);
@@ -194,12 +197,12 @@ export function TopCryptoTable({ coins: coinsProp, onSelectCoin, filterable = fa
   return (
     <div className={`gm-section gm-table-section${filterable ? " tct--filterable" : ""}`}>
       {!controlled && <div className="gm-section-header">
-        {hideTitle ? <span /> : <span className="gm-section-title">Top Cryptocurrencies</span>}
+        {hideTitle ? <span /> : <span className="gm-section-title">{t("topCrypto.title")}</span>}
         {filterable ? (
           <div className="tct-filter" ref={menuRef}>
             <button type="button" className="tct-filter-btn" onClick={() => setMenuOpen((o) => !o)} aria-haspopup="listbox" aria-expanded={menuOpen}>
               <span className="tct-filter-icon">{activeFilter.icon}</span>
-              {activeFilter.label}
+              {t(`topCrypto.filters.${activeFilter.key}`, activeFilter.label)}
               <span className="tct-filter-count">{coins.length}</span>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
             </button>
@@ -215,18 +218,18 @@ export function TopCryptoTable({ coins: coinsProp, onSelectCoin, filterable = fa
                     onClick={() => { setFilter(f.key); setMenuOpen(false); }}
                   >
                     <span className="tct-filter-icon">{f.icon}</span>
-                    {f.label}
+                    {t(`topCrypto.filters.${f.key}`, f.label)}
                   </button>
                 ))}
               </div>
             )}
           </div>
         ) : (
-          <span className="gm-section-sub">{coins.length.toLocaleString()} coins by market capitalization</span>
+          <span className="gm-section-sub">{t("topCrypto.coinsByMcap", { n: coins.length.toLocaleString() })}</span>
         )}
       </div>}
       {filterable && filter === "watchlist" && coins.length === 0 && allCoins.length > 0 && (
-        <div className="tct-empty">No coins in your watchlist yet — tap ☆ on any coin to add it.</div>
+        <div className="tct-empty">{t("topCrypto.emptyWatchlist")}</div>
       )}
       {error && coins.length === 0 && <div className="gm-error">{error}</div>}
       <div className="gm-table-wrap">
@@ -247,14 +250,14 @@ export function TopCryptoTable({ coins: coinsProp, onSelectCoin, filterable = fa
           )}
           <thead>
             <tr>
-              <SortTh className="gm-th gm-th--rank" label="Rank" k="rank" sort={sort} />
-              <SortTh label="Name" k="name" sort={sort} />
-              <SortTh className="gm-th gm-th--r" label="Price" k="price" sort={sort} />
+              <SortTh className="gm-th gm-th--rank" label={t("topCrypto.cols.rank")} k="rank" sort={sort} />
+              <SortTh label={t("topCrypto.cols.name")} k="name" sort={sort} />
+              <SortTh className="gm-th gm-th--r" label={t("topCrypto.cols.price")} k="price" sort={sort} />
               <SortTh className="gm-th gm-th--r" label="24h %" k="chg24" sort={sort} />
               <SortTh className="gm-th gm-th--r" label="7d %" k="chg7d" sort={sort} />
-              <th className="gm-th gm-th--c">Last 7 Days</th>
-              <SortTh className="gm-th gm-th--r" label="Market Cap" k="mcap" sort={sort} />
-              <SortTh className="gm-th gm-th--r" label="Volume (24h)" k="vol" sort={sort} />
+              <th className="gm-th gm-th--c">{t("topCrypto.cols.last7")}</th>
+              <SortTh className="gm-th gm-th--r" label={t("topCrypto.cols.mcap")} k="mcap" sort={sort} />
+              <SortTh className="gm-th gm-th--r" label={t("topCrypto.cols.vol")} k="vol" sort={sort} />
             </tr>
           </thead>
           <tbody>
@@ -274,7 +277,7 @@ export function TopCryptoTable({ coins: coinsProp, onSelectCoin, filterable = fa
                       <button
                         type="button"
                         className={`tct-star${watched.includes(c.id) ? " on" : ""}`}
-                        aria-label={watched.includes(c.id) ? `Remove ${c.name} from watchlist` : `Add ${c.name} to watchlist`}
+                        aria-label={watched.includes(c.id) ? t("topCrypto.removeWatch", { name: c.name }) : t("topCrypto.addWatch", { name: c.name })}
                         onClick={(e) => { e.stopPropagation(); toggleWatch(c.id); }}
                       >
                         {watched.includes(c.id) ? "★" : "☆"}
@@ -301,11 +304,11 @@ export function TopCryptoTable({ coins: coinsProp, onSelectCoin, filterable = fa
       </div>
       <div className="gm-pagination">
         <span className="gm-pagination-info">
-          {coins.length ? (tablePage - 1) * TABLE_PAGE_SIZE + 1 : 0}–{Math.min(tablePage * TABLE_PAGE_SIZE, coins.length)} of {coins.length}
+          {t("topCrypto.range", { from: coins.length ? (tablePage - 1) * TABLE_PAGE_SIZE + 1 : 0, to: Math.min(tablePage * TABLE_PAGE_SIZE, coins.length), total: coins.length })}
         </span>
         <div className="gm-pagination-controls">
           <button type="button" className="gm-page-btn" disabled={tablePage <= 1}
-            onClick={() => setTablePage((p) => Math.max(1, p - 1))} aria-label="Previous page">
+            onClick={() => setTablePage((p) => Math.max(1, p - 1))} aria-label={t("topCrypto.prevPage")}>
             ‹
           </button>
           {/* First, last, current ±1 — never the full page list. */}
@@ -321,7 +324,7 @@ export function TopCryptoTable({ coins: coinsProp, onSelectCoin, filterable = fa
               </span>
             ))}
           <button type="button" className="gm-page-btn" disabled={tablePage >= tableTotalPages}
-            onClick={() => setTablePage((p) => Math.min(tableTotalPages, p + 1))} aria-label="Next page">
+            onClick={() => setTablePage((p) => Math.min(tableTotalPages, p + 1))} aria-label={t("topCrypto.nextPage")}>
             ›
           </button>
         </div>

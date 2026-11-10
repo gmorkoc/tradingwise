@@ -1,0 +1,11 @@
+{
+  "topMovers2": {
+    "tabTrending": "Trend",
+    "tabGainers": "Yükselenler",
+    "tabLosers": "Düşenler",
+    "live": "CANLI",
+    "viewChart": "Grafiği görüntüle",
+    "showMore": "Daha fazla göster",
+    "showLess": "Daha az göster"
+  }
+}

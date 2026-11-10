@@ -720,15 +720,15 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
                   )}
                   <span className="db-video-play">▶</span>
                   <span className="db-video-info">
-                    <span className="db-video-channel">Can't play here — watch on YouTube</span>
+                    <span className="db-video-channel">{t("dailyBrief2.cantPlay")}</span>
                   </span>
                 </button>
                 <button
                   type="button"
                   className="db-video-close"
                   onClick={() => { setVideoPlaying(false); setVideoEmbedFailed(false); }}
-                  aria-label="Back to thumbnail"
-                  title="Back to thumbnail"
+                  aria-label={t("dailyBrief2.backToThumb")}
+                  title={t("dailyBrief2.backToThumb")}
                 >
                   ✕
                 </button>
@@ -751,8 +751,8 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
                   type="button"
                   className="db-video-close"
                   onClick={() => setVideoPlaying(false)}
-                  aria-label="Back to thumbnail"
-                  title="Back to thumbnail"
+                  aria-label={t("dailyBrief2.backToThumb")}
+                  title={t("dailyBrief2.backToThumb")}
                 >
                   ✕
                 </button>
@@ -1044,7 +1044,7 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
         {sheetState !== "collapsed" && sheetState !== "minimized" && (
           <div className="db-card">
             {briefLoading ? (
-              <div className="db-skel" aria-busy="true" aria-label="Loading the brief">
+              <div className="db-skel" aria-busy="true" aria-label={t("dailyBrief2.loadingBrief")}>
                 <span className="db-skel-hero" />
                 {[0, 1, 2, 3].map((i) => (
                   <span key={i} className="db-skel-row" style={{ animationDelay: `${i * 0.1}s` }}>

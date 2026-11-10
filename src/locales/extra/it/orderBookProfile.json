@@ -1,0 +1,16 @@
+{
+  "orderBookProfile": {
+    "title": "Grafico di profondità",
+    "levelsTip": "Numero di livelli di prezzo bid/ask presi dall'order book per lato — valori più alti mostrano un intervallo di prezzo più ampio",
+    "levels": "Livelli",
+    "exit": "Esci",
+    "bidDepth": "Profondità bid",
+    "askDepth": "Profondità ask",
+    "spread": "Spread",
+    "bidAsk": "Bid / Ask",
+    "loading": "Stiamo preparando il tuo order book…",
+    "bidsCum": "Bid (cumulativi)",
+    "asksCum": "Ask (cumulativi)",
+    "live": "live"
+  }
+}

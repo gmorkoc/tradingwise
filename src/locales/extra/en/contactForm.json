@@ -1,0 +1,25 @@
+{
+  "contactForm": {
+    "title": "Contact Us",
+    "subtitle": "We read every message.",
+    "close": "Close",
+    "sentTitle": "Message sent!",
+    "sentBody": "Thanks for reaching out. We'll get back to you soon.",
+    "category": "Category",
+    "categories": {
+      "bug": "Bug Report",
+      "feature": "Feature Request",
+      "feedback": "General Feedback",
+      "other": "Other"
+    },
+    "yourEmail": "Your Email",
+    "emailPlaceholder": "you@example.com",
+    "message": "Message",
+    "messagePlaceholder": "Describe the issue or share your thoughts...",
+    "sending": "Sending…",
+    "send": "Send Message",
+    "errMessage": "Please write a message before submitting.",
+    "errEmail": "Please enter your email address.",
+    "errGeneric": "Something went wrong. Please try again."
+  }
+}

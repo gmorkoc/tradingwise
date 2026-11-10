@@ -1,0 +1,23 @@
+{
+  "marketStories": {
+    "eyebrow": { "usFed": "Fed USA", "cryptoOdds": "Quote crypto" },
+    "live": "Live",
+    "yes": "Sì",
+    "readMore": "Leggi di più",
+    "volume": "{{value}} di volume",
+    "volume24h": "{{value}} di volume 24h",
+    "movers": {
+      "topGainer": "Maggior rialzo · 24h",
+      "topLoser": "Maggior ribasso · 24h",
+      "gainer": "In rialzo · 24h",
+      "loser": "In ribasso · 24h"
+    },
+    "ariaStories": "Storie di mercato",
+    "previous": "Precedente",
+    "next": "Successivo",
+    "carouselPosition": "Posizione del carosello",
+    "goTo": "Vai a {{n}} di {{total}}",
+    "autoPlay": "Riproduzione automatica",
+    "ago": { "m": "{{n}}m", "h": "{{n}}h", "d": "{{n}}g" }
+  }
+}

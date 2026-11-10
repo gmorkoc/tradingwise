@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import i18n from "i18next";
+import { useTranslation } from "react-i18next";
 import { IChartApi, Time } from "lightweight-charts";
 import { CandleDataPoint, COINS, CoinSymbol } from "../services/coinglass";
 import { ZoneResult } from "./PriceChart.types";
@@ -26,21 +28,50 @@ function formatPrice(p: number): string {
 // relative time ("2h ago"/"3d ago") doesn't have that problem.
 export function formatRelativeTime(unixSeconds: number): string {
   const deltaSec = Math.max(0, Math.floor(Date.now() / 1000) - unixSeconds);
-  if (deltaSec < 60) return "just now";
+  if (deltaSec < 60) return i18n.t("chartEvents.ago.justNow");
   const mins = Math.floor(deltaSec / 60);
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 60) return i18n.t("chartEvents.ago.m", { n: mins });
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return i18n.t("chartEvents.ago.h", { n: hours });
   const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
+  if (days < 30) return i18n.t("chartEvents.ago.d", { n: days });
   const months = Math.floor(days / 30);
-  if (months < 12) return `${months}mo ago`;
-  return `${Math.floor(months / 12)}y ago`;
+  if (months < 12) return i18n.t("chartEvents.ago.mo", { n: months });
+  return i18n.t("chartEvents.ago.y", { n: Math.floor(months / 12) });
+}
+
+// "current" event: oversold vs overbought. title/body stay English on the
+// event object (other panels match on them) — shown text is translated
+// at render via eventTitle / eventBody below.
+const isOversold = (ev: ChartEvent) => /oversold/i.test(ev.body);
+
+const TITLE_KEY: Record<string, string> = {
+  current: "current",
+  "support-break": "supportBreak",
+  "resistance-reject": "resistanceReject",
+  "resistance-breakout": "resistanceBreakout",
+  "support-bounce": "supportBounce",
+  "at-support": "atSupport",
+  "at-resistance": "atResistance",
+};
+
+/** The event's title in the current language (falls back to ev.title). */
+export function eventTitle(ev: ChartEvent): string {
+  const k = TITLE_KEY[ev.id];
+  return k ? i18n.t(`chartEvents.title.${k}`, { defaultValue: ev.title }) : ev.title;
+}
+
+/** The event's one-line explanation in the current language (falls back to ev.body). */
+export function eventBody(ev: ChartEvent): string {
+  const k = TITLE_KEY[ev.id];
+  if (!k || !ev.vars) return ev.body;
+  const key = ev.id === "current" ? (isOversold(ev) ? "currentOversold" : "currentOverbought") : k;
+  return i18n.t(`chartEvents.body.${key}`, { ...ev.vars, defaultValue: ev.body });
 }
 
 // Card mood: green for bullish setups, red for bearish ones.
 function eventTone(ev: ChartEvent): "bullish" | "bearish" {
-  if (ev.id === "current") return /oversold/i.test(ev.body) ? "bullish" : "bearish";
+  if (ev.id === "current") return isOversold(ev) ? "bullish" : "bearish";
   if (ev.id === "resistance-breakout" || ev.id === "support-bounce" || ev.id === "at-support") return "bullish";
   return "bearish";
 }
@@ -48,13 +79,13 @@ function eventTone(ev: ChartEvent): "bullish" | "bearish" {
 // Short headline per event kind (the card's big line).
 function eventHeadline(ev: ChartEvent): string {
   switch (ev.id) {
-    case "current": return /oversold/i.test(ev.body) ? "Oversold zone" : "Overbought zone";
-    case "support-break": return "Broke below support";
-    case "resistance-reject": return "Rejected at resistance";
-    case "resistance-breakout": return "Broke above resistance";
-    case "support-bounce": return "Bounced off support";
-    case "at-support": return "Testing support";
-    case "at-resistance": return "Testing resistance";
+    case "current": return isOversold(ev) ? i18n.t("chartEvents.headline.oversold") : i18n.t("chartEvents.headline.overbought");
+    case "support-break": return i18n.t("chartEvents.headline.supportBreak");
+    case "resistance-reject": return i18n.t("chartEvents.headline.resistanceReject");
+    case "resistance-breakout": return i18n.t("chartEvents.headline.resistanceBreakout");
+    case "support-bounce": return i18n.t("chartEvents.headline.supportBounce");
+    case "at-support": return i18n.t("chartEvents.headline.atSupport");
+    case "at-resistance": return i18n.t("chartEvents.headline.atResistance");
     default: return ev.title;
   }
 }
@@ -83,10 +114,10 @@ function EventCard({ ev, onOpen }: { ev: ChartEvent; onOpen: () => void }) {
           <span className="cec-sep">·</span>
           <span className="cec-price">${ev.price.toLocaleString(undefined, { maximumFractionDigits: ev.price >= 100 ? 2 : 6 })}</span>
         </span>
-        <span className="cec-line2">{ev.body}</span>
+        <span className="cec-line2">{eventBody(ev)}</span>
       </span>
       <span className="cec-side">
-        {live ? <span className="cec-live"><i />LIVE</span> : null}
+        {live ? <span className="cec-live"><i />{i18n.t("chartEvents.live")}</span> : null}
         <span className="cec-time">{formatRelativeTime(ev.time)}</span>
       </span>
     </div>
@@ -105,8 +136,8 @@ function EventSheet({ ev, onClose }: { ev: ChartEvent; onClose: () => void }) {
       ariaLabel={eventHeadline(ev)}
       title={
         <span className="cec-sheet-label">
-          {ev.title}
-          {live && <span className="cec-live"><i />LIVE</span>}
+          {eventTitle(ev)}
+          {live && <span className="cec-live"><i />{i18n.t("chartEvents.live")}</span>}
         </span>
       }
     >
@@ -120,9 +151,9 @@ function EventSheet({ ev, onClose }: { ev: ChartEvent; onClose: () => void }) {
             <span className="cec-sheet-headline">{eventHeadline(ev)}</span>
           </div>
           <div className="cec-sheet-price">${ev.price.toLocaleString(undefined, { maximumFractionDigits: ev.price >= 100 ? 2 : 6 })}</div>
-          <p className="cec-sheet-text">{ev.body}</p>
+          <p className="cec-sheet-text">{eventBody(ev)}</p>
           <div className="cec-sheet-meta">
-            <span className="cec-sheet-tone"><i />{tone === "bullish" ? "Bullish setup" : "Bearish setup"}</span>
+            <span className="cec-sheet-tone"><i />{tone === "bullish" ? i18n.t("chartEvents.bullishSetup") : i18n.t("chartEvents.bearishSetup")}</span>
             <span className="cec-time">{formatRelativeTime(ev.time)}</span>
           </div>
         </div>
@@ -136,6 +167,8 @@ export interface ChartEvent {
   price: number;
   title: string;
   body: string;
+  /** Values for the translated body (see eventBody). */
+  vars?: Record<string, string | number>;
 }
 
 // How far back (in candles) a support/resistance crossing can be and
@@ -182,6 +215,7 @@ function buildChartEvents(
         price: last.close,
         title: "Happening now",
         body: `${name} is trading in ${oversold ? "an oversold" : "an overbought"} zone at ${formatPrice(last.close)}, suggesting the recent move may be ${oversold ? "overdone to the downside" : "overdone to the upside"}.`,
+        vars: { name, price: formatPrice(last.close) },
       });
     }
   }
@@ -205,6 +239,7 @@ function buildChartEvents(
             price: c.close,
             title: "Below Support",
             body: `${name} dropped below ${formatPrice(nearestSupport.price)}, a price it's mostly stayed above over the past ${daysAbove} candle${daysAbove === 1 ? "" : "s"}.`,
+            vars: { name, price: formatPrice(nearestSupport.price), count: daysAbove },
           });
         }
         break;
@@ -224,6 +259,7 @@ function buildChartEvents(
           price: c.close,
           title: "Resistance Rejected",
           body: `${name} was rejected near ${formatPrice(nearestResistance.price)} and pulled back.`,
+          vars: { name, price: formatPrice(nearestResistance.price) },
         });
         break;
       }
@@ -246,6 +282,7 @@ function buildChartEvents(
             price: c.close,
             title: "Resistance Breakout",
             body: `${name} broke above ${formatPrice(nearestResistance.price)}, a price it's mostly stayed under over the past ${daysBelow} candle${daysBelow === 1 ? "" : "s"}.`,
+            vars: { name, price: formatPrice(nearestResistance.price), count: daysBelow },
           });
         }
         break;
@@ -266,6 +303,7 @@ function buildChartEvents(
           price: c.close,
           title: "Support Bounce",
           body: `${name} bounced off support near ${formatPrice(nearestSupport.price)} and recovered.`,
+          vars: { name, price: formatPrice(nearestSupport.price) },
         });
         break;
       }
@@ -283,6 +321,7 @@ function buildChartEvents(
       price: last.close,
       title: "At Support",
       body: `${name} is testing support near ${formatPrice(nearestSupport.price)}.`,
+      vars: { name, price: formatPrice(nearestSupport.price) },
     });
   }
   if (nearestResistance && Math.abs(last.close - nearestResistance.price) / nearestResistance.price < PROXIMITY_PCT) {
@@ -292,6 +331,7 @@ function buildChartEvents(
       price: last.close,
       title: "At Resistance",
       body: `${name} is testing resistance near ${formatPrice(nearestResistance.price)}.`,
+      vars: { name, price: formatPrice(nearestResistance.price) },
     });
   }
 
@@ -368,6 +408,8 @@ function LeadEventCard({ card }: { card: LeadCard }) {
 }
 
 export function ChartEventAnnotations({ chartRef, seriesRef, candlesRef, srLevels, zone, coin, visible, cardsSlotRef, onEventsChange, leadCard }: Props) {
+  // Re-render (and re-translate the cards) when the language changes.
+  const { t } = useTranslation();
   const [events, setEvents] = useState<ChartEvent[]>([]);
   const [positions, setPositions] = useState<Record<string, { x: number; y: number }>>({});
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -534,7 +576,7 @@ export function ChartEventAnnotations({ chartRef, seriesRef, candlesRef, srLevel
             className={`chart-event-dot${ev.id === activeId ? " chart-event-dot--active" : ""}`}
             style={{ left: pos.x, top: pos.y }}
             onClick={() => selectEvent(ev.id)}
-            aria-label={ev.title}
+            aria-label={eventTitle(ev)}
           />
         );
       })}
@@ -558,7 +600,9 @@ export function ChartEventAnnotations({ chartRef, seriesRef, candlesRef, srLevel
               type="button"
               className={`chart-event-pager-dot${id === activeId ? " chart-event-pager-dot--active" : ""}`}
               onClick={() => selectEvent(id)}
-              aria-label={id === LEAD_ID ? `Show ${leadCard?.title ?? "summary"}` : `Show ${events.find((e) => e.id === id)?.title ?? "event"}`}
+              aria-label={id === LEAD_ID
+                ? t("chartEvents.show", { title: leadCard?.title ?? t("chartEvents.summary") })
+                : (() => { const ev = events.find((e) => e.id === id); return t("chartEvents.show", { title: ev ? eventTitle(ev) : t("chartEvents.event") }); })()}
             />
           ))}
         </div>

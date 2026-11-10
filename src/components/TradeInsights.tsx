@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import i18n from "../i18n";
 import { CoinRow, COINS_MARKETS_URL, TTL, cgFetch, fmtPrice } from "./GlobalMarkets";
 import { signalOf } from "./MarketSignalTable";
 import { fetchBrief, type BriefItem } from "./DailyBrief";
@@ -29,7 +31,9 @@ function rsi14(a: number[]) {
 const short = (v: number) => (v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : fmtPrice(v));
 const ago = (ms: number) => {
   const m = Math.max(1, Math.round((Date.now() - ms) / 60000));
-  return m < 60 ? `${m}m` : m < 1440 ? `${Math.round(m / 60)}h` : `${Math.round(m / 1440)}d`;
+  return m < 60 ? i18n.t("tradeInsights.agoShort.m", { n: m })
+    : m < 1440 ? i18n.t("tradeInsights.agoShort.h", { n: Math.round(m / 60) })
+    : i18n.t("tradeInsights.agoShort.d", { n: Math.round(m / 1440) });
 };
 
 export function TradeInsights({ coin, onAsk }: {
@@ -38,6 +42,7 @@ export function TradeInsights({ coin, onAsk }: {
   onAsk?: (prompt: string) => void;
 }) {
   const name = COINS.find((c) => c.symbol === coin)?.name ?? coin;
+  const { t } = useTranslation();
   const [row, setRow] = useState<CoinRow | null>(null);
   const [daily, setDaily] = useState<Daily | null>(null);
   const [news, setNews] = useState<BriefItem[]>([]);
@@ -99,14 +104,26 @@ export function TradeInsights({ coin, onAsk }: {
   const maKnown = [ma20, ma50, ma200].filter((m) => m != null).length;
   const tone: "bull" | "bear" | "mixed" =
     sig?.tone === "bull" && maUp >= 2 ? "bull" : sig?.tone === "bear" && maKnown - maUp >= 2 ? "bear" : "mixed";
-  const crowd = deriv?.long == null ? null : deriv.long >= 60 ? "longs crowded" : deriv.long <= 40 ? "shorts crowded" : "balanced positioning";
+  const crowd = deriv?.long == null ? null : deriv.long >= 60 ? t("tradeInsights.crowd.long") : deriv.long <= 40 ? t("tradeInsights.crowd.short") : t("tradeInsights.crowd.balanced");
   const maParts = [
     [ma20, "MA20"], [ma50, "MA50"], [ma200, "MA200"],
   ].filter(([m]) => m != null).map(([m, label]) => ({ label: label as string, up: above(m as number) }));
+  // Structure sentence, from full templates: technicals clause, MA clause, crowd clause.
+  const maUpList = maParts.filter((m) => m.up).map((m) => m.label).join(" & ");
+  const maDnList = maParts.filter((m) => !m.up).map((m) => m.label).join(" & ");
+  const maClause = !maParts.length ? ""
+    : maUpList && maDnList ? t("tradeInsights.maAboveBelow", { above: maUpList, below: maDnList })
+    : maUpList ? t("tradeInsights.maAbove", { above: maUpList })
+    : maDnList ? t("tradeInsights.maBelow", { below: maDnList }) : "";
+  const structLine = t("tradeInsights.structLine", {
+    tech: sig ? t("tradeInsights.techRead", { word: t(`tradeInsights.sigWord.${sig.tone}`), score: sig.score }) : t("tradeInsights.techLoading"),
+    ma: maClause,
+    crowd: crowd ? t("tradeInsights.crowdClause", { crowd }) : "",
+  });
 
   return (
     <div className="tix">
-      <section className="tix-card" aria-label={`${coin} insights`}>
+      <section className="tix-card" aria-label={t("tradeInsights.aria", { coin })}>
         {/* No title row — the structure line leads, "updated" time on its right. */}
         {/* Collapsed by default: just the structure line — "Show" opens the
             full read (headlines, 30d, derivatives, technicals). */}
@@ -117,15 +134,15 @@ export function TradeInsights({ coin, onAsk }: {
           aria-expanded={open}
         >
           <i aria-hidden="true" />
-          <b>{tone === "bull" ? "BULLISH" : tone === "bear" ? "BEARISH" : "MIXED"} STRUCTURE</b>
+          <b>{t(`tradeInsights.structUpper.${tone}`)}</b>
           {crowd && <span>· {crowd}</span>}
           <span className="tix-show">
-            {open ? "Hide" : "Show"}
+            {open ? t("tradeInsights.hide") : t("tradeInsights.show")}
             <svg className={open ? "tix-chev tix-chev--open" : "tix-chev"} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
           </span>
         </button>
         {open && (<>
-        <span className="tix-time tix-time--row">Live Hintz · updated {ago(at)} ago</span>
+        <span className="tix-time tix-time--row">{t("tradeInsights.updated", { ago: ago(at) })}</span>
 
         {/* Live Hintz: the read as steps (Paper Trading's step-list look) —
             accent bar · icon tile · bold takeaway · plain-language detail.
@@ -139,12 +156,8 @@ export function TradeInsights({ coin, onAsk }: {
               </svg>
             </span>
             <span className="tix-step-text">
-              <span className="tix-step-t">{tone === "bull" ? "Bullish" : tone === "bear" ? "Bearish" : "Mixed"} structure</span>
-              <span className="tix-step-s">
-                {sig ? `Technicals read ${sig.word} ${sig.score}/100` : "Technicals still loading"}
-                {maParts.length > 0 && ` — price is ${maParts.filter((m) => m.up).map((m) => m.label).join(", ") ? `above ${maParts.filter((m) => m.up).map((m) => m.label).join(" & ")}` : ""}${maParts.some((m) => m.up) && maParts.some((m) => !m.up) ? " and " : ""}${maParts.some((m) => !m.up) ? `below ${maParts.filter((m) => !m.up).map((m) => m.label).join(" & ")}` : ""}`}
-                {crowd ? `, ${crowd}.` : "."}
-              </span>
+              <span className="tix-step-t">{t(`tradeInsights.structTitle.${tone}`)}</span>
+              <span className="tix-step-s">{structLine}</span>
             </span>
           </li>
 
@@ -156,13 +169,13 @@ export function TradeInsights({ coin, onAsk }: {
             <span className="tix-step-text">
               <span className="tix-step-t">
                 {lo30 != null && hi30 != null ? (
-                  <>{short(lo30)}–{short(hi30)} in 30 days{chg30 != null && <> · <span className={chg30 >= 0 ? "tix-up" : "tix-dn"}>{chg30 >= 0 ? "+" : ""}{chg30.toFixed(1)}%</span></>}</>
+                  <>{t("tradeInsights.range30", { lo: short(lo30), hi: short(hi30) })}{chg30 != null && <> · <span className={chg30 >= 0 ? "tix-up" : "tix-dn"}>{chg30 >= 0 ? "+" : ""}{chg30.toFixed(1)}%</span></>}</>
                 ) : <span className="tix-skel" />}
               </span>
               <span className="tix-step-s">
                 {rsi != null
-                  ? `RSI ${Math.round(rsi)} — ${rsi >= 70 ? "overbought, stretched to the upside" : rsi <= 30 ? "oversold, stretched to the downside" : rsi >= 50 ? "momentum leaning up" : "momentum leaning down"}.`
-                  : "Monthly range and momentum."}
+                  ? t(rsi >= 70 ? "tradeInsights.rsi.overbought" : rsi <= 30 ? "tradeInsights.rsi.oversold" : rsi >= 50 ? "tradeInsights.rsi.up" : "tradeInsights.rsi.down", { v: Math.round(rsi) })
+                  : t("tradeInsights.rangeFallback")}
               </span>
             </span>
           </li>
@@ -176,13 +189,13 @@ export function TradeInsights({ coin, onAsk }: {
               <span className="tix-step-text">
                 <span className="tix-step-t">
                   {deriv ? (
-                    <>Funding <span className={deriv.funding != null && deriv.funding < 0 ? "tix-dn" : "tix-up"}>{deriv.funding != null ? `${deriv.funding >= 0 ? "+" : ""}${deriv.funding.toFixed(4)}%` : "—"}</span></>
+                    <>{t("tradeInsights.funding")} <span className={deriv.funding != null && deriv.funding < 0 ? "tix-dn" : "tix-up"}>{deriv.funding != null ? `${deriv.funding >= 0 ? "+" : ""}${deriv.funding.toFixed(4)}%` : "—"}</span></>
                   ) : <span className="tix-skel" />}
                 </span>
                 <span className="tix-step-s">
                   {deriv?.long != null
-                    ? `${deriv.long.toFixed(0)}% of futures accounts are long — ${crowd ?? "balanced positioning"}.`
-                    : "Futures positioning."}
+                    ? t("tradeInsights.longShare", { pct: deriv.long.toFixed(0), crowd: crowd ?? t("tradeInsights.crowd.balanced") })
+                    : t("tradeInsights.futuresFallback")}
                 </span>
               </span>
             </li>
@@ -195,7 +208,7 @@ export function TradeInsights({ coin, onAsk }: {
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M8 8h8M8 12h8M8 16h5" /></svg>
               </span>
               <span className="tix-step-text">
-                <span className="tix-step-t">What's moving it</span>
+                <span className="tix-step-t">{t("tradeInsights.whatsMoving")}</span>
                 {news.map((n) => (
                   <a key={n.url} className="tix-step-s tix-step-link" href={n.url} target="_blank" rel="noopener noreferrer">
                     {n.title}<em> · {ago(n.pubDate)}</em>
@@ -207,10 +220,10 @@ export function TradeInsights({ coin, onAsk }: {
         </ol>
 
         <div className="tix-foot">
-          <span>Not financial advice<br />Powered by coinhintz signals</span>
+          <span>{t("tradeInsights.nfa")}<br />{t("tradeInsights.poweredBy")}</span>
           {onAsk && (
-            <button type="button" className="tix-more" onClick={() => onAsk(`Give me a full analysis of ${name} (${coin}) right now: trend, key levels, derivatives positioning and what to watch.`)}>
-              Full Analysis
+            <button type="button" className="tix-more" onClick={() => onAsk(t("tradeInsights.askPrompt", { name, coin }))}>
+              {t("tradeInsights.fullAnalysis")}
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
             </button>
           )}

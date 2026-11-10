@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import type { IChartApi, Time } from "lightweight-charts";
 import type { PvResult } from "../services/proVision";
 
@@ -32,8 +33,13 @@ export function ProVisionOverlay({ chartRef, seriesRef, candlesRef, result, visi
   const resultRef = useRef(result);
   const renderRef = useRef<(() => void) | null>(null);
   const subRef = useRef<{ chart: IChartApi; off: () => void } | null>(null);
+  // Canvas labels read the current language through a ref (render is stable).
+  const { t } = useTranslation();
+  const tRef = useRef(t);
+  tRef.current = t;
 
   const render = useCallback(() => {
+    const t = tRef.current;
     const canvas = canvasRef.current;
     const chart = chartRef.current;
     const series = seriesRef.current;
@@ -145,8 +151,8 @@ export function ProVisionOverlay({ chartRef, seriesRef, candlesRef, result, visi
         ctx.stroke();
         ctx.restore();
         // Tag at the right end.
-        const label = "INVALIDATION";
-        const sub = `Δ Volume ${z.deltaVolPct >= 0 ? "+" : "−"}${Math.abs(z.deltaVolPct).toFixed(1)}%${z.real ? "" : " (est.)"}`;
+        const label = t("pvOverlay.invalidation");
+        const sub = `${t("pvOverlay.deltaVolume")} ${z.deltaVolPct >= 0 ? "+" : "−"}${Math.abs(z.deltaVolPct).toFixed(1)}%${z.real ? "" : ` ${t("pvOverlay.est")}`}`;
         ctx.font = "700 9px Inter, system-ui, sans-serif";
         const lw = ctx.measureText(label).width;
         ctx.font = "600 11px Inter, system-ui, sans-serif";
@@ -193,8 +199,8 @@ export function ProVisionOverlay({ chartRef, seriesRef, candlesRef, result, visi
         ctx.restore();
         ctx.font = "700 9px Inter, system-ui, sans-serif";
         ctx.fillStyle = "rgba(174, 174, 178, 0.95)";
-        ctx.fillText("RANGE CEILING", x + 6, yT - 5);
-        ctx.fillText("RANGE FLOOR", x + 6, yB + 12);
+        ctx.fillText(t("pvOverlay.rangeCeiling"), x + 6, yT - 5);
+        ctx.fillText(t("pvOverlay.rangeFloor"), x + 6, yB + 12);
       }
     }
 
@@ -304,7 +310,7 @@ export function ProVisionOverlay({ chartRef, seriesRef, candlesRef, result, visi
         const isSell = s.side === "sell";
         const anchor = yOf(isSell ? c.high : c.low);
         if (anchor !== null) {
-          pill(x, anchor, !isSell, isSell ? "STRONG SELL" : "STRONG BUY", isSell ? "#e5484d" : "#30a46c", "#ffffff", true);
+          pill(x, anchor, !isSell, isSell ? t("pvOverlay.strongSell") : t("pvOverlay.strongBuy"), isSell ? "#e5484d" : "#30a46c", "#ffffff", true);
         }
       }
     }
@@ -327,7 +333,7 @@ export function ProVisionOverlay({ chartRef, seriesRef, candlesRef, result, visi
       if (k === undefined || x === null || !c || x < -30 || x > plotRight + 30 || nearStrong(k)) continue;
       const isSell = f.side === "sell";
       const anchor = yOf(isSell ? c.high : c.low);
-      if (anchor !== null) pill(x, anchor, !isSell, isSell ? "Sell" : "Buy", isSell ? "#e5484d" : "#30a46c", "#ffffff", true);
+      if (anchor !== null) pill(x, anchor, !isSell, isSell ? t("pvOverlay.sell") : t("pvOverlay.buy"), isSell ? "#e5484d" : "#30a46c", "#ffffff", true);
     }
   }, [chartRef, seriesRef, candlesRef]);
 
@@ -336,7 +342,7 @@ export function ProVisionOverlay({ chartRef, seriesRef, candlesRef, result, visi
   useEffect(() => {
     resultRef.current = result;
     if (visible) render();
-  }, [result, visible, generation, render]);
+  }, [result, visible, generation, render, t]);
 
   useEffect(() => () => { subRef.current?.off(); }, []);
 

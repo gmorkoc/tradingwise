@@ -1,0 +1,35 @@
+{
+  "globalSearch": {
+    "placeholder": "Busca monedas, secciones, funciones…",
+    "ask": "Preguntar",
+    "askAgentTitle": "Preguntar a Agent Ready",
+    "clear": "Borrar",
+    "cancel": "Cancelar",
+    "noResults": "Sin resultados para \"{{query}}\"",
+    "coins": "Monedas",
+    "pages": "Páginas",
+    "allPages": "Todas las páginas",
+    "kbdNavigate": "navegar",
+    "kbdOpen": "abrir",
+    "kbdClose": "cerrar",
+    "sections": {
+      "chart": { "label": "Gráfico de precio", "desc": "Gráfico de velas en vivo con indicadores" },
+      "candleai": { "label": "Análisis de Velas", "desc": "Análisis de patrones con IA, smart money, pronósticos" },
+      "heatmap": { "label": "Mapa de Liquidaciones", "desc": "Zonas de liquidación de futuros y niveles de caza de stops" },
+      "onchain": { "label": "Métricas On-Chain", "desc": "Datos de red, flujos de exchanges y actividad de ballenas" },
+      "positions": { "label": "Posiciones y flujos", "desc": "Ratios long/short y volumen de compra/venta taker" },
+      "htf": { "label": "Análisis HTF", "desc": "Estructura en temporalidades altas, tendencia macro y sesgo" },
+      "orderflow": { "label": "Flujo de órdenes", "desc": "Gráfico footprint, delta y cinta de órdenes grandes" },
+      "signals": { "label": "Señales", "desc": "Señales de trading por confluencia multi-exchange generadas por IA" },
+      "fundingbot": { "label": "Bot Funding", "desc": "Tasas de funding de perpetuos en todos los exchanges" },
+      "riskcalc": { "label": "Calc. Posición", "desc": "Calculadora de tamaño de posición, riesgo en dólares y R:R" },
+      "markets": { "label": "Mercados", "desc": "Capitalización, dominancia y resumen de las principales monedas" },
+      "marketheatmap": { "label": "Mapa de calor del mercado", "desc": "Principales monedas por capitalización, tamaño por cap, color por cambio 24h" },
+      "altanalysis": { "label": "Análisis de Altcoins", "desc": "Análisis con IA de criptomonedas alternativas" },
+      "options": { "label": "Opciones", "desc": "Datos de opciones de BTC/ETH — interés abierto, max pain, IV" },
+      "correlation": { "label": "Correlación", "desc": "Correlación entre activos frente al oro, el DXY y el S&P 500" },
+      "strategyalerts": { "label": "Alertas de Estrategia", "desc": "Motor de reglas personalizado — alertas de indicadores y precio" },
+      "agentReady": { "label": "Agent Ready", "desc": "Chatea con el agente de trading con IA — pregunta por cualquier moneda y recibe ideas de trading" }
+    }
+  }
+}

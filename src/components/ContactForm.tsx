@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../services/supabase";
 import "../styles/ContactForm.css";
@@ -8,14 +9,17 @@ interface Props {
   onClose: () => void;
 }
 
+// `label` (English) is what the forwarded support email uses; the form
+// shows contactForm.categories.<value> instead.
 const CATEGORIES = [
-  { value: "bug",      label: "🐛  Bug Report" },
-  { value: "feature",  label: "✨  Feature Request" },
-  { value: "feedback", label: "💬  General Feedback" },
-  { value: "other",    label: "📬  Other" },
+  { value: "bug",      icon: "🐛", label: "🐛  Bug Report" },
+  { value: "feature",  icon: "✨", label: "✨  Feature Request" },
+  { value: "feedback", icon: "💬", label: "💬  General Feedback" },
+  { value: "other",    icon: "📬", label: "📬  Other" },
 ];
 
 export const ContactForm: React.FC<Props> = ({ isOpen, onClose }) => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const backdropRef = useRef<HTMLDivElement>(null);
 
@@ -45,8 +49,8 @@ export const ContactForm: React.FC<Props> = ({ isOpen, onClose }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim()) { setError("Please write a message before submitting."); return; }
-    if (!email.trim())   { setError("Please enter your email address."); return; }
+    if (!message.trim()) { setError(t("contactForm.errMessage")); return; }
+    if (!email.trim())   { setError(t("contactForm.errEmail")); return; }
 
     setBusy(true);
     setError("");
@@ -65,7 +69,7 @@ export const ContactForm: React.FC<Props> = ({ isOpen, onClose }) => {
 
     if (sbErr) {
       setBusy(false);
-      setError("Something went wrong. Please try again.");
+      setError(t("contactForm.errGeneric"));
       return;
     }
 
@@ -102,24 +106,24 @@ export const ContactForm: React.FC<Props> = ({ isOpen, onClose }) => {
         {/* Header */}
         <div className="cf-header">
           <div>
-            <h2 className="cf-title">Contact Us</h2>
-            <p className="cf-subtitle">We read every message.</p>
+            <h2 className="cf-title">{t("contactForm.title")}</h2>
+            <p className="cf-subtitle">{t("contactForm.subtitle")}</p>
           </div>
-          <button className="cf-close" onClick={onClose} aria-label="Close">✕</button>
+          <button className="cf-close" onClick={onClose} aria-label={t("contactForm.close")}>✕</button>
         </div>
 
         {sent ? (
           <div className="cf-success">
             <span className="cf-success-icon">✅</span>
-            <p className="cf-success-title">Message sent!</p>
-            <p className="cf-success-body">Thanks for reaching out. We'll get back to you soon.</p>
-            <button className="cf-submit" onClick={onClose}>Close</button>
+            <p className="cf-success-title">{t("contactForm.sentTitle")}</p>
+            <p className="cf-success-body">{t("contactForm.sentBody")}</p>
+            <button className="cf-submit" onClick={onClose}>{t("contactForm.close")}</button>
           </div>
         ) : (
           <form className="cf-form" onSubmit={handleSubmit} noValidate>
             {/* Category */}
             <div className="cf-field">
-              <label className="cf-label">Category</label>
+              <label className="cf-label">{t("contactForm.category")}</label>
               <div className="cf-category-grid">
                 {CATEGORIES.map((c) => (
                   <button
@@ -128,7 +132,7 @@ export const ContactForm: React.FC<Props> = ({ isOpen, onClose }) => {
                     className={`cf-category-btn${category === c.value ? " cf-category-btn--active" : ""}`}
                     onClick={() => setCategory(c.value)}
                   >
-                    {c.label}
+                    {c.icon}  {t(`contactForm.categories.${c.value}`)}
                   </button>
                 ))}
               </div>
@@ -136,12 +140,12 @@ export const ContactForm: React.FC<Props> = ({ isOpen, onClose }) => {
 
             {/* Email */}
             <div className="cf-field">
-              <label className="cf-label" htmlFor="cf-email">Your Email</label>
+              <label className="cf-label" htmlFor="cf-email">{t("contactForm.yourEmail")}</label>
               <input
                 id="cf-email"
                 className="cf-input"
                 type="email"
-                placeholder="you@example.com"
+                placeholder={t("contactForm.emailPlaceholder")}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -150,11 +154,11 @@ export const ContactForm: React.FC<Props> = ({ isOpen, onClose }) => {
 
             {/* Message */}
             <div className="cf-field">
-              <label className="cf-label" htmlFor="cf-message">Message</label>
+              <label className="cf-label" htmlFor="cf-message">{t("contactForm.message")}</label>
               <textarea
                 id="cf-message"
                 className="cf-textarea"
-                placeholder="Describe the issue or share your thoughts..."
+                placeholder={t("contactForm.messagePlaceholder")}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 rows={5}
@@ -166,7 +170,7 @@ export const ContactForm: React.FC<Props> = ({ isOpen, onClose }) => {
             {error && <p className="cf-error">{error}</p>}
 
             <button className="cf-submit" type="submit" disabled={busy}>
-              {busy ? "Sending…" : "Send Message"}
+              {busy ? t("contactForm.sending") : t("contactForm.send")}
             </button>
           </form>
         )}

@@ -742,7 +742,7 @@ function AppDashboard({
   const openChartCoin = (symbol: string, opts: { recent?: boolean; navigate?: boolean } = {}): boolean => {
     const sym = String(symbol || "").toUpperCase();
     if (!SUPPORTED_CHART_COINS.has(sym)) {
-      setUnavailableCoin(sym || "This coin");
+      setUnavailableCoin(sym || t("appShell.thisCoin"));
       return false;
     }
     setCoin(sym as CoinSymbol);
@@ -1214,10 +1214,10 @@ function AppDashboard({
             <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" />
           </svg>
         </span>
-        <span className="icon-strip-usage-title">{t("nav.aiUsage", "AI Usage")}</span>
+        <span className="icon-strip-usage-title">{t("appShell.usage.title")}</span>
         {tier !== "elite" && (
           <button type="button" className="icon-strip-usage-upgrade" onClick={onOpenUpgrade}>
-            {t("nav.upgrade", "Upgrade")}
+            {t("appShell.usage.upgrade")}
           </button>
         )}
       </div>
@@ -1232,8 +1232,8 @@ function AppDashboard({
         {tier === "elite"
           ? t("profile.aiUsage.unlimited", "Unlimited")
           : aiLimit > 0
-            ? t("nav.usageOfLimit", "{{used}} of {{limit}} used", { used: aiUsed, limit: aiLimit })
-            : t("nav.usageLocked", "Upgrade to unlock AI requests")}
+            ? t("appShell.usage.ofLimit", { used: aiUsed, limit: aiLimit })
+            : t("appShell.usage.locked")}
       </div>
     </div>
   );
@@ -1664,7 +1664,7 @@ function AppDashboard({
   // (P) — that opens a small menu explaining both, with the paper balance.
   // Markets (home) and the coin chart both read "Live market".
   const liveLabel = onChartPage || activeSection === "markets"
-    ? "Live market"
+    ? t("appShell.mode.liveMarket")
     : t(NAV_ITEMS.find((n) => n.id === activeSection)?.labelKey ?? "chart.tabLabel", activeSection);
   const inPaper = mobileChartTab === "orderbook";
   // Sketch #3 (TradingView / Webull): no toggle — a paper-wallet chip that
@@ -1675,14 +1675,14 @@ function AppDashboard({
       type="button"
       className="wallet-chip wallet-chip--back"
       onClick={() => { hapticTap(); switchMode("chart"); }}
-      aria-label={`Back to ${liveLabel}`}
+      aria-label={t("appShell.mode.backToAria", { label: liveLabel })}
     >
       <span key={chartTabSpinKey} className={`mode-switch-badge mode-switch-badge--c wallet-chip-badge${chartTabSpinKey > 0 ? " chart-tab-logo-spin" : ""}`} aria-hidden="true">
         <LogoIcon size={16} />
       </span>
       <span className="wallet-chip-text">
-        <span className="wallet-chip-title">Back to market</span>
-        <span className="wallet-chip-sub">Leave paper trading</span>
+        <span className="wallet-chip-title">{t("appShell.mode.backToMarket")}</span>
+        <span className="wallet-chip-sub">{t("appShell.mode.leavePaper")}</span>
       </span>
     </button>
   ) : (
@@ -1690,7 +1690,7 @@ function AppDashboard({
       type="button"
       className="wallet-chip"
       onClick={() => { hapticTap(); switchMode("orderbook"); }}
-      aria-label={paperSummary ? `Paper trading: $${Math.round(paperSummary.cash).toLocaleString()} practice money, ${paperSummary.open} open` : "Open paper trading, practice with $50,000"}
+      aria-label={paperSummary ? t("appShell.mode.paperChipAria", { cash: Math.round(paperSummary.cash).toLocaleString(), open: paperSummary.open }) : t("appShell.mode.openPaperAria")}
     >
       <span key={paperTabSpinKey} className={`wallet-chip-icon${paperTabSpinKey > 0 ? " chart-tab-logo-spin" : ""}`} aria-hidden="true">
         {paperSummary ? (
@@ -1703,12 +1703,12 @@ function AppDashboard({
         {paperSummary ? (
           <>
             <span className="wallet-chip-title">${paperSummary.cash >= 1000 ? `${(paperSummary.cash / 1000).toFixed(1)}K` : Math.round(paperSummary.cash)}</span>
-            <span className="wallet-chip-sub">PAPER{paperSummary.open ? ` · ${paperSummary.open} OPEN` : ""}</span>
+            <span className="wallet-chip-sub">{t("appShell.mode.paperShort")}{paperSummary.open ? ` · ${t("appShell.mode.openCount", { n: paperSummary.open })}` : ""}</span>
           </>
         ) : (
           <>
-            <span className="wallet-chip-title">Practice $50K</span>
-            <span className="wallet-chip-sub">PAPER TRADING</span>
+            <span className="wallet-chip-title">{t("appShell.mode.practice50k")}</span>
+            <span className="wallet-chip-sub">{t("appShell.mode.paperTradingCaps")}</span>
           </>
         )}
       </span>
@@ -1754,7 +1754,7 @@ function AppDashboard({
           </span>
         )}
         <span className="mode-switch-text">
-          <span className="mode-switch-title">{inPaper ? "Paper trading" : liveLabel}</span>
+          <span className="mode-switch-title">{inPaper ? t("appShell.mode.paperTrading") : liveLabel}</span>
           {showHdrPrice ? (
             <span className="mode-switch-sub mode-switch-sub--price">
               <b>{hdrPrice!.price}</b>
@@ -1765,7 +1765,7 @@ function AppDashboard({
               )}
             </span>
           ) : (
-            <span className="mode-switch-sub">Tap to switch</span>
+            <span className="mode-switch-sub">{t("appShell.mode.tapToSwitch")}</span>
           )}
         </span>
         <svg className="mode-switch-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
@@ -1785,7 +1785,7 @@ function AppDashboard({
               <span className="mode-switch-badge mode-switch-badge--c mode-switch-badge--lg" aria-hidden="true"><LogoIcon size={20} /></span>
               <span className="mode-switch-item-text">
                 <span className="mode-switch-item-title">{liveLabel}</span>
-                <span className="mode-switch-item-sub">Charts, signals and real prices</span>
+                <span className="mode-switch-item-sub">{t("appShell.mode.liveSub")}</span>
               </span>
               {!inPaper && (
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7" /></svg>
@@ -1800,17 +1800,17 @@ function AppDashboard({
             >
               <span className="mode-switch-badge mode-switch-badge--p mode-switch-badge--lg" aria-hidden="true">P</span>
               <span className="mode-switch-item-text">
-                <span className="mode-switch-item-title">Paper trading</span>
+                <span className="mode-switch-item-title">{t("appShell.mode.paperTrading")}</span>
                 <span className="mode-switch-item-sub">
                   {paperSummary
-                    ? `Practice money · $${Math.round(paperSummary.cash).toLocaleString()}${paperSummary.open ? ` · ${paperSummary.open} open` : ""}`
-                    : "Practice with fake money, no risk"}
+                    ? `${t("appShell.mode.practiceMoney", { cash: Math.round(paperSummary.cash).toLocaleString() })}${paperSummary.open ? ` · ${t("appShell.mode.openCountLower", { n: paperSummary.open })}` : ""}`
+                    : t("appShell.mode.paperSub")}
                 </span>
               </span>
               {inPaper ? (
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7" /></svg>
               ) : !paperTabSeen ? (
-                <span className="mode-switch-new">New</span>
+                <span className="mode-switch-new">{t("appShell.mode.new")}</span>
               ) : null}
             </button>
           </div>
@@ -1820,13 +1820,13 @@ function AppDashboard({
   );
   // Which header control is live (sketch #3 now; flip to compare with #1).
   const modeSplashEl = modeSplash && ReactDOM.createPortal(
-    <div className={`mode-splash mode-splash--${modeSplash === "orderbook" ? "paper" : "market"}`} role="status" aria-label={modeSplash === "orderbook" ? "Switching to Paper trading" : "Switching to Live market"}>
+    <div className={`mode-splash mode-splash--${modeSplash === "orderbook" ? "paper" : "market"}`} role="status" aria-label={modeSplash === "orderbook" ? t("appShell.mode.switchingToPaper") : t("appShell.mode.switchingToLive")}>
       <span className="mode-splash-logo" aria-hidden="true">
         {modeSplash === "orderbook" ? <span className="mode-splash-p">P</span> : <LogoIcon size={96} />}
       </span>
       <span className="mode-splash-word" aria-hidden="true">
         <span className="mode-splash-brand">coinhint<span className="mode-splash-z">z</span></span>
-        <span className="mode-splash-mode">{modeSplash === "orderbook" ? "PAPER" : "MARKET"}</span>
+        <span className="mode-splash-mode">{modeSplash === "orderbook" ? t("appShell.mode.splashPaper") : t("appShell.mode.splashMarket")}</span>
       </span>
     </div>,
     document.body,
@@ -2119,11 +2119,11 @@ function AppDashboard({
           gradient bar that shimmers continuously and glows
           under the active tab, sliding/resizing between them;
           the icon pops with a little overshoot on switch. */}
-      <div className="crc-tabs" role="tablist" aria-label="Paper Trading / Order Flow / Order Book">
+      <div className="crc-tabs" role="tablist" aria-label={t("appShell.tabs.tradeToolsAria")}>
         {([
           {
             key: "paper" as const,
-            label: "Paper Trading",
+            label: t("appShell.tabs.paperTrading"),
             icon: (
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="2" y="6" width="20" height="13" rx="3" />
@@ -2134,7 +2134,7 @@ function AppDashboard({
           },
           {
             key: "flow" as const,
-            label: "Order Flow Pressure",
+            label: t("appShell.tabs.orderFlowPressure"),
             icon: (
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M3 17l5-6 4 3 5-8 4 5" />
@@ -2143,7 +2143,7 @@ function AppDashboard({
           },
           {
             key: "orderbook" as const,
-            label: "Order Book",
+            label: t("appShell.tabs.orderBook"),
             icon: (
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="4" y1="7" x2="20" y2="7" />
@@ -2154,7 +2154,7 @@ function AppDashboard({
           },
           {
             key: "posintel" as const,
-            label: "Position Intelligence",
+            label: t("appShell.tabs.positionIntelligence"),
             icon: (
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="9" />
@@ -2221,11 +2221,11 @@ function AppDashboard({
   useEffect(() => { localStorage.setItem("tradeColTab", tradeColTab); }, [tradeColTab]);
   const chartTradeColEl = (
     <div className="cmc-rcol">
-      <div className="cmc-rtabs" role="tablist" aria-label="Paper Trading, Position Intelligence, Order Book, Order Flow Pressure">
+      <div className="cmc-rtabs" role="tablist" aria-label={t("appShell.tabs.tradeToolsAria")}>
         {([
           {
             key: "paper" as const,
-            label: "Paper Trading",
+            label: t("appShell.tabs.paperTrading"),
             icon: (
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <rect x="2" y="6" width="20" height="13" rx="3" />
@@ -2236,7 +2236,7 @@ function AppDashboard({
           },
           {
             key: "orderbook" as const,
-            label: "Order Book",
+            label: t("appShell.tabs.orderBook"),
             icon: (
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <line x1="4" y1="7" x2="20" y2="7" />
@@ -2247,7 +2247,7 @@ function AppDashboard({
           },
           {
             key: "posintel" as const,
-            label: "Position Intelligence",
+            label: t("appShell.tabs.positionIntelligence"),
             icon: (
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <circle cx="12" cy="12" r="9" />
@@ -2258,7 +2258,7 @@ function AppDashboard({
           },
           {
             key: "flow" as const,
-            label: "Order Flow Pressure",
+            label: t("appShell.tabs.orderFlowPressure"),
             icon: (
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M3 17l5-6 4 3 5-8 4 5" />
@@ -2316,11 +2316,11 @@ function AppDashboard({
   }, [paperColTab]);
   const chartPaperColEl = (
     <div className="chart-right-col chart-right-col--tabbed chart-right-col--paper">
-      <div className="crc-tabs" role="tablist" aria-label="Paper Trading / Position Intelligence">
+      <div className="crc-tabs" role="tablist" aria-label={t("appShell.tabs.tradeToolsAria")}>
         {([
           {
             key: "paper" as const,
-            label: "Paper Trading",
+            label: t("appShell.tabs.paperTrading"),
             icon: (
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="2" y="6" width="20" height="13" rx="3" />
@@ -2331,7 +2331,7 @@ function AppDashboard({
           },
           {
             key: "posintel" as const,
-            label: "Position Intelligence",
+            label: t("appShell.tabs.positionIntelligence"),
             icon: (
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="9" />
@@ -2558,11 +2558,11 @@ function AppDashboard({
   useEffect(() => {
     const name = COINS.find((c) => c.symbol === coin)?.name ?? coin;
     const title = activeSection === "chart"
-      ? `${name} (${coin}) Price Chart, Live Signals & Analysis | coinhintz`
-      : "coinhintz | Crypto Trading Intelligence";
+      ? t("appShell.meta.chartTitle", { name, coin })
+      : t("appShell.meta.defaultTitle");
     const desc = activeSection === "chart"
-      ? `Live ${name} (${coin}) price chart with ProVision signals, technical analysis, order book and market consensus on coinhintz.`
-      : "Real-time crypto charts, AI signals, liquidation heatmaps and more. Trade smarter with coinhintz.";
+      ? t("appShell.meta.chartDesc", { name, coin })
+      : t("appShell.meta.defaultDesc");
     document.title = title;
     let meta = document.querySelector<HTMLMetaElement>('meta[name="description"]');
     if (!meta) {
@@ -2578,7 +2578,7 @@ function AppDashboard({
       document.head.appendChild(canon);
     }
     canon.href = `${window.location.origin}${pathFor(activeSection, coin)}`;
-  }, [activeSection, coin]);
+  }, [activeSection, coin, t]);
 
   // Global search keyboard shortcut (Cmd+K / Ctrl+K) — routed through the
   // same openGlobalSearch() the nav button uses (not a bare setGlobalSearch
@@ -2804,7 +2804,7 @@ function AppDashboard({
       setRefreshTrigger((prev) => prev + 1);
       setError("");
     } else if (!btcDataRef.current) {
-      setError("Failed to fetch data. Please check your API connection.");
+      setError(t("appShell.fetchError"));
     }
     setLoading(false);
     setRefreshing(false);
@@ -2848,7 +2848,8 @@ function AppDashboard({
   // sign-in or a plan, in place on the page.
   const gateFor = (id: SectionId): { tier: Tier; name: string } | undefined => {
     if (ALWAYS_OPEN_PAGES.has(id)) return undefined;
-    if (PAYWALLED_PAGES[id]) return PAYWALLED_PAGES[id];
+    const paywalled = PAYWALLED_PAGES[id];
+    if (paywalled) return { tier: paywalled.tier, name: t(`appShell.features.${id}`, paywalled.name) };
     const item = NAV_ITEMS.find((n) => n.id === id);
     if (!item?.requiredTier || id === "chart") return undefined;
     return { tier: item.requiredTier, name: t(item.labelKey) };
@@ -2933,7 +2934,7 @@ function AppDashboard({
         </svg>
         <input
           className="coin-picker-search-input"
-          placeholder="Search…"
+          placeholder={t("appShell.coinPicker.search")}
           // Not on iOS native — autoFocus pops the keyboard the instant
           // the sheet opens, before the user's even looked at the list,
           // which ate screen space and felt like it hijacked the sheet on
@@ -2952,16 +2953,16 @@ function AppDashboard({
         <div className="coin-picker-table-row coin-picker-table-header">
           <span className="coin-picker-table-star" aria-hidden="true" />
           <button type="button" className="coin-picker-table-th coin-picker-table-th--market" onClick={() => toggleCoinSort("market")}>
-            Market <span className="coin-picker-table-sort">{coinSortIndicator("market")}</span>
+            {t("appShell.coinPicker.market")} <span className="coin-picker-table-sort">{coinSortIndicator("market")}</span>
           </button>
           <button type="button" className="coin-picker-table-th" onClick={() => toggleCoinSort("price")}>
-            Last price <span className="coin-picker-table-sort">{coinSortIndicator("price")}</span>
+            {t("appShell.coinPicker.lastPrice")} <span className="coin-picker-table-sort">{coinSortIndicator("price")}</span>
           </button>
           <button type="button" className="coin-picker-table-th" onClick={() => toggleCoinSort("change")}>
-            24h % <span className="coin-picker-table-sort">{coinSortIndicator("change")}</span>
+            {t("appShell.coinPicker.change24h")} <span className="coin-picker-table-sort">{coinSortIndicator("change")}</span>
           </button>
           <button type="button" className="coin-picker-table-th" onClick={() => toggleCoinSort("volume")}>
-            Volume <span className="coin-picker-table-sort">{coinSortIndicator("volume")}</span>
+            {t("appShell.coinPicker.volume")} <span className="coin-picker-table-sort">{coinSortIndicator("volume")}</span>
           </button>
         </div>
         <div className="coin-picker-table-body">
@@ -3018,7 +3019,7 @@ function AppDashboard({
                   type="button"
                   className={`coin-picker-table-star${starred ? " coin-picker-table-star--active" : ""}`}
                   onClick={(e) => { e.stopPropagation(); setStarredCoins(toggleStarredCoin(c.symbol)); }}
-                  aria-label={starred ? `Unstar ${c.symbol}` : `Star ${c.symbol}`}
+                  aria-label={starred ? t("appShell.coinPicker.unstar", { coin: c.symbol }) : t("appShell.coinPicker.star", { coin: c.symbol })}
                 >
                   {starred ? "★" : "☆"}
                 </button>
@@ -3241,20 +3242,20 @@ function AppDashboard({
             <>
               {user && inviteCardOpen && (
                 <div className="icon-strip-invite-card">
-                  <button type="button" className="icon-strip-invite-close" onClick={() => setInviteCardOpen(false)} aria-label="Dismiss">
+                  <button type="button" className="icon-strip-invite-close" onClick={() => setInviteCardOpen(false)} aria-label={t("appShell.dismiss")}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
                       <line x1="18" y1="6" x2="6" y2="18" />
                       <line x1="6" y1="6" x2="18" y2="18" />
                     </svg>
                   </button>
-                  <div className="icon-strip-invite-title">{t("nav.inviteTitle", "Invite a friend")}</div>
+                  <div className="icon-strip-invite-title">{t("appShell.invite.title")}</div>
                   <p className="icon-strip-invite-sub">
-                    {t("nav.inviteSub", "Invite a friend — when they sign up, you get $10,000 in free paper trading cash.")}
+                    {t("appShell.invite.sub")}
                   </p>
                   <input
                     type="email"
                     className="icon-strip-invite-input"
-                    placeholder="friend@email.com"
+                    placeholder={t("appShell.invite.placeholder")}
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") sendInvite(); }}
@@ -3267,12 +3268,12 @@ function AppDashboard({
                     disabled={!inviteEmail.trim() || inviteStatus === "sending"}
                   >
                     {inviteStatus === "sending"
-                      ? t("nav.inviteSending", "Sending…")
+                      ? t("appShell.invite.sending")
                       : inviteStatus === "sent"
-                        ? t("nav.inviteSent", "Invite sent ✓")
+                        ? t("appShell.invite.sent")
                         : inviteStatus === "error"
-                          ? t("nav.inviteError", "Couldn't send — try again")
-                          : t("nav.inviteSend", "Send invite")}
+                          ? t("appShell.invite.error")
+                          : t("appShell.invite.send")}
                   </button>
                 </div>
               )}
@@ -3297,8 +3298,8 @@ function AppDashboard({
                   className="icon-strip-profile-avatar"
                 />
                 <span className="icon-strip-profile-info">
-                  <span className="icon-strip-profile-name">{profile?.full_name || t("nav.guest", "Guest")}</span>
-                  <span className="icon-strip-profile-email">{user?.email ?? t("nav.signInPrompt", "Sign in")}</span>
+                  <span className="icon-strip-profile-name">{profile?.full_name || t("appShell.sidebar.guest")}</span>
+                  <span className="icon-strip-profile-email">{user?.email ?? t("appShell.sidebar.signInPrompt")}</span>
                 </span>
               </button>
             </>
@@ -3395,7 +3396,7 @@ function AppDashboard({
             onPointerDown={onNavResizeDown}
             onPointerMove={onNavResizeMove}
             onPointerUp={onNavResizeUp}
-            title={navCollapsed ? "Drag to expand sidebar" : "Drag to collapse sidebar"}
+            title={navCollapsed ? t("appShell.sidebar.dragExpand") : t("appShell.sidebar.dragCollapse")}
           />
 
           {/* Mobile-only profile header */}
@@ -3425,7 +3426,7 @@ function AppDashboard({
             />
             <div className="mob-nav-userinfo">
               <span className="mob-nav-name">
-                {profile?.full_name || user?.email?.split("@")[0] || "Account"}
+                {profile?.full_name || user?.email?.split("@")[0] || t("appShell.sidebar.account")}
               </span>
               <span className={`mob-nav-tier mob-nav-tier--${tier}`}>{tier.toUpperCase()}</span>
             </div>
@@ -3517,7 +3518,7 @@ function AppDashboard({
                   setContactOpen(true);
                   setMobileNavOpen(false);
                 }}
-                title={t("nav.support", "Support")}
+                title={t("appShell.sidebar.support")}
               >
                 <span className="nav-icon-wrap">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -3526,10 +3527,10 @@ function AppDashboard({
                     <line x1="12" y1="17" x2="12.01" y2="17" />
                   </svg>
                 </span>
-                <span className="icon-strip-label">{t("nav.support", "Support")}</span>
+                <span className="icon-strip-label">{t("appShell.sidebar.support")}</span>
                 <span className="icon-strip-support-badge">
                   <span className="icon-strip-support-dot" />
-                  {t("nav.online", "Online")}
+                  {t("appShell.sidebar.online")}
                 </span>
               </button>
 
@@ -3576,12 +3577,12 @@ function AppDashboard({
                     setMobileNavOpen(false);
                     onOpenAuth();
                   }}
-                  title={t("nav.signIn", "Sign In")}
+                  title={t("appShell.sidebar.signIn")}
                 >
                   <span className="nav-icon-wrap">
                     <NavIcon d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3" />
                   </span>
-                  <span className="icon-strip-label">{t("nav.signIn", "Sign In")}</span>
+                  <span className="icon-strip-label">{t("appShell.sidebar.signIn")}</span>
                 </button>
               )}
             </div>
@@ -3626,8 +3627,8 @@ function AppDashboard({
                   type="button"
                   className="top-nav-logo"
                   onClick={() => setActiveSection("markets")}
-                  aria-label="coinhintz — Home"
-                  title="Home"
+                  aria-label={t("appShell.topNav.logoAria")}
+                  title={t("appShell.topNav.home")}
                 >
                   {/* Just the C: spins on load and on every data refresh
                       (re-keyed so the spin replays), and nonstop on hover. */}
@@ -3645,7 +3646,7 @@ function AppDashboard({
                   <button
                     type="button"
                     className="top-nav-burger"
-                    aria-label="Menu"
+                    aria-label={t("appShell.topNav.menu")}
                     aria-expanded={guestBurger}
                     onClick={() => setGuestBurger((v) => !v)}
                   >
@@ -3699,7 +3700,7 @@ function AppDashboard({
                 </div>
               )}
               {(
-                <nav className="top-nav-guest" aria-label="Main menu">
+                <nav className="top-nav-guest" aria-label={t("appShell.topNav.mainMenu")}>
                   {NAV_ITEMS.filter((i) => !i.hidden && !i.category).map((i) => (
                     <button
                       key={i.id}
@@ -3764,7 +3765,7 @@ function AppDashboard({
                   <path d="M11 2.05A10 10 0 1 0 21.95 13H11z" opacity="0.55" />
                   <path d="M13 2.05V11h8.95A10 10 0 0 0 13 2.05z" />
                 </svg>
-                Portfolio
+                {t("appShell.topNav.portfolio")}
               </button>
               {/* Watchlist (icon + label) → Markets on its Watchlist tab. */}
               <button
@@ -3780,13 +3781,13 @@ function AppDashboard({
                 }}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3 6.6 7 .7-5.3 4.7 1.6 7L12 17.3 5.7 21l1.6-7L2 9.3l7-.7z" /></svg>
-                Watchlist
+                {t("appShell.topNav.watchlist")}
               </button>
               <button
                 ref={topNavSearchRef}
                 className="top-nav-search"
                 onClick={openGlobalSearch}
-                title="Search (⌘K)"
+                title={t("appShell.topNav.searchTitle")}
               >
                 {/* Modern search field: icon · placeholder · ⌘K chip. */}
                 <span className="top-nav-search-ic" aria-hidden="true">
@@ -3796,7 +3797,7 @@ function AppDashboard({
                   </svg>
                 </span>
                 <span className="top-nav-search-text">
-                  {t("search.short", "Search")}
+                  {t("appShell.topNav.search")}
                 </span>
                 <kbd className="top-nav-search-kbd" aria-hidden="true">⌘K</kbd>
               </button>
@@ -3814,7 +3815,7 @@ function AppDashboard({
                   <HoverTip
                     className="top-nav-icon-tip"
                     placement="left"
-                    text={distractionFree ? "Focus on — alerts muted, distractions hidden. Click to turn off" : "Focus off — click to hide distractions and mute all alerts"}
+                    text={distractionFree ? t("appShell.focus.onTip") : t("appShell.focus.offTip")}
                   >
                     <button
                       type="button"
@@ -3822,7 +3823,7 @@ function AppDashboard({
                       onClick={toggleFocusMode}
                       role="switch"
                       aria-checked={distractionFree}
-                      aria-label="Focus mode"
+                      aria-label={t("appShell.focus.aria")}
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
@@ -3845,13 +3846,13 @@ function AppDashboard({
                     const r = pvGate.access.lockReason(coin);
                     if (r !== "signin" && r !== "trial-available") return null;
                     return (
-                      <div className="pv-callout" role="complementary" aria-label="Try ProVision">
+                      <div className="pv-callout" role="complementary" aria-label={t("appShell.pv.tryAria")}>
                         <span className="pv-callout-arrow" aria-hidden="true" />
                         <span className="pv-float-border" aria-hidden="true" />
                         <button
                           type="button"
                           className="pv-float-close"
-                          aria-label="Dismiss"
+                          aria-label={t("appShell.dismiss")}
                           onClick={() => setPvCalloutDismissed(true)}
                         >
                           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
@@ -3859,8 +3860,8 @@ function AppDashboard({
                         <button type="button" className="pv-callout-body" onClick={() => pvGate.toggle(coin)}>
                           <span className="pv-callout-head">
                             <svg className="pv-float-spark" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
-                            <span className="pv-float-title">Turn me on</span>
-                            <span className="pv-callout-free">3 days free</span>
+                            <span className="pv-float-title">{t("appShell.pv.turnMeOn")}</span>
+                            <span className="pv-callout-free">{t("appShell.pv.daysFree")}</span>
                           </span>
                           <span className="pv-float-preview pv-callout-preview" aria-hidden="true">
                             <svg viewBox="0 0 120 64" preserveAspectRatio="none">
@@ -3876,10 +3877,10 @@ function AppDashboard({
                               <path className="pv-float-ribbon pv-float-ribbon--2" stroke="url(#pvc-band)" d="M0 50 C25 54 40 56 58 44 S95 20 120 14" />
                               <path className="pv-float-ribbon pv-float-ribbon--1" stroke="url(#pvc-band)" d="M0 54 C25 58 40 60 58 48 S95 24 120 18" />
                             </svg>
-                            <span className="pv-float-buy">▲ BUY</span>
+                            <span className="pv-float-buy">▲ {t("appShell.pv.buy")}</span>
                           </span>
-                          <span className="pv-float-sub">Trend colors, buy/sell signals and a live signal check. No card needed.</span>
-                          <span className="pv-float-cta pv-callout-cta">Try ProVision free</span>
+                          <span className="pv-float-sub">{t("appShell.pv.sub")}</span>
+                          <span className="pv-float-cta pv-callout-cta">{t("appShell.pv.cta")}</span>
                         </button>
                       </div>
                     );
@@ -3887,7 +3888,7 @@ function AppDashboard({
                   <HoverTip
                     className="top-nav-icon-tip"
                     placement="left"
-                    text={proVision ? "ProVision on — click to go back to the normal chart" : "ProVision: trend candles, buy/sell signals and a live signal check"}
+                    text={proVision ? t("appShell.pv.onTip") : t("appShell.pv.offTip")}
                   >
                     <button
                       type="button"
@@ -3910,7 +3911,7 @@ function AppDashboard({
                 {/* No Market/Paper switch on desktop: the chart and Paper
                     Trading are already side by side on this screen. */}
                 {activeSection !== "chart" && activeSection !== "advance-chart" && (
-                  <HoverTip className="top-nav-icon-tip" placement="left" text={t("paperTrading.title", "Paper Trading")}>
+                  <HoverTip className="top-nav-icon-tip" placement="left" text={t("appShell.tabs.paperTrading")}>
                     <button
                       type="button"
                       className={`mch-search-btn top-nav-layout-btn${paperTradingFlyoutOpen ? " top-nav-layout-btn--open" : ""}`}
@@ -3925,7 +3926,7 @@ function AppDashboard({
                 )}
                 <PriceAlerts coin={coin} currentPrice={btcData?.price ?? 0} coinChatOpen={activeSection === "chart" && showCoinChat} />
                 <BuySignals onOpenUpgrade={onOpenUpgrade} hideTrigger={!isWideDesktop} columnTarget={activatedPanelsRailEl} />
-                <HoverTip className="top-nav-icon-tip" placement="left" text="Notifications">
+                <HoverTip className="top-nav-icon-tip" placement="left" text={t("appShell.topNav.notifications")}>
                   <button
                     className="mch-search-btn mch-notif-feed-btn"
                     onClick={(e) => {
@@ -3983,8 +3984,8 @@ function AppDashboard({
                 ) : (
                   /* Signed out: Log in + Sign up pills (Coinbase / Kraken). */
                   <span className="top-nav-auth">
-                    <button type="button" className="top-nav-login" onClick={() => onOpenAuth("login")}>Sign in</button>
-                    <button type="button" className="top-nav-signup" onClick={() => onOpenAuth("signup")}>Sign up</button>
+                    <button type="button" className="top-nav-login" onClick={() => onOpenAuth("login")}>{t("appShell.topNav.signIn")}</button>
+                    <button type="button" className="top-nav-signup" onClick={() => onOpenAuth("signup")}>{t("appShell.topNav.signUp")}</button>
                   </span>
                 )}
               </div>
@@ -4010,7 +4011,7 @@ function AppDashboard({
                   if (!mobileNavOpen) hapticTap();
                   setMobileNavOpen((v) => !v);
                 }}
-                aria-label="Open menu"
+                aria-label={t("appShell.topNav.openMenu")}
               >
                 <svg
                   width="20"
@@ -4079,7 +4080,7 @@ function AppDashboard({
                   )}
                   <span className="price-source">
                     <span className="price-source-fs-hint">
-                      ⛶ Double-click chart for fullscreen
+                      ⛶ {t("appShell.fullscreenHint")}
                     </span>
                   </span>
                 </div>
@@ -4112,7 +4113,7 @@ function AppDashboard({
                   <button
                     className="mch-search-btn mch-notif-feed-btn"
                     onClick={() => (user ? setNotificationsCenterOpen(true) : onOpenAuth())}
-                    title="Notifications"
+                    title={t("appShell.topNav.notifications")}
                   >
                     <svg
                       width="16"
@@ -4127,7 +4128,7 @@ function AppDashboard({
                       <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
                       <path d="M13.73 21a2 2 0 0 1-3.46 0" />
                     </svg>
-                    <span className="mch-btn-label">Notifications</span>
+                    <span className="mch-btn-label">{t("appShell.topNav.notifications")}</span>
                     {unreadNotifCount > 0 && (
                       <span className="mch-notif-feed-count">{unreadNotifCount > 9 ? "9+" : unreadNotifCount}</span>
                     )}
@@ -4344,7 +4345,7 @@ function AppDashboard({
                           <div className="chart-below-full" id={activeSection === "chart" ? "coin-sec-traders" : undefined}>
                             {/* Phones: titled like every other section on the page. */}
                             {activeSection === "chart" && !isDesktopWidth && (
-                              <h2 className="cbp-sec-h">{COINS.find((c) => c.symbol === coin)?.name ?? coin} Top Traders</h2>
+                              <h2 className="cbp-sec-h">{t("appShell.topTraders", { name: COINS.find((c) => c.symbol === coin)?.name ?? coin })}</h2>
                             )}
                             <ChartBottomPanel
                               coin={coin}
@@ -4548,7 +4549,7 @@ function AppDashboard({
               {activeSection === "altanalysis" && (
                 <BlurGate
                   requiredTier="pro"
-                  featureName="Alt Analysis"
+                  featureName={t("appShell.features.altanalysis")}
                   onOpenAuth={onOpenAuth}
                   onOpenUpgrade={onOpenUpgrade}
                   className="bg-root--top"
@@ -4562,7 +4563,7 @@ function AppDashboard({
               {activeSection === "options" && (
                 <BlurGate
                   requiredTier="pro"
-                  featureName="Options Analytics"
+                  featureName={t("appShell.features.options")}
                   onOpenAuth={onOpenAuth}
                   onOpenUpgrade={onOpenUpgrade}
                   className="bg-root--top"
@@ -4573,7 +4574,7 @@ function AppDashboard({
               {activeSection === "correlation" && (
                 <BlurGate
                   requiredTier="pro"
-                  featureName="Correlation Matrix"
+                  featureName={t("appShell.features.correlation")}
                   onOpenAuth={onOpenAuth}
                   onOpenUpgrade={onOpenUpgrade}
                   className="bg-root--top"
@@ -4585,7 +4586,7 @@ function AppDashboard({
                 <BlurGate
                   autoAuth
                   requiredTier="pro"
-                  featureName="Strategy Alerts"
+                  featureName={t("appShell.features.strategyalerts")}
                   onOpenAuth={onOpenAuth}
                   onOpenUpgrade={onOpenUpgrade}
                   className="bg-root--top"
@@ -4736,10 +4737,10 @@ function AppDashboard({
           <BottomSheet
             open={coinPickerOpen}
             onClose={closeCoinPicker}
-            title="Select a Crypto"
+            title={t("appShell.coinPicker.title")}
             className="coin-picker-sheet coin-picker-bs"
             bodyClassName="coin-picker-bs-body"
-            ariaLabel="Select a Crypto"
+            ariaLabel={t("appShell.coinPicker.title")}
           >
             {coinPickerTableContent}
           </BottomSheet>
@@ -4843,7 +4844,7 @@ function AppDashboard({
                             updatePosition(pos.id, { catalogId: e.target.value })
                           }
                         >
-                          <option value={CASH_ID}>💵 Cash (USD)</option>
+                          <option value={CASH_ID}>💵 {t("appShell.portfolio.cashOption")}</option>
                           {CATALOG.map((c) => (
                             <option key={c.id} value={c.id}>
                               {c.symbol} — {c.name}
@@ -4970,7 +4971,7 @@ function AppDashboard({
         // Advance Chart page — the floating trigger asks for (and
         // attaches) a chart screenshot instead of opening blank; see
         // TradingAgent.tsx's own Props comments for the event handoff.
-        triggerLabel={activeSection === "advance-chart" ? "Ask Agent ready" : undefined}
+        triggerLabel={activeSection === "advance-chart" ? t("appShell.askAgent") : undefined}
         triggerCapturesChart={activeSection === "advance-chart"}
       />
       {showAgentShowcase && <AgentIntroShowcase />}
@@ -5096,7 +5097,7 @@ function AppDashboard({
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
         </svg>
-        Focus mode activated
+        {t("appShell.focus.activated")}
       </div>,
       document.body,
     )}

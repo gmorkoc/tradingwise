@@ -6,6 +6,7 @@
 //  • market-price   → Pi Cycle Top (111-day SMA vs 2 × 350-day SMA) and the
 //    Rainbow chart (log price fitted against log time, 9 bands around it).
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   createChart, ColorType, LineSeries, AreaSeries, BaselineSeries, LineStyle, PriceScaleMode,
   type IChartApi, type UTCTimestamp,
@@ -148,11 +149,12 @@ function CycleChart({ theme, build, deps, overlay, dotted }: {
 }
 
 function RangeTabs({ value, onChange }: { value: Range; onChange: (r: Range) => void }) {
+  const { t } = useTranslation();
   return (
     <div className="mcyc-seg" role="tablist">
       {RANGES.map((r) => (
         <button key={r.id} type="button" role="tab" aria-selected={value === r.id} className={`mcyc-seg-btn${value === r.id ? " mcyc-seg-btn--on" : ""}`} onClick={() => onChange(r.id)}>
-          {r.label}
+          {t(`marketCycles.range.${r.id}`)}
         </button>
       ))}
     </div>
@@ -182,6 +184,8 @@ export function MarketCycles({ coin, theme }: { coin: string; theme: "dark" | "l
   const [puellRange, setPuellRange] = useState<Range>("all");
   const [piRange, setPiRange] = useState<Range>("all");
   const [rbRange, setRbRange] = useState<Range>("all");
+  const { t } = useTranslation();
+  const zoneName = (i: number) => t(`marketCycles.rainbow.${i}`);
 
   useEffect(() => {
     if (coin !== "BTC") return;
@@ -219,10 +223,10 @@ export function MarketCycles({ coin, theme }: { coin: string; theme: "dark" | "l
   const piTop = pi111 !== null && pi350 !== null && pi111 >= pi350;
 
   return (
-    <section id="coin-sec-cycles" className="mcyc" aria-label="Bitcoin market cycles">
-      <h2 className="mcyc-h">Bitcoin Market Cycles</h2>
+    <section id="coin-sec-cycles" className="mcyc" aria-label={t("marketCycles.title")}>
+      <h2 className="mcyc-h">{t("marketCycles.title")}</h2>
       {error ? (
-        <p className="mcyc-note">Cycle data couldn't load right now.</p>
+        <p className="mcyc-note">{t("marketCycles.error")}</p>
       ) : !calc ? (
         <div className="mcyc-skel"><span /><span /></div>
       ) : (
@@ -230,41 +234,41 @@ export function MarketCycles({ coin, theme }: { coin: string; theme: "dark" | "l
           {/* Status cards — swipe sideways. */}
           <div className="mcyc-cards">
             <div className="mcyc-card">
-              <span className="mcyc-card-k">Puell Multiple Status</span>
+              <span className="mcyc-card-k">{t("marketCycles.puellStatus")}</span>
               <strong className="mcyc-card-v">{puellNow!.toFixed(4)}</strong>
               <div className="mcyc-meter" aria-hidden="true">
                 <div className="mcyc-meter-bar" />
                 <i style={{ left: `${(puellPos * 100).toFixed(1)}%` }} />
               </div>
-              <div className="mcyc-meter-cap"><span>Undervalued</span><span>Overvalued</span></div>
+              <div className="mcyc-meter-cap"><span>{t("marketCycles.undervalued")}</span><span>{t("marketCycles.overvalued")}</span></div>
             </div>
             <div className="mcyc-card">
-              <span className="mcyc-card-k">Pi Cycle Top Indicator</span>
+              <span className="mcyc-card-k">{t("marketCycles.piTitle")}</span>
               <div className="mcyc-card-pair">
                 <span><em>111DMA</em><b>{fmtUsdFull(Math.round(pi111!))}</b></span>
                 <span><em>350DMA × 2</em><b>{fmtUsdFull(Math.round(pi350!))}</b></span>
               </div>
-              <span className={`mcyc-badge${piTop ? " mcyc-badge--hot" : ""}`}>{piTop ? "Top signal" : "No top signal"}</span>
+              <span className={`mcyc-badge${piTop ? " mcyc-badge--hot" : ""}`}>{piTop ? t("marketCycles.topSignal") : t("marketCycles.noTopSignal")}</span>
             </div>
             <div className="mcyc-card">
-              <span className="mcyc-card-k">Rainbow Chart</span>
+              <span className="mcyc-card-k">{t("marketCycles.rainbowCard")}</span>
               <strong className="mcyc-card-v mcyc-card-v--zone">
                 <i style={{ background: RAINBOW[calc.zone].color }} />
-                {RAINBOW[calc.zone].name}
+                {zoneName(calc.zone)}
               </strong>
-              <span className="mcyc-card-sub">Price {fmtUsdFull(Math.round(calc.last.value))}</span>
+              <span className="mcyc-card-sub">{t("marketCycles.price", { v: fmtUsdFull(Math.round(calc.last.value)) })}</span>
             </div>
           </div>
 
           {/* Puell Multiple */}
           <div className="mcyc-block">
-            <Title text="Puell Multiple" tip="Daily miner revenue ÷ its 365-day average. Under 0.5 has marked cycle bottoms; over 4, cycle tops." />
+            <Title text="Puell Multiple" tip={t("marketCycles.puellTip")} />
             <RangeTabs value={puellRange} onChange={setPuellRange} />
             <Legend items={[
               { label: "Puell Multiple", color: "#3861fb" },
-              { label: "Undervalued", color: "#9fe3c0" },
-              { label: "Overvalued", color: "#f5b5b5" },
-              { label: "Bitcoin Price", color: priceGrey },
+              { label: t("marketCycles.undervalued"), color: "#9fe3c0" },
+              { label: t("marketCycles.overvalued"), color: "#f5b5b5" },
+              { label: t("marketCycles.btcPrice"), color: priceGrey },
             ]} />
             <CycleChart
               theme={theme}
@@ -300,12 +304,12 @@ export function MarketCycles({ coin, theme }: { coin: string; theme: "dark" | "l
 
           {/* Pi Cycle Top */}
           <div className="mcyc-block">
-            <Title text="Pi Cycle Top Indicator" tip="The 111-day average crossing above 2 × the 350-day average has marked past cycle tops." />
+            <Title text={t("marketCycles.piTitle")} tip={t("marketCycles.piTip")} />
             <RangeTabs value={piRange} onChange={setPiRange} />
             <Legend items={[
               { label: "111DMA", color: C_BLUE },
               { label: "350DMA × 2", color: C_GREEN },
-              { label: "Bitcoin Price", color: priceGrey },
+              { label: t("marketCycles.btcPrice"), color: priceGrey },
             ]} />
             <CycleChart
               theme={theme}
@@ -323,11 +327,11 @@ export function MarketCycles({ coin, theme }: { coin: string; theme: "dark" | "l
 
           {/* Rainbow */}
           <div className="mcyc-block">
-            <Title text="Bitcoin Rainbow Price Chart Indicator" tip="A log curve fitted to Bitcoin's whole price history, split into 9 colour bands from Fire sale to Maximum bubble." />
+            <Title text={t("marketCycles.rainbowTitle")} tip={t("marketCycles.rainbowTip")} />
             <RangeTabs value={rbRange} onChange={setRbRange} />
             <Legend items={[
-              { label: "Bitcoin Price", color: isLight ? "#0d1421" : "#ffffff" },
-              { label: `Now: ${RAINBOW[calc.zone].name}`, color: RAINBOW[calc.zone].color },
+              { label: t("marketCycles.btcPrice"), color: isLight ? "#0d1421" : "#ffffff" },
+              { label: t("marketCycles.now", { zone: zoneName(calc.zone) }), color: RAINBOW[calc.zone].color },
             ]} />
             <CycleChart
               theme={theme}
@@ -368,7 +372,7 @@ export function MarketCycles({ coin, theme }: { coin: string; theme: "dark" | "l
                   <>
                     {h.map((x) => (
                       <span key={x.t} className="mcyc-halving" style={{ left: x.x! }}>
-                        <span>{x.label}</span>
+                        <span>{t("marketCycles.halving", { n: HALVINGS.findIndex((hv) => hv.t === x.t) + 1 })}</span>
                       </span>
                     ))}
                   </>

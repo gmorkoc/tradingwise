@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, type CSSProperties } from "react";
 import ReactDOM from "react-dom";
 import { Capacitor } from "@capacitor/core";
+import { useTranslation } from "react-i18next";
 import { COINS, CoinSymbol } from "../services/coinglass";
 import "../styles/GlobalSearch.css";
 
@@ -108,6 +109,11 @@ interface Props {
 
 /* ── Component ─────────────────────────────────────────────────────────────── */
 export function GlobalSearch({ open, onClose, onCoinSelect, onSectionSelect, variant = "docked", anchorRect }: Props) {
+  const { t } = useTranslation();
+  // Display text in the current language; the English label/desc stay in
+  // the search haystack too, so English queries still match.
+  const secLabel = (id: string, fallback: string) => t(`globalSearch.sections.${id}.label`, fallback);
+  const secDesc = (id: string, fallback: string) => t(`globalSearch.sections.${id}.desc`, fallback);
   const [query, setQuery] = useState("");
   const [activeIdx, setActiveIdx] = useState(0);
   const inputRef  = useRef<HTMLInputElement>(null);
@@ -154,26 +160,26 @@ export function GlobalSearch({ open, onClose, onCoinSelect, onSectionSelect, var
        returns" (an HTF keyword) or "heatmap market" typed out of order. */
     const qWords = q.split(/\s+/).filter(Boolean);
     SECTIONS.forEach(s => {
-      const haystack = `${s.label} ${s.desc} ${s.id} ${s.keywords.join(" ")}`.toLowerCase();
+      const haystack = `${s.label} ${s.desc} ${secLabel(s.id, s.label)} ${secDesc(s.id, s.desc)} ${s.id} ${s.keywords.join(" ")}`.toLowerCase();
       if (qWords.every(w => haystack.includes(w))) {
         results.push({
           id:        `section-${s.id}`,
           type:      "section",
-          primary:   s.label,
-          secondary: s.desc,
+          primary:   secLabel(s.id, s.label),
+          secondary: secDesc(s.id, s.desc),
           icon:      s.icon,
           action:    () => { onSectionSelect(s.id); onClose(); },
         });
       }
     });
 
-    const agentHaystack = `${AGENT_READY.label} ${AGENT_READY.desc} ${AGENT_READY.keywords.join(" ")}`.toLowerCase();
+    const agentHaystack = `${AGENT_READY.label} ${AGENT_READY.desc} ${secDesc("agentReady", AGENT_READY.desc)} ${AGENT_READY.keywords.join(" ")}`.toLowerCase();
     if (qWords.every(w => agentHaystack.includes(w))) {
       results.push({
         id:        "agent-ready",
         type:      "section",
         primary:   AGENT_READY.label,
-        secondary: AGENT_READY.desc,
+        secondary: secDesc("agentReady", AGENT_READY.desc),
         icon:      AGENT_READY.icon,
         action:    () => { window.dispatchEvent(new CustomEvent("open-trading-agent")); onClose(); },
       });
@@ -182,12 +188,12 @@ export function GlobalSearch({ open, onClose, onCoinSelect, onSectionSelect, var
     /* No query — show all sections, Agent Ready included */
     SECTIONS.forEach(s => results.push({
       id: `section-${s.id}`, type: "section",
-      primary: s.label, secondary: s.desc, icon: s.icon,
+      primary: secLabel(s.id, s.label), secondary: secDesc(s.id, s.desc), icon: s.icon,
       action: () => { onSectionSelect(s.id); onClose(); },
     }));
     results.push({
       id: "agent-ready", type: "section",
-      primary: AGENT_READY.label, secondary: AGENT_READY.desc, icon: AGENT_READY.icon,
+      primary: AGENT_READY.label, secondary: secDesc("agentReady", AGENT_READY.desc), icon: AGENT_READY.icon,
       action: () => { window.dispatchEvent(new CustomEvent("open-trading-agent")); onClose(); },
     });
   }
@@ -236,14 +242,14 @@ export function GlobalSearch({ open, onClose, onCoinSelect, onSectionSelect, var
       type="button"
       className="gs-agent-pill"
       onClick={() => { window.dispatchEvent(new CustomEvent("open-trading-agent")); onClose(); }}
-      title="Ask Agent ready"
+      title={t("globalSearch.askAgentTitle")}
     >
       {/* The identical floating-trigger orb (TradingAgent.css's
           .ta-trigger-orb — global class, not scoped to .ta-trigger, so it
           renders pixel-identical here: same gradient sphere, rotation,
           and pulsing glow), just shrunk down to pill size. */}
       <span className="ta-trigger-orb gs-agent-pill-orb" aria-hidden="true" />
-      Ask
+      {t("globalSearch.ask")}
     </button>
   );
 
@@ -259,13 +265,13 @@ export function GlobalSearch({ open, onClose, onCoinSelect, onSectionSelect, var
         <input
           ref={inputRef}
           className="gs-input"
-          placeholder="Search coins, sections, features…"
+          placeholder={t("globalSearch.placeholder")}
           value={query}
           onChange={e => setQuery(e.target.value)}
           onKeyDown={handleKey}
         />
         {query && (
-          <button className="gs-clear" onClick={() => setQuery("")}>✕</button>
+          <button className="gs-clear" onClick={() => setQuery("")} aria-label={t("globalSearch.clear")}>✕</button>
         )}
         {agentPillBtn}
       </div>
@@ -274,19 +280,19 @@ export function GlobalSearch({ open, onClose, onCoinSelect, onSectionSelect, var
           its only close affordance, a native app's own standard "search
           field + Cancel" layout. */}
       {docked && (
-        <button type="button" className="gs-cancel-btn" onClick={onClose}>Cancel</button>
+        <button type="button" className="gs-cancel-btn" onClick={onClose}>{t("globalSearch.cancel")}</button>
       )}
       </div>
 
       {/* Results */}
       <ul className="gs-list" ref={listRef}>
         {results.length === 0 && (
-          <li className="gs-empty">No results for "{query}"</li>
+          <li className="gs-empty">{t("globalSearch.noResults", { query })}</li>
         )}
 
         {coinResults.length > 0 && (
           <>
-            <li className="gs-group-label">Coins</li>
+            <li className="gs-group-label">{t("globalSearch.coins")}</li>
             {coinResults.map(r => {
               const idx = results.indexOf(r);
               return (
@@ -308,7 +314,7 @@ export function GlobalSearch({ open, onClose, onCoinSelect, onSectionSelect, var
 
         {sectionResults.length > 0 && (
           <>
-            <li className="gs-group-label">{query ? "Pages" : "All Pages"}</li>
+            <li className="gs-group-label">{query ? t("globalSearch.pages") : t("globalSearch.allPages")}</li>
             {sectionResults.map(r => {
               const idx = results.indexOf(r);
               return (
@@ -331,9 +337,9 @@ export function GlobalSearch({ open, onClose, onCoinSelect, onSectionSelect, var
 
       {!docked && (
         <div className="gs-footer">
-          <span><kbd>↑↓</kbd> navigate</span>
-          <span><kbd>↵</kbd> open</span>
-          <span><kbd>esc</kbd> close</span>
+          <span><kbd>↑↓</kbd> {t("globalSearch.kbdNavigate")}</span>
+          <span><kbd>↵</kbd> {t("globalSearch.kbdOpen")}</span>
+          <span><kbd>esc</kbd> {t("globalSearch.kbdClose")}</span>
         </div>
       )}
     </>

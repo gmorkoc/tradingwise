@@ -1,0 +1,25 @@
+{
+  "contactForm": {
+    "title": "Bize Ulaşın",
+    "subtitle": "Her mesajı okuyoruz.",
+    "close": "Kapat",
+    "sentTitle": "Mesaj gönderildi!",
+    "sentBody": "Bize ulaştığınız için teşekkürler. En kısa sürede dönüş yapacağız.",
+    "category": "Kategori",
+    "categories": {
+      "bug": "Hata Bildirimi",
+      "feature": "Özellik İsteği",
+      "feedback": "Genel Geri Bildirim",
+      "other": "Diğer"
+    },
+    "yourEmail": "E-posta adresiniz",
+    "emailPlaceholder": "siz@ornek.com",
+    "message": "Mesaj",
+    "messagePlaceholder": "Sorunu açıklayın veya düşüncelerinizi paylaşın...",
+    "sending": "Gönderiliyor…",
+    "send": "Mesaj Gönder",
+    "errMessage": "Lütfen göndermeden önce bir mesaj yazın.",
+    "errEmail": "Lütfen e-posta adresinizi girin.",
+    "errGeneric": "Bir şeyler ters gitti. Lütfen tekrar deneyin."
+  }
+}

@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import ReactDOM from "react-dom";
 import { BottomSheet } from "./BottomSheet";
-import { useTranslation } from "react-i18next";
+import { useTranslation, Trans } from "react-i18next";
+import i18next from "i18next";
 import { Capacitor } from "@capacitor/core";
 import { Haptics, ImpactStyle } from "@capacitor/haptics";
 import { Filesystem, Directory } from "@capacitor/filesystem";
@@ -113,7 +114,7 @@ function fmtPvVol(v: number): string {
 // Pro Vision event countdown: "2h 14m", "45m", "under 1m".
 function fmtCountdown(ms: number): string {
   const m = Math.max(0, Math.round(ms / 60000));
-  if (m < 1) return "under 1m";
+  if (m < 1) return i18next.t("priceChart.under1m");
   const h = Math.floor(m / 60);
   return h ? `${h}h ${m % 60}m` : `${m}m`;
 }
@@ -296,21 +297,9 @@ const INTERVAL_LABELS: Record<TimeInterval, string> = {
   "all": "ALL (full history)",
 };
 
-// Menu/sheet wording (no parentheses): short label + plain description.
+// Menu/sheet wording (no parentheses): short label + plain description
+// now lives in the locale files (priceChart.ivDesc.*).
 // INTERVAL_LABELS above stays as-is — the AI interval read uses it.
-const INTERVAL_DESC: Record<TimeInterval, string> = {
-  "1sec": "Last 30 minutes",
-  "1min": "Last 6 hours",
-  "5min": "Last 24 hours",
-  "15min": "Last 48 hours",
-  "1h": "About 7 days",
-  "4h": "About 4 weeks",
-  "6h": "About 15 days",
-  "1day": "Last 90 days",
-  "1week": "Last 52 weeks",
-  "1month": "Last 24 months",
-  "all": "Full history",
-};
 
 export const INTERVAL_SHORT: Record<TimeInterval, string> = {
   "1sec": "1s",
@@ -855,8 +844,8 @@ function analyzeInterval(
   if (candles.length < 5) {
     return {
       sentiment: "neutral",
-      title: "Not enough data",
-      body: "Insufficient candle history to analyse this interval.",
+      title: i18next.t("priceChart.banner.noData.title"),
+      body: i18next.t("priceChart.banner.noData.body"),
     };
   }
   const first = candles[0],
@@ -875,48 +864,24 @@ function analyzeInterval(
       ? (last.close - botBand) / (topBand - botBand)
       : 0.5;
   const isBullish = overallChange > 0;
+  const tb = (k: string) => ({
+    title: i18next.t(`priceChart.banner.${k}.title`, { iv: intervalLabel }),
+    body: i18next.t(`priceChart.banner.${k}.body`, { pct, absPct, green: greenCount, red: redCount }),
+  });
 
   if (bbPos > 0.85)
-    return {
-      sentiment: "bullish",
-      title: `Pushing the Upper Band on ${intervalLabel}`,
-      body: `Price is up ${pct}% and pressing against the upper Bollinger Band. Momentum is strong, but the market may be overextended — a short-term cooldown or sideways consolidation is common before the next leg higher.`,
-    };
+    return { sentiment: "bullish", ...tb("upperBand") };
   if (bbPos < 0.15)
-    return {
-      sentiment: "bearish",
-      title: `Testing the Lower Band on ${intervalLabel}`,
-      body: `Price has fallen ${absPct}% and is compressing near the lower Bollinger Band. Sellers have been dominant, but this zone often attracts buyers — watch for a relief bounce or a confirmed breakdown below support.`,
-    };
+    return { sentiment: "bearish", ...tb("lowerBand") };
   if (greenCount >= 4)
-    return {
-      sentiment: "bullish",
-      title: `Strong Buying Pressure on ${intervalLabel}`,
-      body: `${greenCount} of the last 5 candles closed green with price up ${pct}% overall. Buyers are clearly in control. The trend could extend, but watch for a pullback to the mid-band as profit-taking kicks in.`,
-    };
+    return { sentiment: "bullish", ...tb("strongBuying") };
   if (redCount >= 4)
-    return {
-      sentiment: "bearish",
-      title: `Sustained Selling on ${intervalLabel}`,
-      body: `${redCount} of the last 5 candles closed red with price down ${absPct}% overall. Sellers are dominating. A short-term oversold bounce is possible, but the path of least resistance remains lower until buyers reclaim momentum.`,
-    };
+    return { sentiment: "bearish", ...tb("sustainedSelling") };
   if (absPct < 0.3)
-    return {
-      sentiment: "neutral",
-      title: `Tight Consolidation on ${intervalLabel}`,
-      body: `Price has moved just ${pct}% over this window and is coiling near the middle band. The market is in indecision — a directional breakout is building. Watch volume and the next 2–3 candles for a clue.`,
-    };
+    return { sentiment: "neutral", ...tb("consolidation") };
   if (isBullish)
-    return {
-      sentiment: "bullish",
-      title: `Upward Bias on ${intervalLabel}`,
-      body: `Price is up ${pct}% with ${greenCount} of the last 5 candles green. The trend leans bullish but lacks explosive momentum — likely a steady grind higher unless macro sentiment shifts.`,
-    };
-  return {
-    sentiment: "bearish",
-    title: `Downward Bias on ${intervalLabel}`,
-    body: `Price is down ${absPct}% with ${redCount} of the last 5 candles red. Bearish pressure is present but not extreme — watch for stabilisation near the lower band or a key support level before calling a reversal.`,
-  };
+    return { sentiment: "bullish", ...tb("upwardBias") };
+  return { sentiment: "bearish", ...tb("downwardBias") };
 }
 
 // ── AI pattern cache ────────────────────────────────────────────────────────
@@ -1123,6 +1088,18 @@ function computeGannCycles(
   });
 }
 
+// Translated pattern text (priceChart.patterns.<key>.name/summary/narrative/nextMove).
+function pat(key: string, type: PatternInsight["type"]): PatternInsight {
+  const k = `priceChart.patterns.${key}`;
+  return {
+    name: i18next.t(`${k}.name`),
+    type,
+    summary: i18next.t(`${k}.summary`),
+    narrative: i18next.t(`${k}.narrative`),
+    nextMove: i18next.t(`${k}.nextMove`),
+  };
+}
+
 // kept as instant fallback while AI loads
 function detectCandlePattern(
   candles: CandleDataPoint[],
@@ -1149,16 +1126,7 @@ function detectCandlePattern(
     bod(c1) / rng(c1) > 0.5 &&
     bod(c0) / rng(c0) > 0.5
   )
-    return {
-      name: "Three White Soldiers",
-      type: "bullish",
-      summary:
-        "Three consecutive bullish candles, each closing higher with strong bodies.",
-      narrative:
-        "Market makers are in full accumulation mode — they are buying every dip and not allowing sellers any foothold. Each candle opens near the prior close and extends gains without meaningful pullback, signalling institutional conviction.",
-      nextMove:
-        "Momentum strongly favours continuation higher. Look for a break above the current high as confirmation. A pullback to the middle candle's body is a potential re-entry zone before the next leg up.",
-    };
+    return pat("threeWhiteSoldiers", "bullish");
   if (
     bear(c2) &&
     bear(c1) &&
@@ -1169,16 +1137,7 @@ function detectCandlePattern(
     bod(c1) / rng(c1) > 0.5 &&
     bod(c0) / rng(c0) > 0.5
   )
-    return {
-      name: "Three Black Crows",
-      type: "bearish",
-      summary:
-        "Three consecutive bearish candles, each closing lower with strong bodies.",
-      narrative:
-        "Institutional sellers are systematically distributing. Every relief bounce is being sold — market makers are preventing any meaningful recovery, suggesting they are positioned short or offloading large inventory onto retail buyers.",
-      nextMove:
-        "Expect further downside. Each bounce toward the previous candle's open is a potential short entry. The move is likely over-extended short-term, so watch for a brief relief bounce before the next leg lower.",
-    };
+    return pat("threeBlackCrows", "bearish");
   if (
     bear(c2) &&
     bod(c1) / rng(c1) < 0.35 &&
@@ -1186,16 +1145,7 @@ function detectCandlePattern(
     c0.close > mid(c2) &&
     bod(c2) / rng(c2) > 0.4
   )
-    return {
-      name: "Morning Star",
-      type: "bullish",
-      summary:
-        "Three-candle bottom reversal: large red → small indecisive → large green.",
-      narrative:
-        "Market makers engineered a classic stop-hunt then reversed. The large red candle shook out weak longs, the small middle candle shows sellers losing conviction at the lows, and the strong green candle confirms institutions stepped in and absorbed all the supply.",
-      nextMove:
-        "Bullish bias. A close above the morning star high is the trigger for long entries. The prior swing low from the red candle now acts as key support — if price revisits and holds, that is the higher-probability entry with tight risk.",
-    };
+    return pat("morningStar", "bullish");
   if (
     bull(c2) &&
     bod(c1) / rng(c1) < 0.35 &&
@@ -1203,60 +1153,15 @@ function detectCandlePattern(
     c0.close < mid(c2) &&
     bod(c2) / rng(c2) > 0.4
   )
-    return {
-      name: "Evening Star",
-      type: "bearish",
-      summary:
-        "Three-candle top reversal: large green → small indecisive → large red.",
-      narrative:
-        "Market makers distributed inventory at the highs. The bullish candle lured in retail buyers, the small middle candle revealed buyer exhaustion, and the bearish candle confirms institutions unloaded onto the crowd. Retail longs are now trapped.",
-      nextMove:
-        "Bearish bias. A break below the evening star low is the trigger for short entries. The prior swing high from the green candle now acts as resistance — any failed rally back into that level is a distribution signal.",
-    };
+    return pat("eveningStar", "bearish");
   if (bear(c1) && bull(c0) && c0.open < c1.close && c0.close > c1.open)
-    return {
-      name: "Bullish Engulfing",
-      type: "bullish",
-      summary:
-        "Large green candle completely engulfs the prior red candle's body.",
-      narrative:
-        "Institutional buyers stepped in with force. The green candle consuming the entire prior red signals market makers absorbed all seller supply and then pushed price beyond the open. Traders who sold the previous candle are now trapped short.",
-      nextMove:
-        "Bullish. Their stop-losses sit above the engulfing candle's high — when hit, they add fuel to the rally. Target the next resistance zone or prior swing high. Hold long as long as price stays above the midpoint of the engulfing candle.",
-    };
+    return pat("bullishEngulfing", "bullish");
   if (bull(c1) && bear(c0) && c0.open > c1.close && c0.close < c1.open)
-    return {
-      name: "Bearish Engulfing",
-      type: "bearish",
-      summary:
-        "Large red candle completely engulfs the prior green candle's body.",
-      narrative:
-        "Institutional sellers appeared suddenly and overwhelmed buyers. The red candle consuming the entire prior green signals market makers distributed inventory to retail buyers who chased the move up. Those buyers are now underwater.",
-      nextMove:
-        "Bearish. Their stop-losses below the engulfing candle's low will accelerate the drop when triggered. Target the next support zone or prior swing low. Avoid longs until price reclaims the midpoint of the engulfing candle.",
-    };
+    return pat("bearishEngulfing", "bearish");
   if (bear(c1) && bull(c0) && c0.open < c1.low && c0.close > mid(c1))
-    return {
-      name: "Piercing Line",
-      type: "bullish",
-      summary:
-        "Green candle opens below the red low but closes above the red midpoint.",
-      narrative:
-        "Market makers swept below support to trigger stop-losses — a classic liquidity grab — then reversed sharply as institutions absorbed the flush. Every seller who chased the breakdown is now losing money.",
-      nextMove:
-        "Bullish. The next likely move is back toward the top of the red candle. If price holds above the piercing candle's midpoint on any pullback, the reversal is intact. A break above the red candle's open confirms the pattern.",
-    };
+    return pat("piercingLine", "bullish");
   if (bull(c1) && bear(c0) && c0.open > c1.high && c0.close < mid(c1))
-    return {
-      name: "Dark Cloud Cover",
-      type: "bearish",
-      summary:
-        "Red candle opens above the green high but closes below the green midpoint.",
-      narrative:
-        "Market makers used the gap higher to offload supply onto retail buyers chasing the breakout. The rejection deep into the prior green candle's body shows institutions sold aggressively into strength — a textbook distribution move.",
-      nextMove:
-        "Bearish. The next likely move is back toward the bottom of the green candle. If price fails to reclaim the dark cloud candle's open on a bounce, the distribution is confirmed. A break below the green candle's low opens up further downside.",
-    };
+    return pat("darkCloudCover", "bearish");
   if (
     bear(c1) &&
     bull(c0) &&
@@ -1264,16 +1169,7 @@ function detectCandlePattern(
     c0.close < c1.open &&
     bod(c1) > bod(c0) * 2
   )
-    return {
-      name: "Bullish Harami",
-      type: "bullish",
-      summary:
-        "Small green candle completely inside the prior large red candle's body.",
-      narrative:
-        "Selling momentum is stalling — the bears can no longer push price lower. Market makers may be quietly absorbing supply within the prior red candle's range, building a base without drawing attention.",
-      nextMove:
-        "Watch for the breakout direction. A close above the harami high (prior red candle's open) signals buyers are taking over. A close below the harami low (prior red candle's close) means the trend continues — wait for one of these confirmations before acting.",
-    };
+    return pat("bullishHarami", "bullish");
   if (
     bull(c1) &&
     bear(c0) &&
@@ -1281,16 +1177,7 @@ function detectCandlePattern(
     c0.close > c1.open &&
     bod(c1) > bod(c0) * 2
   )
-    return {
-      name: "Bearish Harami",
-      type: "bearish",
-      summary:
-        "Small red candle completely inside the prior large green candle's body.",
-      narrative:
-        "Buying momentum is losing steam — bulls can no longer extend the move. Market makers may be quietly distributing into strength within the prior green candle's range, without triggering a panic that would close their positions at worse prices.",
-      nextMove:
-        "Watch for the breakout direction. A close below the harami low (prior green candle's open) signals sellers are taking control. A close above the harami high (prior green candle's close) means the trend resumes — wait for confirmation.",
-    };
+    return pat("bearishHarami", "bearish");
 
   const r0 = rng(c0),
     b0 = bod(c0),
@@ -1298,146 +1185,38 @@ function detectCandlePattern(
     l0 = loW(c0);
   if (b0 / r0 < 0.06) {
     if (u0 / r0 > 0.6 && l0 / r0 < 0.1)
-      return {
-        name: "Gravestone Doji",
-        type: "bearish",
-        summary:
-          "Price rallied strongly then fell back to the open — buyers rejected at the top.",
-        narrative:
-          "Market makers drove price higher to collect buy-stop liquidity from breakout traders, then aggressively sold into the move. The long upper wick is a clear supply rejection — institutions used retail FOMO as exit liquidity.",
-        nextMove:
-          "Bearish bias. A close below the gravestone's low on the next candle is a strong sell signal. The high of this candle is now a key resistance level — failed re-tests of that high are short opportunities.",
-      };
+      return pat("gravestoneDoji", "bearish");
     if (l0 / r0 > 0.6 && u0 / r0 < 0.1)
-      return {
-        name: "Dragonfly Doji",
-        type: "bullish",
-        summary:
-          "Price fell sharply but buyers fully reclaimed the open — sellers rejected at the bottom.",
-        narrative:
-          "Market makers swept below support to hunt stop-losses and collect cheap inventory, then immediately reversed. The long lower wick shows every unit of selling was absorbed by institutional buyers — a classic stop-hunt accumulation move.",
-        nextMove:
-          "Bullish bias. A close above the dragonfly's high on the next candle is a strong buy signal. The low of this candle now acts as key support — a hold above that level on any pullback is a long entry with tight risk.",
-      };
-    return {
-      name: "Doji",
-      type: "neutral",
-      summary:
-        "Open and close are virtually equal — market is in perfect equilibrium.",
-      narrative:
-        "Neither buyers nor sellers have the upper hand. Market makers are absorbing orders on both sides without committing to a direction yet. This standoff typically precedes a sharp move once one side capitulates.",
-      nextMove:
-        "Wait for the breakout. A close above the doji high is a bullish trigger; below the doji low is bearish. The larger the next candle's body in either direction, the more conviction behind the move — volume confirms.",
-    };
+      return pat("dragonflyDoji", "bullish");
+    return pat("doji", "neutral");
   }
   if (b0 / r0 > 0.9) {
     if (bull(c0))
-      return {
-        name: "Bullish Marubozu",
-        type: "bullish",
-        summary:
-          "No wicks — buyers controlled the entire candle with zero hesitation.",
-        narrative:
-          "Pure institutional buying pressure. Market makers opened and drove price higher without allowing any meaningful pullback — there were simply no sellers willing to step in. This one-sided aggression signals strong demand at this price level.",
-        nextMove:
-          "Strongly bullish. The open of this candle now acts as major support — a pullback to that level is a high-probability long entry. Expect continuation toward the next major resistance level, with minimal consolidation.",
-      };
-    return {
-      name: "Bearish Marubozu",
-      type: "bearish",
-      summary:
-        "No wicks — sellers controlled the entire candle with zero hesitation.",
-      narrative:
-        "Pure institutional selling pressure. Market makers drove price lower from open to close without pause — buyers had no meaningful window to fight back. This relentless aggression signals strong supply at this price level.",
-      nextMove:
-        "Strongly bearish. The open of this candle now acts as major resistance — a bounce to that level is a high-probability short entry. Expect continuation toward the next major support level.",
-    };
+      return pat("bullishMarubozu", "bullish");
+    return pat("bearishMarubozu", "bearish");
   }
   if (l0 / r0 >= 0.55 && u0 / r0 <= 0.15 && b0 / r0 <= 0.3) {
     const isDown =
       candles.length >= 5 && c0.close < candles[candles.length - 5].close;
     if (isDown)
-      return {
-        name: "Hammer",
-        type: "bullish",
-        summary:
-          "Long lower wick shows sellers failed — buyers absorbed every unit of supply.",
-        narrative:
-          "Market makers engineered a stop-loss sweep below support. The long wick reveals that sellers pushed hard but institutions absorbed it all and reclaimed the open. This shakeout move removes weak hands before a reversal.",
-        nextMove:
-          "Bullish if the next candle closes above the hammer's high. The low of the wick is now critical support — that level represents where institutions chose to buy. A re-test and hold of that zone is a high-probability entry.",
-      };
-    return {
-      name: "Hanging Man",
-      type: "bearish",
-      summary:
-        "Hammer shape after an uptrend — sellers are beginning to push back.",
-      narrative:
-        "Despite the visual recovery, this is a distribution warning at the top. Market makers allowed price to dip sharply, revealing that sellers are becoming active at these elevated levels. The recovery masks underlying selling pressure building.",
-      nextMove:
-        "Bearish if the next candle closes below the hanging man's low. The high of this candle is now resistance — watch for a failed re-test of that level, which would confirm distribution is underway.",
-    };
+      return pat("hammer", "bullish");
+    return pat("hangingMan", "bearish");
   }
   if (u0 / r0 >= 0.55 && l0 / r0 <= 0.15 && b0 / r0 <= 0.3) {
     const isUp =
       candles.length >= 5 && c0.close > candles[candles.length - 5].close;
     if (isUp)
-      return {
-        name: "Shooting Star",
-        type: "bearish",
-        summary:
-          "Long upper wick shows buyers failed — sellers absorbed every rally attempt.",
-        narrative:
-          "Market makers used the spike higher to offload inventory onto retail traders chasing the breakout. The long wick is evidence of institutional selling into strength — every buyer at the top is immediately losing money.",
-        nextMove:
-          "Bearish if the next candle closes below the shooting star's low. The high of the wick is now strong resistance — short entries on a failed re-test of that level offer a favourable risk/reward setup.",
-      };
-    return {
-      name: "Inverted Hammer",
-      type: "bullish",
-      summary:
-        "Long upper wick after a downtrend — buyers tested higher ground from the lows.",
-      narrative:
-        "Market makers may be testing resistance from below. Buyers pushed price up significantly before sellers regained control, signalling weakening seller dominance. This is a first sign of demand emerging after a decline.",
-      nextMove:
-        "Bullish if the next candle closes above the inverted hammer's high — that confirms buyers are taking control. Wait for that confirmation candle before acting; without it, the pattern has no follow-through.",
-    };
+      return pat("shootingStar", "bearish");
+    return pat("invertedHammer", "bullish");
   }
   if (c0.high < c1.high && c0.low > c1.low)
-    return {
-      name: "Inside Bar (Consolidation)",
-      type: "neutral",
-      summary:
-        "Current candle is fully within the prior candle's range — coiling for a breakout.",
-      narrative:
-        "Market makers are absorbing orders quietly within a tight range, building energy for a directional move. This compression pattern is favoured by institutions before they commit to a trend — it keeps retail guessing while they position.",
-      nextMove:
-        "The break above the prior candle's high is bullish; below the prior low is bearish. The larger the breakout candle's body relative to the inside bar, the stronger the conviction. Trade the breakout, not the inside bar itself.",
-    };
+    return pat("insideBar", "neutral");
   if (candles.length >= 5) {
     const slice = candles.slice(-5);
     if (slice.every((c) => c.close > c.open))
-      return {
-        name: "Sustained Bullish Momentum",
-        type: "bullish",
-        summary:
-          "Five consecutive green candles — buyers have dominated without pause.",
-        narrative:
-          "Institutions are systematically accumulating. Every potential pullback is being bought immediately — market makers are not allowing sellers any traction, signalling they want price higher before retail fully participates.",
-        nextMove:
-          "Momentum favours continuation, but 5 straight green candles often lead to a short-term pause or minor pullback. Wait for a 1-2 candle consolidation and a close back above the prior high for the next entry. The first red candle is not a reversal — it is a reset.",
-      };
+      return pat("sustainedBullish", "bullish");
     if (slice.every((c) => c.close < c.open))
-      return {
-        name: "Sustained Bearish Momentum",
-        type: "bearish",
-        summary:
-          "Five consecutive red candles — sellers have dominated without pause.",
-        narrative:
-          "Institutions are systematically distributing. Every attempted bounce is being sold — market makers are preventing any meaningful recovery, signalling they are positioned short or unloading inventory progressively.",
-        nextMove:
-          "Momentum favours continuation lower, but 5 straight red candles often produce a short-term bounce. Shorts should manage risk and trail stops. The first green candle is not a reversal — it is a breather before the next leg down.",
-      };
+      return pat("sustainedBearish", "bearish");
   }
   return null;
 }
@@ -1457,30 +1236,12 @@ function fallbackPatternInsight(
   bannerSentiment: "bullish" | "bearish" | "neutral" | null,
 ): PatternInsight {
   if (bannerSentiment === "bullish") {
-    return {
-      name: "No Named Pattern — Trend Intact",
-      type: "bullish",
-      summary: "No classic candlestick formation in the last few candles, but the broader trend remains bullish.",
-      narrative: "There's no textbook three-candle setup right now, but price structure still favors buyers overall. No named pattern doesn't mean no direction — the underlying trend is doing the talking here.",
-      nextMove: "Stay aligned with the trend rather than waiting for a specific pattern to appear. A pullback to support is a reasonable area to watch for continuation.",
-    };
+    return pat("noPatternBullish", "bullish");
   }
   if (bannerSentiment === "bearish") {
-    return {
-      name: "No Named Pattern — Trend Intact",
-      type: "bearish",
-      summary: "No classic candlestick formation in the last few candles, but the broader trend remains bearish.",
-      narrative: "There's no textbook three-candle setup right now, but price structure still favors sellers overall. No named pattern doesn't mean no direction — the underlying trend is doing the talking here.",
-      nextMove: "Stay aligned with the trend rather than waiting for a specific pattern to appear. A bounce into resistance is a reasonable area to watch for continuation lower.",
-    };
+    return pat("noPatternBearish", "bearish");
   }
-  return {
-    name: "No Clear Pattern",
-    type: "neutral",
-    summary: "No classic candlestick formation detected, and the broader trend is flat right now.",
-    narrative: "Price action lacks both a textbook pattern and a clear directional bias at the moment — this usually means the market is consolidating before its next real move.",
-    nextMove: "Wait for either a recognizable pattern or a decisive break from this range before leaning into a direction.",
-  };
+  return pat("noClearPattern", "neutral");
 }
 
 // Applies overall-trend context so the pattern and banner never contradict.
@@ -1499,19 +1260,13 @@ function trendAwarePattern(
     return {
       ...result,
       type: "neutral",
-      nextMove:
-        "Counter-trend signal — the overall move is still bearish. " +
-        result.nextMove +
-        " Wait for the dominant trend to shift before treating this as a primary long entry.",
+      nextMove: i18next.t("priceChart.counterTrendBearish", { next: result.nextMove }),
     };
   if (result.type === "bearish" && bannerSentiment === "bullish")
     return {
       ...result,
       type: "neutral",
-      nextMove:
-        "Counter-trend signal — the overall move is still bullish. " +
-        result.nextMove +
-        " Treat this as a caution flag rather than a primary short signal.",
+      nextMove: i18next.t("priceChart.counterTrendBullish", { next: result.nextMove }),
     };
   return result;
 }
@@ -1632,7 +1387,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // "1 year in 4H candles" — the preset's own tip only matches its own
   // default interval.
   const activeRangeDesc = activeRangePreset
-    ? (activeRangePreset.interval === interval ? activeRangePreset.tip : `${activeRangePreset.label} in ${INTERVAL_SHORT[interval]} candles`)
+    ? (activeRangePreset.interval === interval ? t(`chartBar.rangeTip.${activeRangePreset.key}`, activeRangePreset.tip) : t("priceChart.rangeInCandles", { range: activeRangePreset.label, iv: INTERVAL_SHORT[interval] }))
     : null;
   // Visible window for a fresh view: the active preset's span if any,
   // otherwise the interval's own default.
@@ -1690,11 +1445,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const goToDate = (ts: number): string | null => {
     const candles = lastCandlesRef.current;
     const ts0 = chartRef.current?.timeScale();
-    if (!candles.length || !ts0) return "Chart data hasn't loaded yet.";
+    if (!candles.length || !ts0) return t("priceChart.goTo.notLoaded");
     const first = candles[0].time as number;
     const last = candles[candles.length - 1].time as number;
     if (ts < first) {
-      return `This interval only goes back to ${fmtDay(first)}. Pick a later date, or switch to a bigger interval (e.g. 1D or 1W) to go further back.`;
+      return t("priceChart.goTo.tooOldLong", { date: fmtDay(first) });
     }
     const vr = ts0.getVisibleRange();
     const span = vr ? (vr.to as number) - (vr.from as number) : (INTERVAL_WINDOW[interval] ?? 7 * 86400);
@@ -1718,10 +1473,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     setRangePreset(null);
     if (iv === interval) {
       const candles = lastCandlesRef.current;
-      if (!candles.length) return "Chart data hasn't loaded yet.";
+      if (!candles.length) return t("priceChart.goTo.notLoaded");
       const first = candles[0].time as number;
       const last = candles[candles.length - 1].time as number;
-      if (to < first) return `This interval only goes back to ${fmtDay(first)}.`;
+      if (to < first) return t("priceChart.goTo.tooOld", { date: fmtDay(first) });
       chartRef.current?.timeScale().setVisibleRange({
         from: Math.max(from, first) as UTCTimestamp,
         to: Math.min(to, last) as UTCTimestamp,
@@ -2545,9 +2300,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     const totalH = Math.floor(ms / 3_600_000);
     const d = Math.floor(totalH / 24);
     const h = totalH % 24;
-    if (d >= 1) return h > 0 ? `${d}d ${h}h` : compact ? `${d}d` : `${d} day${d === 1 ? "" : "s"}`;
+    if (d >= 1) return h > 0 ? `${d}d ${h}h` : compact ? `${d}d` : t("priceChart.trial.days", { count: d });
     if (totalH >= 1) return `${totalH}h`;
-    return compact ? "<1h" : "under an hour";
+    return compact ? "<1h" : t("priceChart.trial.underHour");
   };
   // (Pro's coin count is claimed by the server when it computes the read.)
   // Short "preparing" intro each time Pro Vision is switched on (not on page
@@ -2628,15 +2383,15 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         </span>
         <span className="pv-locked-text">
           <strong>
-            <span className="pv-trial-long">ProVision free trial · {left} left</span>
-            <span className="pv-trial-short">Free trial · {left} left</span>
+            <span className="pv-trial-long">{t("priceChart.trial.bannerLong", { left })}</span>
+            <span className="pv-trial-short">{t("priceChart.trial.bannerShort", { left })}</span>
           </strong>
           <span>
-            <span className="pv-trial-long">Every coin &amp; timeframe · {pvPrice}/year</span>
-            <span className="pv-trial-short">then {pvPrice}/year</span>
+            <span className="pv-trial-long">{t("priceChart.trial.everyCoinPrice", { price: pvPrice })}</span>
+            <span className="pv-trial-short">{t("priceChart.trial.thenPrice", { price: pvPrice })}</span>
           </span>
         </span>
-        <span className="pv-locked-cta">Keep it</span>
+        <span className="pv-locked-cta">{t("priceChart.trial.keepIt")}</span>
       </button>
     );
   })();
@@ -2662,10 +2417,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); openProVisionPaywall({ reason: "trial-active", coin }); } }}
       >
         <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
-        <span className="pv-trial-chip-long">Enjoying ProVision?</span>
-        <span className="pv-trial-chip-short">Enjoying it?</span>
-        <span className="pv-trial-chip-cta">Keep it ›</span>
-        <span className="pv-trial-chip-left pv-trial-chip-long">{long} left</span>
+        <span className="pv-trial-chip-long">{t("priceChart.trial.enjoyingPv")}</span>
+        <span className="pv-trial-chip-short">{t("priceChart.trial.enjoyingIt")}</span>
+        <span className="pv-trial-chip-cta">{t("priceChart.trial.keepItArrow")}</span>
+        <span className="pv-trial-chip-left pv-trial-chip-long">{t("priceChart.trial.left", { left: long })}</span>
         <span className="pv-trial-chip-left pv-trial-chip-short">{short}</span>
       </span>
     );
@@ -2699,7 +2454,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           setPvBase(r);
           setPvServerLocked(false);
           // Server answered but had nothing to read (too little history).
-          setPvError(r ? null : "Not enough candles on this interval for ProVision");
+          setPvError(r ? null : t("priceChart.pvErr.notEnough"));
         })
         .catch(async (e) => {
           if (!alive) return;
@@ -2713,8 +2468,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             if (!alive) return;
             setPvBase(null);
             setPvServerLocked(false);
-            if (refreshErr) setPvError("Your sign-in expired — please sign in again");
-            else { setPvError("Reconnecting…"); pvLastKey.current = ""; }
+            if (refreshErr) setPvError(t("priceChart.pvErr.signinExpired"));
+            else { setPvError(t("priceChart.pvErr.reconnecting")); pvLastKey.current = ""; }
             return;
           }
           if (e instanceof ProVisionLockedError) {
@@ -2735,7 +2490,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           try { detail = res ? (await res.clone().json())?.error ?? "" : ""; } catch { /* not JSON */ }
           const status = res?.status;
           console.warn("[ProVision] read failed", status ?? "", detail || (e as Error)?.message || e);
-          setPvError(status === 429 ? "Too many requests — retrying" : status ? `Server error ${status} — retrying` : "Couldn't reach ProVision — retrying");
+          setPvError(status === 429 ? t("priceChart.pvErr.tooMany") : status ? t("priceChart.pvErr.server", { status }) : t("priceChart.pvErr.unreachable"));
         });
     }, wait);
     return () => { alive = false; clearTimeout(id); };
@@ -2910,11 +2665,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     setAwaitingZoneDraw(false);
     setHasZone(true);
     if (candles.length < 2) {
-      setZoneAnalysis({ candles, loading: false, error: "Draw a larger area — need at least 2 candles inside the zone." });
+      setZoneAnalysis({ candles, loading: false, error: t("priceChart.zone.tooSmall") });
       return;
     }
     if (exceeded) {
-      setZoneAnalysis({ candles, loading: false, error: "Daily AI analysis limit reached." });
+      setZoneAnalysis({ candles, loading: false, error: t("priceChart.zone.limit") });
       return;
     }
     setZoneAnalysis({ candles, loading: true });
@@ -2935,7 +2690,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
 
     consume().then((ok) => {
       if (!ok) {
-        setZoneAnalysis((prev) => prev ? { ...prev, loading: false, error: "Daily AI analysis limit reached." } : prev);
+        setZoneAnalysis((prev) => prev ? { ...prev, loading: false, error: t("priceChart.zone.limit") } : prev);
         return;
       }
       getZoneAnalysis(coin, interval, candles, {
@@ -2952,11 +2707,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           if (!prev) return prev;
           return res.success && res.result
             ? { ...prev, loading: false, result: res.result }
-            : { ...prev, loading: false, error: res.error || "Failed to analyse zone" };
+            : { ...prev, loading: false, error: res.error || t("priceChart.zone.failed") };
         });
       });
     });
-  }, [coin, interval, exceeded, consume]);
+  }, [coin, interval, exceeded, consume, t]);
 
   const [divergence, setDivergence] = useState<DivergenceResult | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -3299,8 +3054,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           const pct = d.open ? (chg / d.open) * 100 : 0;
           const cls = chg >= 0 ? "up" : "dn";
           el.innerHTML =
-            `<span>O</span><b class="${cls}">${fmt(d.open)}</b><span>H</span><b class="${cls}">${fmt(d.high)}</b>` +
-            `<span>L</span><b class="${cls}">${fmt(d.low)}</b><span>C</span><b class="${cls}">${fmt(d.close)}</b>` +
+            `<span>${t("priceChart.ohlc.o")}</span><b class="${cls}">${fmt(d.open)}</b><span>${t("priceChart.ohlc.h")}</span><b class="${cls}">${fmt(d.high)}</b>` +
+            `<span>${t("priceChart.ohlc.l")}</span><b class="${cls}">${fmt(d.low)}</b><span>${t("priceChart.ohlc.c")}</span><b class="${cls}">${fmt(d.close)}</b>` +
             `<b class="${cls}">${chg >= 0 ? "" : "−"}${fmt(Math.abs(chg))} (${chg >= 0 ? "+" : "−"}${Math.abs(pct).toFixed(2)}%)</b>`;
         };
         const latest = () => {
@@ -3558,7 +3313,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         const data = fresh.length > 0 ? fresh : placeholderCandlesRef.current ? [] : lastCandlesRef.current;
         placeholderCandlesRef.current = false;
         if (data.length === 0) {
-          setError("No chart data available");
+          setError(t("chart.noData"));
           // Nothing real ever came in for this coin/interval, so whatever
           // is on the canvas right now is only the fake/cached first-load
           // placeholder (see makeFakeFirstLoadCandles/readChartCandleCache
@@ -3660,7 +3415,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             setDayChangePercent(null);
           }
 
-          const newBanner = analyzeInterval(data, INTERVAL_LABELS[interval]);
+          const newBanner = analyzeInterval(data, t(`priceChart.ivLabel.${interval}`, INTERVAL_LABELS[interval]));
           setBanner(newBanner);
           setBannerAt(newBanner ? Date.now() : null);
 
@@ -3709,7 +3464,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   color: div.type === "bullish" ? "#4ade80" : "#fb7185",
                   size: 3,
                   // Label once (latest pivot) — two labels side by side overlapped.
-                  text: pi === all.length - 1 ? (div.type === "bullish" ? "Bull Div" : "Bear Div") : "",
+                  text: pi === all.length - 1 ? (div.type === "bullish" ? t("priceChart.canvas.bullDiv") : t("priceChart.canvas.bearDiv")) : "",
                 }))
               : [];
             if (!divMarkersRef.current) {
@@ -3784,7 +3539,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         }
       } catch {
         if (!cancelled) {
-          setError("Failed to fetch chart data");
+          setError(t("chart.failed"));
           // Same reasoning as the "No chart data available" branch above —
           // only clear when there's no real data to fall back on, so a
           // failed refetch on an already-loaded coin still shows its last
@@ -4174,10 +3929,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     zoneLineRefs.current = [];
     if (!showZones || !isPaid || !zone || !candleRef.current) return;
     const zoneLines: [number, string, string][] = [
-      [zone.buyZone.upper, "rgba(74,222,128,0.5)", "Buy Zone ▲"],
-      [zone.buyZone.lower, "rgba(74,222,128,0.5)", "Buy Zone ▼"],
-      [zone.sellZone.upper, "rgba(251,113,133,0.5)", "Sell Zone ▲"],
-      [zone.sellZone.lower, "rgba(251,113,133,0.5)", "Sell Zone ▼"],
+      [zone.buyZone.upper, "rgba(74,222,128,0.5)", `${t("chart.buy")} ▲`],
+      [zone.buyZone.lower, "rgba(74,222,128,0.5)", `${t("chart.buy")} ▼`],
+      [zone.sellZone.upper, "rgba(251,113,133,0.5)", `${t("chart.sell")} ▲`],
+      [zone.sellZone.lower, "rgba(251,113,133,0.5)", `${t("chart.sell")} ▼`],
     ];
     for (const [price, color, title] of zoneLines) {
       const pl = candleRef.current.createPriceLine({
@@ -4670,7 +4425,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     window.dispatchEvent(new CustomEvent("open-trading-agent-with-image", {
       detail: {
         imageDataUrl: captured.dataUrl,
-        prompt: `Can you analyze this ${coin} chart?`,
+        prompt: t("priceChart.askAgentPrompt", { coin }),
       },
     }));
   };
@@ -4795,7 +4550,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           className="indicators-menu-dot"
           style={{ background: "rgba(251,191,36,0.85)" }}
         />
-        <span>Fibonacci Levels</span>
+        <span>{t("priceChart.ind.fib")}</span>
         <span className="tier-badge tier-badge--pro">P</span>
       </label>
       <label className="indicators-menu-item">
@@ -4808,7 +4563,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           className="indicators-menu-dot"
           style={{ background: "rgba(251,113,133,0.75)" }}
         />
-        <span>Support / Resistance</span>
+        <span>{t("priceChart.ind.sr")}</span>
       </label>
       <label className="indicators-menu-item">
         <input
@@ -4820,7 +4575,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           className="indicators-menu-dot"
           style={{ background: "#facc15" }}
         />
-        <span>24H High/Low</span>
+        <span>{t("priceChart.ind.dayhl")}</span>
       </label>
       <label className="indicators-menu-item">
         <input
@@ -4835,7 +4590,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           className="indicators-menu-dot"
           style={{ background: "rgba(74,222,128,0.75)" }}
         />
-        <span>Buy/Sell Zones</span>
+        <span>{t("priceChart.ind.zones")}</span>
         <span className="tier-badge tier-badge--pro">P</span>
       </label>
       <div className="indicators-menu-divider" />
@@ -4880,10 +4635,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     { key: "ma20", label: t("chart.ma20"), color: "#818cf8", checked: showMA20, onToggle: () => setShowMA20((v) => !v) },
     { key: "ma50", label: t("chart.ma50"), color: "#f472b6", checked: showMA50, onToggle: () => setShowMA50((v) => !v) },
     { key: "ma200", label: t("chart.ma200"), color: "#facc15", checked: showMA200, onToggle: () => setShowMA200((v) => !v) },
-    { key: "fib", label: "Fibonacci Levels", color: "rgba(251,191,36,0.85)", checked: showFib, pro: true, onToggle: () => { if (!isPaid) { onOpenUpgrade?.("pro"); return; } setShowFib((v) => !v); } },
-    { key: "sr", label: "Support / Resistance", color: "rgba(251,113,133,0.75)", checked: showSR, onToggle: () => setShowSR((v) => !v) },
-    { key: "dayhl", label: "24H High/Low", color: "#facc15", checked: showDayHL, onToggle: () => setShowDayHL((v) => !v) },
-    { key: "zones", label: "Buy/Sell Zones", color: "rgba(74,222,128,0.75)", checked: showZones, pro: true, onToggle: () => { if (!isPaid) { onOpenUpgrade?.("pro"); return; } setShowZones((v) => !v); } },
+    { key: "fib", label: t("priceChart.ind.fib"), color: "rgba(251,191,36,0.85)", checked: showFib, pro: true, onToggle: () => { if (!isPaid) { onOpenUpgrade?.("pro"); return; } setShowFib((v) => !v); } },
+    { key: "sr", label: t("priceChart.ind.sr"), color: "rgba(251,113,133,0.75)", checked: showSR, onToggle: () => setShowSR((v) => !v) },
+    { key: "dayhl", label: t("priceChart.ind.dayhl"), color: "#facc15", checked: showDayHL, onToggle: () => setShowDayHL((v) => !v) },
+    { key: "zones", label: t("priceChart.ind.zones"), color: "rgba(74,222,128,0.75)", checked: showZones, pro: true, onToggle: () => { if (!isPaid) { onOpenUpgrade?.("pro"); return; } setShowZones((v) => !v); } },
     { key: "rsi", label: t("chart.rsi14"), color: "#818cf8", checked: showRSI, onToggle: () => setShowRSI((v) => !v) },
     { key: "macd", label: t("chart.macd1269"), color: "#f97316", checked: showMACD, onToggle: () => setShowMACD((v) => !v) },
   ];
@@ -4913,7 +4668,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const pickerBuiltIn: PickerItem[] = fsQuickIndicators.map((ind) => ({
     id: `pc-${ind.key}`,
     name: ind.label,
-    description: BUILTIN_DESC[ind.key],
+    description: t(`priceChart.ind.desc.${ind.key}`, BUILTIN_DESC[ind.key]),
     kind: ind.key === "rsi" || ind.key === "macd" ? "pane" : "overlay",
     category: BUILTIN_CATEGORY[ind.key] ?? "Trend",
     checked: ind.checked,
@@ -4962,7 +4717,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               {indicatorsList}
               <div className="indicators-menu-divider" />
               <button type="button" className="indicators-menu-all" onClick={() => { setMenuOpen(false); setToolsIndOpen(true); }}>
-                All indicators{libIndicators.length ? ` · ${libIndicators.length} on` : ""} ›
+                {libIndicators.length ? t("priceChart.allIndicatorsOn", { n: libIndicators.length }) : t("priceChart.allIndicators")} ›
               </button>
             </div>
           </>,
@@ -4981,7 +4736,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // Rendered unconditionally (not tied to any one trigger button's own
   // mount state) further down in the main return.
   const intervalSheetPortal = intervalSheetOpen && (
-    <BottomSheet open onClose={() => setIntervalSheetOpen(false)} title={<>{t("chart.selectInterval", "Select Interval")}</>}>
+    <BottomSheet open onClose={() => setIntervalSheetOpen(false)} title={<>{t("priceChart.c.selectInterval")}</>}>
         <div className="interval-sheet-list date-range-sheet-list">
           {INTERVALS.map((opt) => {
             const needsPro = PRO_INTERVALS.has(opt);
@@ -5004,7 +4759,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     : trend === "bearish" ? <span className="interval-pill-trend interval-pill-trend--down">↓</span>
                     : null}
                 </span>
-                <span className="date-range-sheet-sub">{INTERVAL_DESC[opt]}</span>
+                <span className="date-range-sheet-sub">{t(`priceChart.ivDesc.${opt}`)}</span>
                 {locked ? <span className="interval-sheet-item-pro">PRO</span>
                   : interval === opt ? <span className="chart-style-check">✓</span>
                   : <span />}
@@ -5101,16 +4856,16 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     const t = Date.parse(g);
     if (!Number.isFinite(t)) return null;
     const months = Math.floor((Date.now() - t) / (30.44 * 86400000));
-    if (months < 1) return "New";
-    return months >= 12 ? `${Math.floor(months / 12)}Y old` : `${months}M old`;
+    if (months < 1) return i18next.t("priceChart.age.new");
+    return months >= 12 ? i18next.t("priceChart.age.years", { n: Math.floor(months / 12) }) : i18next.t("priceChart.age.months", { n: months });
   })();
   const gridToggleButton = (
     <button
       type="button"
       className={`chart-depth-btn chart-grid-toggle-btn${showGrid ? " chart-depth-btn--active" : ""}`}
       onClick={() => setShowGrid((v) => !v)}
-      title={showGrid ? "Hide grid" : "Show grid"}
-      data-tooltip={showGrid ? "Hide grid" : "Show grid"}
+      title={showGrid ? t("priceChart.hideGrid") : t("priceChart.showGrid")}
+      data-tooltip={showGrid ? t("priceChart.hideGrid") : t("priceChart.showGrid")}
     >
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="3" width="18" height="18" rx="1" />
@@ -5119,7 +4874,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         <line x1="9" y1="3" x2="9" y2="21" />
         <line x1="15" y1="3" x2="15" y2="21" />
       </svg>
-      <span className="chart-icon-label">Grid</span>
+      <span className="chart-icon-label">{t("priceChart.grid")}</span>
     </button>
   );
   const gridStyleControls = (
@@ -5136,7 +4891,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             }
             setStyleMenuOpen((v) => !v);
           }}
-          title="Chart style"
+          title={t("priceChart.chartStyle")}
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="7" y1="3" x2="7" y2="8" />
@@ -5146,7 +4901,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             <rect x="14" y="10" width="6" height="6" />
             <line x1="17" y1="16" x2="17" y2="19" />
           </svg>
-          <span className="chart-icon-label">{CHART_STYLE_LABELS[chartStyle]}</span>
+          <span className="chart-icon-label">{t(`priceChart.style.${chartStyle}`)}</span>
         </button>
         {styleMenuOpen && (isDesktopWidth ? (
           styleMenuPos && ReactDOM.createPortal(
@@ -5162,7 +4917,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                       setStyleMenuOpen(false);
                     }}
                   >
-                    {CHART_STYLE_LABELS[s]}
+                    {t(`priceChart.style.${s}`)}
                     {chartStyle === s && <span className="chart-style-check">✓</span>}
                   </div>
                 ))}
@@ -5171,7 +4926,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             document.body,
           )
         ) : (
-          <BottomSheet open onClose={() => setStyleMenuOpen(false)} title={<>Chart style</>}>
+          <BottomSheet open onClose={() => setStyleMenuOpen(false)} title={<>{t("priceChart.chartStyle")}</>}>
               <div className="indicators-menu indicators-menu--sheet">
                 {(Object.keys(CHART_STYLE_LABELS) as ChartStyle[]).map((s) => (
                   <div
@@ -5182,7 +4937,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                       setStyleMenuOpen(false);
                     }}
                   >
-                    {CHART_STYLE_LABELS[s]}
+                    {t(`priceChart.style.${s}`)}
                     {chartStyle === s && <span className="chart-style-check">✓</span>}
                   </div>
                 ))}
@@ -5214,7 +4969,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           }
           setIntervalSheetOpen(true);
         }}
-        title={t("chart.interval", "Interval")}
+        title={t("priceChart.c.interval")}
       >
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="9" />
@@ -5241,7 +4996,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   }}
                 >
                   <b className="interval-menu-short">{INTERVAL_SHORT[opt]}</b>
-                  <span className="interval-menu-desc">{INTERVAL_DESC[opt]}</span>
+                  <span className="interval-menu-desc">{t(`priceChart.ivDesc.${opt}`)}</span>
                   {trend === "bullish" ? <span className="interval-pill-trend interval-pill-trend--up">↑</span>
                     : trend === "bearish" ? <span className="interval-pill-trend interval-pill-trend--down">↓</span>
                     : null}
@@ -5325,7 +5080,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           }
           setIntervalSheetOpen(true);
         }}
-        title={t("chart.interval", "Interval")}
+        title={t("priceChart.c.interval")}
       >
         {/* Always just the down arrow (the active interval is shown in
             the row itself). */}
@@ -5357,7 +5112,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   }}
                 >
                   <b className="interval-menu-short">{INTERVAL_SHORT[opt]}</b>
-                  <span className="interval-menu-desc">{INTERVAL_DESC[opt]}</span>
+                  <span className="interval-menu-desc">{t(`priceChart.ivDesc.${opt}`)}</span>
                   {trend === "bullish" ? <span className="interval-pill-trend interval-pill-trend--up">↑</span>
                     : trend === "bearish" ? <span className="interval-pill-trend interval-pill-trend--down">↓</span>
                     : null}
@@ -5389,8 +5144,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         if (showCompactView) { setShowCompactView(false); return; }
         openPredict();
       }}
-      title={showCompactView ? t("chart.switchToFull", "Back to chart") : t("chart.switchToCompact", "Predict")}
-      data-tooltip={showCompactView ? t("chart.switchToFull", "Back to chart") : t("chart.switchToCompact", "Predict")}
+      title={showCompactView ? t("priceChart.c.switchToFull") : t("priceChart.c.switchToCompact")}
+      data-tooltip={showCompactView ? t("priceChart.c.switchToFull") : t("priceChart.c.switchToCompact")}
     >
       {/* Shape-based, not another set of lines (grid/depth/chart-style
           nearby already are) — represents the CURRENT view, not the
@@ -5430,16 +5185,16 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       type="button"
       className="chart-depth-btn"
       onClick={toggleFullscreen}
-      title={t("chart.fullscreen", "Fullscreen")}
-      data-tooltip={t("chart.fullscreen", "Fullscreen")}
+      title={t("priceChart.c.fullscreen")}
+      data-tooltip={t("priceChart.c.fullscreen")}
     >
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3" />
       </svg>
-      {mobileTabs && <span className="chart-tool-label">Fullscreen</span>}
+      {mobileTabs && <span className="chart-tool-label">{t("priceChart.c.fullscreen")}</span>}
       {/* Desktop #trade only: text label beside the icon. */}
       {isDesktopWidth && prefsScope === "trade" && !pageMode && (
-        <span className="chart-fs-label">{t("chart.fullChart", "Full Chart")}</span>
+        <span className="chart-fs-label">{t("priceChart.c.fullChart")}</span>
       )}
     </button>
   );
@@ -5497,11 +5252,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           )}
         </span>
         {pvRenew === "trial-ended" ? (
-          <span>Your <b className="pv-pill-brand">ProVision</b> trial ended · <b className="pv-pill-renew">Renew</b></span>
+          <span><Trans i18nKey="priceChart.pill.trialEnded" components={{ b: <b className="pv-pill-brand" /> }} /> · <b className="pv-pill-renew">{t("priceChart.pill.renew")}</b></span>
         ) : pvRenew === "pro-limit" ? (
-          <span><b className="pv-pill-brand">ProVision</b> locked on {coin} · <b className="pv-pill-renew">Unlock</b></span>
+          <span><Trans i18nKey="priceChart.pill.lockedOn" values={{ coin }} components={{ b: <b className="pv-pill-brand" /> }} /> · <b className="pv-pill-renew">{t("priceChart.pill.unlock")}</b></span>
         ) : (
-          <span>Analyze this chart with <b className="pv-pill-brand">ProVision</b></span>
+          <span><Trans i18nKey="priceChart.pill.analyze" components={{ b: <b className="pv-pill-brand" /> }} /></span>
         )}
         <svg className="pv-pill-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
       </button>
@@ -5509,7 +5264,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       <button
         type="button"
         className="pv-pill-x"
-        aria-label="Dismiss"
+        aria-label={t("priceChart.dismiss")}
         onClick={() => {
           if (pvRenew) {
             setPvRenewSnoozed(true);
@@ -5582,9 +5337,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       onRow={(r) => {
         if (r < 6) { setPvTileOpen(pvResult.tiles[r]); return; }
         setPvTileOpen({
-          key: "macd", label: "Volume", bias: pvResult.volume.bias,
-          value: `${pvResult.volume.buyPct >= pvResult.volume.sellPct ? "Buyers" : "Sellers"} ${Math.max(pvResult.volume.buyPct, pvResult.volume.sellPct)}%`,
-          detail: `${pvResult.volume.real ? "Real market buys vs market sells" : "Estimated buying vs selling (from candle colour)"} over the last 20 candles: buy ${fmtPvVol(pvResult.volume.buyVol)}, sell ${fmtPvVol(pvResult.volume.sellVol)}. 55%+ on one side counts as bullish or bearish.`,
+          key: "macd", label: t("priceChart.vol.label"), bias: pvResult.volume.bias,
+          value: pvResult.volume.buyPct >= pvResult.volume.sellPct ? t("priceChart.vol.buyersPct", { pct: Math.max(pvResult.volume.buyPct, pvResult.volume.sellPct) }) : t("priceChart.vol.sellersPct", { pct: Math.max(pvResult.volume.buyPct, pvResult.volume.sellPct) }),
+          detail: t(pvResult.volume.real ? "priceChart.vol.detailReal" : "priceChart.vol.detailEst", { buy: fmtPvVol(pvResult.volume.buyVol), sell: fmtPvVol(pvResult.volume.sellVol) }),
         });
       }}
       trialLeft={pvTrialLeftMs !== null ? pvTrialLeftLabel(pvTrialLeftMs, true) : null}
@@ -5594,13 +5349,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         const ev = pvEventInfo.live ?? pvEventInfo.next;
         if (ev) {
           const name = eventShortName(ev.title);
-          if (pvEventInfo.live) return { icon: "⏸", text: `${name} now — signals paused`, hot: true };
+          if (pvEventInfo.live) return { icon: "⏸", text: t("priceChart.notice.eventNow", { name }), hot: true };
           const soon = ev.time - pvNow <= 2 * 3600 * 1000;
-          return { icon: "⚠", text: `${name} in ${fmtCountdown(ev.time - pvNow)} — expect volatility`, hot: soon };
+          return { icon: "⚠", text: t("priceChart.notice.eventIn", { name, time: fmtCountdown(ev.time - pvNow) }), hot: soon };
         }
-        if (pvResult.regime.kind === "range") return { icon: "≈", text: "Sideways market — no clear trend" };
-        if (pvResult.barSec <= 300) return { icon: "⏱", text: pvResult.signalSource ? `Signals from the ${pvResult.signalSource} chart` : "Short timeframe — noisy" };
-        if (pvResult.liquidity.thin) return { icon: "!", text: "Thin market — moves can be erratic" };
+        if (pvResult.regime.kind === "range") return { icon: "≈", text: t("priceChart.notice.sideways") };
+        if (pvResult.barSec <= 300) return { icon: "⏱", text: pvResult.signalSource ? t("priceChart.notice.signalsFrom", { src: pvResult.signalSource }) : t("priceChart.notice.shortTf") };
+        if (pvResult.liquidity.thin) return { icon: "!", text: t("priceChart.notice.thin") };
         return null;
       })()}
     />
@@ -5625,12 +5380,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             else if (isPaid) openAiRead();
             else setAiReadOpen(true);
           }}
-          title="AI Chart Read"
+          title={t("priceChart.aiChartRead")}
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 2l2.4 5.6L20 10l-5.6 2.4L12 18l-2.4-5.6L4 10l5.6-2.4z" />
           </svg>
-          <span className="chart-tool-label">AI Read</span>
+          <span className="chart-tool-label">{t("priceChart.aiRead")}</span>
         </button>
       )}
       {gridStyleControls}
@@ -5641,9 +5396,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           type="button"
           className={`chart-depth-btn chart-fx-btn${toolsIndOpen ? " chart-depth-btn--active" : ""}`}
           onClick={() => setToolsIndOpen(true)}
-          title="Indicators"
-          data-tooltip="Indicators"
-          aria-label="Indicators"
+          title={t("chart.indicators")}
+          data-tooltip={t("chart.indicators")}
+          aria-label={t("chart.indicators")}
         >
           <span className="chart-fx-glyph">ƒx</span>
           {libIndicators.length + fsQuickIndicators.filter((i) => i.checked).length > 0 && (
@@ -5656,8 +5411,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       <button
         className={`chart-depth-btn${showDepthProfile ? " chart-depth-btn--active" : ""}`}
         onClick={() => setShowDepthProfile((v) => !v)}
-        title={showDepthProfile ? "Hide depth profile" : "Show depth profile"}
-        data-tooltip={showDepthProfile ? "Hide depth profile" : "Show depth profile"}
+        title={showDepthProfile ? t("priceChart.hideDepth") : t("priceChart.showDepth")}
+        data-tooltip={showDepthProfile ? t("priceChart.hideDepth") : t("priceChart.showDepth")}
       >
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <line x1="18" y1="6" x2="6" y2="6" />
@@ -5665,7 +5420,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           <line x1="15" y1="14" x2="6" y2="14" />
           <line x1="12" y1="18" x2="6" y2="18" />
         </svg>
-        {mobileTabs && <span className="chart-tool-label">Depth</span>}
+        {mobileTabs && <span className="chart-tool-label">{t("priceChart.depth")}</span>}
       </button>
       )}
       {/* Desktop only — mobile goes back to its own text link
@@ -5685,7 +5440,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
           <circle cx="12" cy="13" r="4" />
         </svg>
-        {mobileTabs && <span className="chart-tool-label">Save</span>}
+        {mobileTabs && <span className="chart-tool-label">{t("chart.save")}</span>}
       </button>
       )}
       {/* Fullscreen: in this row on desktop; on the mobile toolbar it's
@@ -5706,13 +5461,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           <line x1="10" y1="12" x2="20" y2="12" /><circle cx="7" cy="12" r="2.5" />
           <line x1="4" y1="18" x2="13" y2="18" /><circle cx="16" cy="18" r="2.5" />
         </svg>
-        <span className="chart-tool-label">Tools</span>
+        <span className="chart-tool-label">{t("priceChart.tools")}</span>
       </button>
     </div>
   );
   const toolsSwitch = (on: boolean) => <span className={`cts-switch${on ? " cts-switch--on" : ""}`} aria-hidden="true"><i /></span>;
   const toolsSheetPortal = toolsSheetOpen && (
-    <BottomSheet open onClose={() => setToolsSheetOpen(false)} title={<>Chart tools</>} className="cts-sheet" ariaLabel="Chart tools">
+    <BottomSheet open onClose={() => setToolsSheetOpen(false)} title={<>{t("chartBar.chartTools")}</>} className="cts-sheet" ariaLabel={t("chartBar.chartTools")}>
         <div className="interval-sheet-list date-range-sheet-list">
           {onOpenPaperTrade && (
             <button
@@ -5724,13 +5479,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 17l6-6 4 4 8-8" /><path d="M15 7h6v6" /></svg>
               </span>
               <span className="cts-row-text">
-                <span className="date-range-sheet-label">Paper trade {coin}</span>
-                <span className="date-range-sheet-sub">Practice with $100k virtual cash, zero risk</span>
+                <span className="date-range-sheet-label">{t("priceChart.ts.paperTrade", { coin })}</span>
+                <span className="date-range-sheet-sub">{t("priceChart.ts.paperTradeSub")}</span>
               </span>
               <span className="cts-row-chev">›</span>
             </button>
           )}
-          <div className="cts-section-label">Chart style</div>
+          <div className="cts-section-label">{t("priceChart.chartStyle")}</div>
           <div className="cts-styles">
             {(Object.keys(CHART_STYLE_LABELS) as ChartStyle[]).map((s) => (
               <button
@@ -5740,12 +5495,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 onClick={() => setChartStyle(s)}
               >
                 {CHART_STYLE_ICONS[s]}
-                <span>{CHART_STYLE_LABELS[s]}</span>
+                <span>{t(`priceChart.style.${s}`)}</span>
               </button>
             ))}
           </div>
           {/* Every interval (1s … All) — PRO ones open the upgrade. */}
-          <div className="cts-section-label">Interval</div>
+          <div className="cts-section-label">{t("priceChart.c.interval")}</div>
           <div className="cts-ivs">
             {(["1sec", "1min", "5min", "15min", "1h", "4h", "6h", "1day", "1week", "1month", "all"] as TimeInterval[]).map((iv) => {
               const pro = PRO_INTERVALS.has(iv) && !isPaid;
@@ -5778,15 +5533,15 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18" /><path d="M7 15l4-4 3 3 5-6" /></svg>
             </span>
             <span className="cts-row-text">
-              <span className="date-range-sheet-label">Indicators</span>
+              <span className="date-range-sheet-label">{t("chart.indicators")}</span>
               <span className="date-range-sheet-sub">
-                {(() => { const on = [...fsQuickIndicators.filter((i) => i.checked).map((i) => i.label), ...libIndicators.map((id) => getIndicatorDef(id)?.name ?? id)]; return on.length ? `${on.length} on · ${on.slice(0, 3).join(", ")}${on.length > 3 ? "…" : ""}` : "None on"; })()}
+                {(() => { const on = [...fsQuickIndicators.filter((i) => i.checked).map((i) => i.label), ...libIndicators.map((id) => getIndicatorDef(id)?.name ?? id)]; return on.length ? t("priceChart.ts.indicatorsOn", { n: on.length, list: `${on.slice(0, 3).join(", ")}${on.length > 3 ? "…" : ""}` }) : t("priceChart.ts.noneOn"); })()}
               </span>
             </span>
             <span className="cts-row-chev">›</span>
           </button>
           )}
-          <div className="cts-section-label">Tools</div>
+          <div className="cts-section-label">{t("priceChart.tools")}</div>
           <button
             type="button"
             className="date-range-sheet-item cts-row"
@@ -5803,8 +5558,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l2.4 5.6L20 10l-5.6 2.4L12 18l-2.4-5.6L4 10l5.6-2.4z" /></svg>
             </span>
             <span className="cts-row-text">
-              <span className="date-range-sheet-label">AI Chart Read{!isPaid && <span className="interval-sheet-item-pro">PRO</span>}</span>
-              <span className="date-range-sheet-sub">Trend bias + candlestick pattern</span>
+              <span className="date-range-sheet-label">{t("priceChart.aiChartRead")}{!isPaid && <span className="interval-sheet-item-pro">PRO</span>}</span>
+              <span className="date-range-sheet-sub">{t("priceChart.ts.aiSub")}</span>
             </span>
             {toolsSwitch(aiReadOpen)}
           </button>
@@ -5820,8 +5575,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="6" /><line x1="21" y1="10" x2="6" y2="10" /><line x1="15" y1="14" x2="6" y2="14" /><line x1="12" y1="18" x2="6" y2="18" /></svg>
             </span>
             <span className="cts-row-text">
-              <span className="date-range-sheet-label">Depth profile</span>
-              <span className="date-range-sheet-sub">Order book depth beside the price axis</span>
+              <span className="date-range-sheet-label">{t("priceChart.ts.depth")}</span>
+              <span className="date-range-sheet-sub">{t("priceChart.ts.depthSub")}</span>
             </span>
             {toolsSwitch(showDepthProfile)}
           </button>
@@ -5837,8 +5592,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="1" /><line x1="3" y1="9" x2="21" y2="9" /><line x1="3" y1="15" x2="21" y2="15" /><line x1="9" y1="3" x2="9" y2="21" /><line x1="15" y1="3" x2="15" y2="21" /></svg>
             </span>
             <span className="cts-row-text">
-              <span className="date-range-sheet-label">Grid</span>
-              <span className="date-range-sheet-sub">Background grid lines on the chart</span>
+              <span className="date-range-sheet-label">{t("priceChart.grid")}</span>
+              <span className="date-range-sheet-sub">{t("priceChart.ts.gridSub")}</span>
             </span>
             {toolsSwitch(showGrid)}
           </button>
@@ -5851,8 +5606,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" /></svg>
             </span>
             <span className="cts-row-text">
-              <span className="date-range-sheet-label">Reset chart</span>
-              <span className="date-range-sheet-sub">Back to the default zoom and settings</span>
+              <span className="date-range-sheet-label">{t("priceChart.ts.reset")}</span>
+              <span className="date-range-sheet-sub">{t("priceChart.ts.resetSub")}</span>
             </span>
           </button>
           <button
@@ -5870,8 +5625,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="2" /><line x1="3" y1="10" x2="21" y2="10" /><line x1="9" y1="10" x2="9" y2="20" /></svg>
             </span>
             <span className="cts-row-text">
-              <span className="date-range-sheet-label">Predict</span>
-              <span className="date-range-sheet-sub">Simple live price line, no indicators</span>
+              <span className="date-range-sheet-label">{t("priceChart.c.switchToCompact")}</span>
+              <span className="date-range-sheet-sub">{t("priceChart.ts.predictSub")}</span>
             </span>
             {toolsSwitch(showCompactView)}
           </button>
@@ -5890,8 +5645,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z" /><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" /><path d="M2 2l7.586 7.586" /><circle cx="11" cy="11" r="2" /></svg>
               </span>
               <span className="cts-row-text">
-                <span className="date-range-sheet-label">Drawing tools</span>
-                <span className="date-range-sheet-sub">Trend lines, Fibonacci, zones, brush & more</span>
+                <span className="date-range-sheet-label">{t("priceChart.c.toolbox")}</span>
+                <span className="date-range-sheet-sub">{t("priceChart.ts.drawSub")}</span>
               </span>
               <span className="cts-row-chev">›</span>
             </button>
@@ -5905,8 +5660,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>
             </span>
             <span className="cts-row-text">
-              <span className="date-range-sheet-label">Save image</span>
-              <span className="date-range-sheet-sub">Screenshot of the current chart</span>
+              <span className="date-range-sheet-label">{t("priceChart.ts.saveImage")}</span>
+              <span className="date-range-sheet-sub">{t("priceChart.ts.saveSub")}</span>
             </span>
             <span />
           </button>
@@ -5919,8 +5674,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3" /></svg>
             </span>
             <span className="cts-row-text">
-              <span className="date-range-sheet-label">Fullscreen</span>
-              <span className="date-range-sheet-sub">Expand the chart to the whole screen</span>
+              <span className="date-range-sheet-label">{t("priceChart.c.fullscreen")}</span>
+              <span className="date-range-sheet-sub">{t("priceChart.ts.fullscreenSub")}</span>
             </span>
             <span />
           </button>
@@ -5941,9 +5696,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const fsSignalPct = fsSignalBucket === "oversold" ? 0 : fsSignalBucket === "overbought" ? 100 : 50;
   const fsDivBucket = divergence?.type === "bearish" ? "bearish" : divergence?.type === "bullish" ? "bullish" : "none";
   const fsDivDotBucket = fsDivBucket === "bearish" ? "overbought" : fsDivBucket === "bullish" ? "oversold" : "neutral";
-  const fsDivLabel = fsDivBucket === "bearish" ? t("chart.bearish", "Bearish")
-    : fsDivBucket === "bullish" ? t("chart.bullish", "Bullish")
-    : t("chart.none", "None");
+  const fsDivLabel = fsDivBucket === "bearish" ? t("priceChart.c.bearish")
+    : fsDivBucket === "bullish" ? t("priceChart.c.bullish")
+    : t("priceChart.c.none");
   const fsDivPct = fsDivBucket === "bearish" ? 0 : fsDivBucket === "bullish" ? 100 : 50;
 
   // Reference-match (TradingView mobile "symbol info" sheet) — the
@@ -6024,12 +5779,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         return (
           <>
             <div>
-              <div className="fs-hero-eyebrow">{t("chart.technicals", "Technicals")}</div>
+              <div className="fs-hero-eyebrow">{t("priceChart.c.technicals")}</div>
               <div className={`fs-hero-value${zone ? fsSignalClass(zone.signal) : ""}`}>
                 {zone ? fsTechnicalsLabel[zone.signal] : "—"}
               </div>
               <div className="fs-hero-sub">
-                <span>{t("chart.divergence", "Divergence")} {fsDivLabel}</span>
+                <span>{t("priceChart.c.divergence")} {fsDivLabel}</span>
               </div>
             </div>
             <div className="fs-hero-icon" style={{ background: `conic-gradient(${color} ${pct}%, var(--color-border) 0)` }}>
@@ -6042,10 +5797,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         return (
           <>
             <div>
-              <div className="fs-hero-eyebrow">{t("chart.keyStats", "Key stats")}</div>
+              <div className="fs-hero-eyebrow">{t("priceChart.c.keyStats")}</div>
               <div className="fs-hero-value">{coinMeta?.marketCapUSD != null ? formatCompactVolume(coinMeta.marketCapUSD) : "—"}</div>
               <div className="fs-hero-sub">
-                <span>{t("chart.tradingVolume24h", "Trading volume 24h")} {quoteVolume24h !== undefined ? formatCompactVolume(quoteVolume24h) : "—"}</span>
+                <span>{t("priceChart.c.tradingVolume24h")} {quoteVolume24h !== undefined ? formatCompactVolume(quoteVolume24h) : "—"}</span>
               </div>
             </div>
             <span className="fs-hero-icon">
@@ -6059,10 +5814,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         return (
           <>
             <div>
-              <div className="fs-hero-eyebrow">{t("chart.overview", "Overview")}</div>
+              <div className="fs-hero-eyebrow">{t("priceChart.c.overview")}</div>
               <div className="fs-hero-value">{coinMeta?.athUSD != null ? formatLivePrice(coinMeta.athUSD) : "—"}</div>
               <div className="fs-hero-sub">
-                <span>{t("chart.circulatingSupply", "Circulating supply")} {coinMeta?.circulatingSupply != null ? `${formatCompactNumber(coinMeta.circulatingSupply)} ${coin}` : "—"}</span>
+                <span>{t("priceChart.c.circulatingSupply")} {coinMeta?.circulatingSupply != null ? `${formatCompactNumber(coinMeta.circulatingSupply)} ${coin}` : "—"}</span>
               </div>
             </div>
             <span className="fs-hero-icon">
@@ -6076,10 +5831,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         return (
           <>
             <div>
-              <div className="fs-hero-eyebrow">{t("chart.about", "About")}</div>
+              <div className="fs-hero-eyebrow">{t("priceChart.c.about")}</div>
               <div className="fs-hero-value">{coinMeta?.category ?? "—"}</div>
               <div className="fs-hero-sub">
-                <span>{coinMeta?.homepage ? coinMeta.homepage.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "") : t("chart.noLink", "No link")}</span>
+                <span>{coinMeta?.homepage ? coinMeta.homepage.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "") : t("priceChart.c.noLink")}</span>
               </div>
             </div>
             <span className="fs-hero-icon">
@@ -6096,12 +5851,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             <div>
               <div className="fs-hero-eyebrow-row">
                 <span className="ta-trigger-orb fs-hero-agent-orb" aria-hidden="true" />
-                <span className="fs-hero-eyebrow">{t("chart.agentTake", "Agent Ready")}</span>
+                <span className="fs-hero-eyebrow">{t("priceChart.c.agentTake")}</span>
               </div>
               {cached === "loading" || cached === undefined ? (
-                <div className="fs-hero-value fs-hero-agent-loading">{t("chart.agentThinking", "Reading the chart…")}</div>
+                <div className="fs-hero-value fs-hero-agent-loading">{t("priceChart.c.agentThinking")}</div>
               ) : cached === "error" ? (
-                <div className="fs-hero-value">{t("chart.agentUnavailable", "Couldn't get a take — try again later")}</div>
+                <div className="fs-hero-value">{t("priceChart.c.agentUnavailable")}</div>
               ) : (
                 <div className="fs-hero-agent-text">{cached.text}</div>
               )}
@@ -6120,11 +5875,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         return (
           <>
             <div>
-              <div className="fs-hero-eyebrow">{t("chart.stats", "Stats")}</div>
+              <div className="fs-hero-eyebrow">{t("priceChart.c.stats")}</div>
               <div className="fs-hero-value fs-hero-value--up">{dayHigh !== null ? formatLivePrice(dayHigh) : "—"}</div>
               <div className="fs-hero-sub">
-                <span className="fs-hero-sub-down">{t("chart.low", "Low")} {dayLow !== null ? formatLivePrice(dayLow) : "—"}</span>
-                <span>{t("chart.volUsd", "Vol (USD)")} {quoteVolume24h !== undefined ? formatCompactVolume(quoteVolume24h) : "—"}</span>
+                <span className="fs-hero-sub-down">{t("priceChart.c.low")} {dayLow !== null ? formatLivePrice(dayLow) : "—"}</span>
+                <span>{t("priceChart.c.volUsd")} {quoteVolume24h !== undefined ? formatCompactVolume(quoteVolume24h) : "—"}</span>
               </div>
             </div>
             <span className="fs-hero-icon">
@@ -6152,7 +5907,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.5-.7 1.5-1.5 0-.4-.2-.8-.4-1.1-.2-.3-.4-.6-.4-1 0-.8.7-1.5 1.5-1.5H16c3.3 0 6-2.7 6-6 0-4.4-4-8.9-10-8.9z" />
             </svg>
           </span>
-          <span className="fs-dock-category-label">{t("chart.style", "Style")}</span>
+          <span className="fs-dock-category-label">{t("priceChart.c.style")}</span>
           <svg className={`fs-dock-category-chevron${fsOpenCategories.style ? " fs-dock-category-chevron--open" : ""}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="6 9 12 15 18 9" />
           </svg>
@@ -6169,7 +5924,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   onClick={() => { hapticTap(); setChartStyle(s); }}
                 >
                   {CHART_STYLE_ICONS[s]}
-                  <span>{CHART_STYLE_LABELS[s]}</span>
+                  <span>{t(`priceChart.style.${s}`)}</span>
                 </button>
               ))}
             </div>
@@ -6184,8 +5939,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="1" /><line x1="3" y1="9" x2="21" y2="9" /><line x1="3" y1="15" x2="21" y2="15" /><line x1="9" y1="3" x2="9" y2="21" /><line x1="15" y1="3" x2="15" y2="21" /></svg>
               </span>
               <span className="cts-row-text">
-                <span className="date-range-sheet-label">Grid</span>
-                <span className="date-range-sheet-sub">Background grid lines on the chart</span>
+                <span className="date-range-sheet-label">{t("priceChart.grid")}</span>
+                <span className="date-range-sheet-sub">{t("priceChart.ts.gridSub")}</span>
               </span>
               <span className={`cts-switch${showGrid ? " cts-switch--on" : ""}`} aria-hidden="true"><i /></span>
             </button>
@@ -6199,9 +5954,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18" /><path d="M7 15l4-4 3 3 5-6" /></svg>
               </span>
               <span className="cts-row-text">
-                <span className="date-range-sheet-label">Indicators</span>
+                <span className="date-range-sheet-label">{t("chart.indicators")}</span>
                 <span className="date-range-sheet-sub">
-                  {(() => { const on = [...fsQuickIndicators.filter((i) => i.checked).map((i) => i.label), ...libIndicators.map((id) => getIndicatorDef(id)?.name ?? id)]; return on.length ? `${on.length} on · ${on.slice(0, 3).join(", ")}${on.length > 3 ? "…" : ""}` : "None on"; })()}
+                  {(() => { const on = [...fsQuickIndicators.filter((i) => i.checked).map((i) => i.label), ...libIndicators.map((id) => getIndicatorDef(id)?.name ?? id)]; return on.length ? t("priceChart.ts.indicatorsOn", { n: on.length, list: `${on.slice(0, 3).join(", ")}${on.length > 3 ? "…" : ""}` }) : t("priceChart.ts.noneOn"); })()}
                 </span>
               </span>
               <span className="cts-row-chev">›</span>
@@ -6214,7 +5969,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               className={`fs-controls-row-toggle${showGrid ? " fs-controls-row-toggle--on" : ""}`}
               onClick={() => setShowGrid((v) => !v)}
             >
-              <span>{t("chart.grid", "Grid")}</span>
+              <span>{t("priceChart.grid")}</span>
               <span className="fs-controls-switch" />
             </button>
             <div className="fs-controls-style-grid">
@@ -6226,7 +5981,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   onClick={() => setChartStyle(s)}
                 >
                   <span className="fs-controls-chip-icon">{CHART_STYLE_ICONS[s]}</span>
-                  {CHART_STYLE_LABELS[s]}
+                  {t(`priceChart.style.${s}`)}
                 </button>
               ))}
             </div>
@@ -6295,7 +6050,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <path d="M12 7v5l3.5 2" />
             </svg>
           </span>
-          <span className="fs-dock-category-label">{fsDockFlat ? "Timeframe & scale" : t("chart.interval", "Interval")}</span>
+          <span className="fs-dock-category-label">{fsDockFlat ? "Timeframe & scale" : t("priceChart.c.interval")}</span>
           <svg className={`fs-dock-category-chevron${fsOpenCategories.interval ? " fs-dock-category-chevron--open" : ""}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="6 9 12 15 18 9" />
           </svg>
@@ -6312,8 +6067,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
                 </span>
                 <span className="cts-row-text">
-                  <span className="date-range-sheet-label">Interval</span>
-                  <span className="date-range-sheet-sub">{INTERVAL_DESC[interval]}</span>
+                  <span className="date-range-sheet-label">{t("priceChart.c.interval")}</span>
+                  <span className="date-range-sheet-sub">{t(`priceChart.ivDesc.${interval}`)}</span>
                 </span>
                 <span className="cts-select-value">
                   {INTERVAL_SHORT[interval]}
@@ -6332,11 +6087,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
                   </span>
                   <span className="cts-row-text">
-                    <span className="date-range-sheet-label">Date range</span>
-                    <span className="date-range-sheet-sub">{activeRangeDesc ?? "Preset span or a custom range"}</span>
+                    <span className="date-range-sheet-label">{t("priceChart.dateRange")}</span>
+                    <span className="date-range-sheet-sub">{activeRangeDesc ?? t("priceChart.ts.dateRangeSub")}</span>
                   </span>
                   <span className="cts-select-value">
-                    {activeRangePreset ? activeRangePreset.label : "Default"}
+                    {activeRangePreset ? activeRangePreset.label : t("priceChart.ts.default")}
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
                   </span>
                 </button>
@@ -6345,8 +6100,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="20" x2="4" y2="4" /><path d="M8 16l4-5 3 3 5-7" /></svg>
                   </span>
                   <span className="cts-row-text">
-                    <span className="date-range-sheet-label">Price scale</span>
-                    <span className="date-range-sheet-sub">Percent, log, auto-fit</span>
+                    <span className="date-range-sheet-label">{t("priceChart.ts.priceScale")}</span>
+                    <span className="date-range-sheet-sub">{t("priceChart.ts.priceScaleSub")}</span>
                   </span>
                   <span className="cts-seg">
                     <button type="button" className={`cts-seg-btn${scaleMode === "percent" ? " active" : ""}`} aria-pressed={scaleMode === "percent"}
@@ -6354,7 +6109,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     <button type="button" className={`cts-seg-btn${scaleMode === "log" ? " active" : ""}`} aria-pressed={scaleMode === "log"}
                       onClick={() => { hapticTap(); setScaleMode((m) => (m === "log" ? "normal" : "log")); }}>log</button>
                     <button type="button" className={`cts-seg-btn${autoScale ? " active" : ""}`} aria-pressed={autoScale}
-                      onClick={() => { hapticTap(); setAutoScale((a) => !a); }}>auto</button>
+                      onClick={() => { hapticTap(); setAutoScale((a) => !a); }}>{t("priceChart.ts.auto")}</button>
                   </span>
                 </div>
               </>
@@ -6377,7 +6132,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   >
                     <span className="interval-sheet-item-label">
                       <b className="interval-menu-short">{INTERVAL_SHORT[opt]}</b>
-                      <span className="interval-menu-desc">{INTERVAL_DESC[opt]}</span>
+                      <span className="interval-menu-desc">{t(`priceChart.ivDesc.${opt}`)}</span>
                       {trend === "bullish" ? <span className="interval-pill-trend interval-pill-trend--up">↑</span>
                         : trend === "bearish" ? <span className="interval-pill-trend interval-pill-trend--down">↓</span>
                         : null}
@@ -6399,7 +6154,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       {fsDockFlat && (
       <div className="fs-dock-category">
         <div className="fs-dock-category-header">
-          <span className="fs-dock-category-label">Tools</span>
+          <span className="fs-dock-category-label">{t("priceChart.tools")}</span>
         </div>
         <div className="fs-dock-category-body">
           <button
@@ -6413,8 +6168,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="6" /><line x1="21" y1="10" x2="6" y2="10" /><line x1="15" y1="14" x2="6" y2="14" /><line x1="12" y1="18" x2="6" y2="18" /></svg>
             </span>
             <span className="cts-row-text">
-              <span className="date-range-sheet-label">Depth profile</span>
-              <span className="date-range-sheet-sub">Order book depth beside the price axis</span>
+              <span className="date-range-sheet-label">{t("priceChart.ts.depth")}</span>
+              <span className="date-range-sheet-sub">{t("priceChart.ts.depthSub")}</span>
             </span>
             <span className={`cts-switch${showDepthProfile ? " cts-switch--on" : ""}`} aria-hidden="true"><i /></span>
           </button>
@@ -6435,8 +6190,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z" /><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" /><path d="M2 2l7.586 7.586" /><circle cx="11" cy="11" r="2" /></svg>
             </span>
             <span className="cts-row-text">
-              <span className="date-range-sheet-label">Drawing tools</span>
-              <span className="date-range-sheet-sub">Trend lines, Fibonacci, zones, brush & more</span>
+              <span className="date-range-sheet-label">{t("priceChart.c.toolbox")}</span>
+              <span className="date-range-sheet-sub">{t("priceChart.ts.drawSub")}</span>
             </span>
             <span className={`cts-switch${fsDrawPanelOpen ? " cts-switch--on" : ""}`} aria-hidden="true"><i /></span>
           </button>
@@ -6455,8 +6210,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
             </span>
             <span className="cts-row-text">
-              <span className="date-range-sheet-label">Price alert</span>
-              <span className="date-range-sheet-sub">Get notified when {coin} hits a price</span>
+              <span className="date-range-sheet-label">{t("priceChart.ts.priceAlert")}</span>
+              <span className="date-range-sheet-sub">{t("priceChart.ts.priceAlertSub", { coin })}</span>
             </span>
             <span className="cts-row-chev">›</span>
           </button>
@@ -6469,8 +6224,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>
             </span>
             <span className="cts-row-text">
-              <span className="date-range-sheet-label">Save image</span>
-              <span className="date-range-sheet-sub">Screenshot of the current chart</span>
+              <span className="date-range-sheet-label">{t("priceChart.ts.saveImage")}</span>
+              <span className="date-range-sheet-sub">{t("priceChart.ts.saveSub")}</span>
             </span>
             <span />
           </button>
@@ -6483,8 +6238,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3" /></svg>
             </span>
             <span className="cts-row-text">
-              <span className="date-range-sheet-label">Exit fullscreen</span>
-              <span className="date-range-sheet-sub">Back to the Trade page</span>
+              <span className="date-range-sheet-label">{t("priceChart.exitFullscreen")}</span>
+              <span className="date-range-sheet-sub">{t("priceChart.ts.exitFsSub")}</span>
             </span>
             <span />
           </button>
@@ -6494,7 +6249,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
 
       {/* Market data group: Overview / Technicals / Key stats / About /
           Stats, under the chart controls. */}
-      {fsDockFlat && <div className="fs-dock-group-title">Market data</div>}
+      {fsDockFlat && <div className="fs-dock-group-title">{t("priceChart.marketData")}</div>}
 
       {/* Reference-match (TradingView mobile "symbol info" sheet) —
           Overview/Technicals/Key stats/About, Advance Chart page only
@@ -6511,7 +6266,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <line x1="12" y1="8" x2="12.01" y2="8" />
             </svg>
           </span>
-          <span className="fs-dock-category-label">{t("chart.overview", "Overview")}</span>
+          <span className="fs-dock-category-label">{t("priceChart.c.overview")}</span>
           <svg className={`fs-dock-category-chevron${fsOpenCategories.overview ? " fs-dock-category-chevron--open" : ""}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="6 9 12 15 18 9" />
           </svg>
@@ -6520,19 +6275,19 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           <div className="fs-dock-category-body">
             <div className="fs-info-list">
               <div className="fs-info-row">
-                <span className="fs-info-label">{t("chart.allTimeHigh", "All time high")}</span>
+                <span className="fs-info-label">{t("priceChart.c.allTimeHigh")}</span>
                 <span className="fs-info-value">{coinMeta?.athUSD != null ? formatLivePrice(coinMeta.athUSD) : "—"}</span>
               </div>
               <div className="fs-info-row">
-                <span className="fs-info-label">{t("chart.circulatingSupply", "Circulating supply")}</span>
+                <span className="fs-info-label">{t("priceChart.c.circulatingSupply")}</span>
                 <span className="fs-info-value">{coinMeta?.circulatingSupply != null ? `${formatCompactNumber(coinMeta.circulatingSupply)} ${coin}` : "—"}</span>
               </div>
               <div className="fs-info-row">
-                <span className="fs-info-label">{t("chart.totalSupply", "Total supply")}</span>
+                <span className="fs-info-label">{t("priceChart.c.totalSupply")}</span>
                 <span className="fs-info-value">{coinMeta?.totalSupply != null ? `${formatCompactNumber(coinMeta.totalSupply)} ${coin}` : "—"}</span>
               </div>
               <div className="fs-info-row">
-                <span className="fs-info-label">{t("chart.openInterest", "Open interest")}</span>
+                <span className="fs-info-label">{t("priceChart.c.openInterest")}</span>
                 <span className="fs-info-value">{oiCoins != null && currentPrice != null ? formatCompactVolume(oiCoins * currentPrice) : "—"}</span>
               </div>
             </div>
@@ -6550,7 +6305,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <path d="M12 12l5-5" />
             </svg>
           </span>
-          <span className="fs-dock-category-label">{t("chart.technicals", "Technicals")}</span>
+          <span className="fs-dock-category-label">{t("priceChart.c.technicals")}</span>
           <svg className={`fs-dock-category-chevron${fsOpenCategories.technicals ? " fs-dock-category-chevron--open" : ""}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="6 9 12 15 18 9" />
           </svg>
@@ -6597,7 +6352,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <line x1="6" y1="20" x2="6" y2="14" />
             </svg>
           </span>
-          <span className="fs-dock-category-label">{t("chart.keyStats", "Key stats")}</span>
+          <span className="fs-dock-category-label">{t("priceChart.c.keyStats")}</span>
           <svg className={`fs-dock-category-chevron${fsOpenCategories.keystats ? " fs-dock-category-chevron--open" : ""}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="6 9 12 15 18 9" />
           </svg>
@@ -6606,15 +6361,15 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           <div className="fs-dock-category-body">
             <div className="fs-info-list">
               <div className="fs-info-row">
-                <span className="fs-info-label">{t("chart.tradingVolume24h", "Trading volume 24h")}</span>
+                <span className="fs-info-label">{t("priceChart.c.tradingVolume24h")}</span>
                 <span className="fs-info-value">{quoteVolume24h !== undefined ? formatCompactVolume(quoteVolume24h) : "—"}</span>
               </div>
               <div className="fs-info-row">
-                <span className="fs-info-label">{t("chart.marketCap", "Market capitalization")}</span>
+                <span className="fs-info-label">{t("priceChart.c.marketCap")}</span>
                 <span className="fs-info-value">{coinMeta?.marketCapUSD != null ? formatCompactVolume(coinMeta.marketCapUSD) : "—"}</span>
               </div>
               <div className="fs-info-row">
-                <span className="fs-info-label">{t("chart.fdv", "Fully diluted market cap")}</span>
+                <span className="fs-info-label">{t("priceChart.c.fdv")}</span>
                 <span className="fs-info-value">{coinMeta?.fdvUSD != null ? formatCompactVolume(coinMeta.fdvUSD) : "—"}</span>
               </div>
             </div>
@@ -6632,7 +6387,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <polyline points="14 2 14 8 20 8" />
             </svg>
           </span>
-          <span className="fs-dock-category-label">{t("chart.about", "About")}</span>
+          <span className="fs-dock-category-label">{t("priceChart.c.about")}</span>
           <svg className={`fs-dock-category-chevron${fsOpenCategories.about ? " fs-dock-category-chevron--open" : ""}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="6 9 12 15 18 9" />
           </svg>
@@ -6641,15 +6396,15 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           <div className="fs-dock-category-body">
             <div className="fs-info-list">
               <div className="fs-info-row">
-                <span className="fs-info-label">{t("chart.category", "Category")}</span>
+                <span className="fs-info-label">{t("priceChart.c.category")}</span>
                 <span className="fs-info-value">{coinMeta?.category ?? "—"}</span>
               </div>
               {([
-                ["chart.website", "Website", coinMeta?.homepage],
-                ["chart.sourceCode", "Source Code", coinMeta?.sourceCode],
-                ["chart.explorers", "Explorers", coinMeta?.explorer],
-                ["chart.whitepaper", "Whitepaper", coinMeta?.whitepaper],
-                ["chart.community", "Community", coinMeta?.subreddit],
+                ["priceChart.c.website", "Website", coinMeta?.homepage],
+                ["priceChart.c.sourceCode", "Source Code", coinMeta?.sourceCode],
+                ["priceChart.c.explorers", "Explorers", coinMeta?.explorer],
+                ["priceChart.c.whitepaper", "Whitepaper", coinMeta?.whitepaper],
+                ["priceChart.c.community", "Community", coinMeta?.subreddit],
               ] as const).map(([key, fallback, url]) => (
                 <div className="fs-info-row" key={key}>
                   <span className="fs-info-label">{t(key, fallback)}</span>
@@ -6681,9 +6436,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <path d="M7 16l4-5 3 3 5-7" />
             </svg>
           </span>
-          <span className="fs-dock-category-label">{t("chart.stats", "Stats")}</span>
-          <span className="chart-fs-strip-item" style={{ marginLeft: 6 }}>{t("chart.high", "High")} <b className="chart-fs-strip-up">{dayHigh !== null ? formatLivePrice(dayHigh) : "—"}</b></span>
-          <span className="chart-fs-strip-item">{t("chart.low", "Low")} <b className="chart-fs-strip-down">{dayLow !== null ? formatLivePrice(dayLow) : "—"}</b></span>
+          <span className="fs-dock-category-label">{t("priceChart.c.stats")}</span>
+          <span className="chart-fs-strip-item" style={{ marginLeft: 6 }}>{t("priceChart.c.high")} <b className="chart-fs-strip-up">{dayHigh !== null ? formatLivePrice(dayHigh) : "—"}</b></span>
+          <span className="chart-fs-strip-item">{t("priceChart.c.low")} <b className="chart-fs-strip-down">{dayLow !== null ? formatLivePrice(dayLow) : "—"}</b></span>
           <svg className={`fs-dock-category-chevron${fsOpenCategories.stats ? " fs-dock-category-chevron--open" : ""}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="6 9 12 15 18 9" />
           </svg>
@@ -6693,19 +6448,19 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             <div className="chart-fs-stats-grid">
               <div className="chart-fs-stat-col">
                 <div className="chart-fs-stat-row">
-                  <span className="chart-fs-stat-label">{t("chart.volUsd", "Vol (USD)")}</span>
+                  <span className="chart-fs-stat-label">{t("priceChart.c.volUsd")}</span>
                   <span className="chart-fs-stat-value">
                     {quoteVolume24h !== undefined ? formatCompactVolume(quoteVolume24h) : "—"}
                   </span>
                 </div>
                 <div className="chart-fs-stat-row">
-                  <span className="chart-fs-stat-label">{t("chart.bid", "Bid")}</span>
+                  <span className="chart-fs-stat-label">{t("priceChart.c.bid")}</span>
                   <span className="chart-fs-stat-value chart-fs-stat-value--up">
                     {bidPrice !== null ? formatLivePrice(bidPrice) : "—"}
                   </span>
                 </div>
                 <div className="chart-fs-stat-row">
-                  <span className="chart-fs-stat-label">{t("chart.ask", "Ask")}</span>
+                  <span className="chart-fs-stat-label">{t("priceChart.c.ask")}</span>
                   <span className="chart-fs-stat-value chart-fs-stat-value--down">
                     {askPrice !== null ? formatLivePrice(askPrice) : "—"}
                   </span>
@@ -6713,7 +6468,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               </div>
               <div className="chart-fs-stat-col chart-fs-stat-col--right">
                 <div className="chart-fs-stat-row">
-                  <span className="chart-fs-stat-label">{t("chart.volCoin", "Vol ({{coin}})", { coin })}</span>
+                  <span className="chart-fs-stat-label">{t("priceChart.c.volCoin", { coin })}</span>
                   <span className="chart-fs-stat-value">
                     {baseVolume24h !== null ? formatCompactVolume(baseVolume24h) : "—"}
                   </span>
@@ -6722,7 +6477,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             </div>
             {zone && isPaid && fsSignalBucket && (
               <div className="chart-fs-meter">
-                <span className="chart-fs-meter-label">{t("chart.signal", "Signal")}</span>
+                <span className="chart-fs-meter-label">{t("priceChart.c.signal")}</span>
                 <div className="chart-fs-meter-row">
                   <span className="chart-fs-meter-track">
                     <span
@@ -6740,12 +6495,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 onClick={() => onOpenUpgrade?.("pro")}
               >
                 <span className={`zone-signal-live zone-signal-live--gate zone-signal-live--gate-${zone?.signal ?? "neutral"}`} />
-                Unlock Status
+                {t("priceChart.unlockStatus")}
               </button>
             )}
             {isPaid && (
               <div className="chart-fs-meter">
-                <span className="chart-fs-meter-label">{t("chart.divergence", "Div")}</span>
+                <span className="chart-fs-meter-label">{t("priceChart.c.div")}</span>
                 <div className="chart-fs-meter-row">
                   <span className="chart-fs-meter-track chart-fs-meter-track--rev">
                     <span
@@ -6763,7 +6518,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 onClick={() => onOpenUpgrade?.("pro")}
               >
                 <span className={`zone-signal-live zone-signal-live--gate zone-signal-live--gate-div-${divergence?.type ?? "neutral"}`} />
-                Unlock Divergence
+                {t("priceChart.unlockDivergence")}
               </button>
             )}
           </div>
@@ -6778,7 +6533,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // up, sticky header with handle + ✕, drag the header down to dismiss)
   // instead of growing the dock in place.
   const fsFlatSheet = fsDockFlat && (
-    <BottomSheet open={fsSheetExpanded} onClose={() => setFsSheetExpanded(false)} title={`${coin} chart`} className="fs-flat-sheet">
+    <BottomSheet open={fsSheetExpanded} onClose={() => setFsSheetExpanded(false)} title={t("priceChart.coinChart", { coin })} className="fs-flat-sheet">
       {fsDockInner}
     </BottomSheet>
   );
@@ -6812,7 +6567,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   className={`fs-bar-btn pv-ring-dock pv-ring-entry--${b}`}
                   // Tap → the full Signal Check, fully expanded.
                   onClick={(e) => { e.stopPropagation(); hapticTap(); setPvAdvSheetOpen(true); }}
-                  aria-label={`Signal Check ${score}. Open details`}
+                  aria-label={t("priceChart.pv.ringAria", { score })}
                 >
                   <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">
                     <circle cx="14" cy="14" r="11" className="pv-ring-track" />
@@ -6826,7 +6581,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               type="button"
               className="fs-bar-btn fs-bar-interval"
               onClick={(e) => { e.stopPropagation(); hapticTap(); setIntervalSheetOpen(true); }}
-              aria-label={t("chart.interval", "Interval")}
+              aria-label={t("priceChart.c.interval")}
             >
               {INTERVAL_SHORT[interval]}
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
@@ -6835,7 +6590,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               type="button"
               className="fs-bar-btn fs-bar-interval"
               onClick={(e) => { e.stopPropagation(); hapticTap(); openDateRangeSheet(); }}
-              aria-label="Date range"
+              aria-label={t("priceChart.dateRange")}
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
               {activeRangePreset && <span>{activeRangePreset.label}</span>}
@@ -6851,8 +6606,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 const keys = Object.keys(CHART_STYLE_LABELS) as ChartStyle[];
                 setChartStyle(keys[(keys.indexOf(chartStyle) + 1) % keys.length]);
               }}
-              aria-label={`Chart style: ${CHART_STYLE_LABELS[chartStyle]}`}
-              title={CHART_STYLE_LABELS[chartStyle]}
+              aria-label={t("priceChart.chartStyleIs", { style: t(`priceChart.style.${chartStyle}`) })}
+              title={t(`priceChart.style.${chartStyle}`)}
             >
               {CHART_STYLE_ICONS[chartStyle]}
             </button>
@@ -6860,7 +6615,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               type="button"
               className={`fs-bar-btn fs-bar-icon${showGrid ? " fs-bar-btn--on" : ""}`}
               onClick={(e) => { e.stopPropagation(); hapticTap(); setShowGrid((v) => !v); }}
-              aria-label="Grid"
+              aria-label={t("priceChart.grid")}
               aria-pressed={showGrid}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="1" /><line x1="3" y1="9" x2="21" y2="9" /><line x1="3" y1="15" x2="21" y2="15" /><line x1="9" y1="3" x2="9" y2="21" /><line x1="15" y1="3" x2="15" y2="21" /></svg>
@@ -6880,7 +6635,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               type="button"
               className={`fs-bar-btn fs-bar-icon${fsDrawPanelOpen ? " fs-bar-btn--on" : ""}`}
               onClick={(e) => { e.stopPropagation(); hapticTap(); setFsDrawPanelOpen((v) => !v); }}
-              aria-label={t("chart.toolbox", "Drawing tools")}
+              aria-label={t("priceChart.c.toolbox")}
               aria-pressed={fsDrawPanelOpen}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z" /><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" /><path d="M2 2l7.586 7.586" /><circle cx="11" cy="11" r="2" /></svg>
@@ -6891,7 +6646,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             type="button"
             className="fs-bar-btn fs-bar-icon fs-bar-more"
             onClick={(e) => { e.stopPropagation(); hapticTap(); setFsSheetExpanded(true); }}
-            aria-label="More"
+            aria-label={t("priceChart.more")}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg>
           </button>
@@ -7049,19 +6804,19 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     (isFirstLoad
       ? {
           sentiment: "neutral",
-          title: "Analyzing price action…",
-          body: "Crunching recent candles to size up momentum and trend strength.",
+          title: t("priceChart.placeholder.bannerTitle"),
+          body: t("priceChart.placeholder.bannerBody"),
         }
       : null);
   const displayPatternInsight: PatternInsight | null =
     patternInsight ??
     (isFirstLoad
       ? {
-          name: "Scanning for patterns…",
+          name: t("priceChart.placeholder.patternName"),
           type: "neutral",
-          summary: "Looking at recent candles for a recognizable setup.",
-          narrative: "Running the same pattern checks we always do — give it a moment.",
-          nextMove: "Hang tight, real analysis is on its way.",
+          summary: t("priceChart.placeholder.patternSummary"),
+          narrative: t("priceChart.placeholder.patternNarrative"),
+          nextMove: t("priceChart.placeholder.patternNext"),
         }
       : null);
 
@@ -7089,21 +6844,23 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // "zone" = zoneLabel (the price-zone status, e.g. "Buy Zone"/
   // "Oversold"), "div" = divergence.
   const intervalSignal = trends[interval];
+  const signalWord = intervalSignal ? t(`priceChart.c.${intervalSignal}`) : "";
+  const divWord = divergence ? t(`priceChart.c.${divergence.type}`) : "";
   const rawZoneDivergenceSentence = isPaid && (intervalSignal || zoneLabel || divergence)
     ? intervalSignal && zoneLabel && divergence
-      ? t("chart.signalZoneDivSentence", "{{signal}} signal in a {{zone}}, with a {{div}} divergence.", { signal: intervalSignal, zone: zoneLabel, div: divergence.type })
+      ? t("priceChart.c.signalZoneDivSentence", { signal: signalWord, zone: zoneLabel, div: divWord })
       : intervalSignal && zoneLabel
-        ? t("chart.signalZoneSentence", "{{signal}} signal in a {{zone}}.", { signal: intervalSignal, zone: zoneLabel })
+        ? t("priceChart.c.signalZoneSentence", { signal: signalWord, zone: zoneLabel })
         : zoneLabel && divergence
-          ? t("chart.zoneDivSentence", "In a {{zone}}, with a {{div}} divergence.", { zone: zoneLabel, div: divergence.type })
+          ? t("priceChart.c.zoneDivSentence", { zone: zoneLabel, div: divWord })
           : intervalSignal && divergence
-            ? t("chart.signalDivSentence", "{{signal}} signal with a {{div}} divergence.", { signal: intervalSignal, div: divergence.type })
+            ? t("priceChart.c.signalDivSentence", { signal: signalWord, div: divWord })
             : zoneLabel
-              ? t("chart.zoneSentence", "In a {{zone}}.", { zone: zoneLabel })
+              ? t("priceChart.c.zoneSentence", { zone: zoneLabel })
               : intervalSignal
-                ? t("chart.signalSentence", "{{signal}} signal.", { signal: intervalSignal })
+                ? t("priceChart.c.signalSentence", { signal: signalWord })
                 : divergence
-                  ? t("chart.divergenceSentence", "{{div}} divergence detected.", { div: divergence.type })
+                  ? t("priceChart.c.divergenceSentence", { div: divWord })
                   : null
     : null;
   // Sentence-case regardless of how the pieces above were capitalized
@@ -7141,7 +6898,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const phoneHeaderEl = phoneCmcPage ? (
     <div className="cmch">
       <div className="cmch-top">
-        <button type="button" className="cmch-id" onClick={(e) => onOpenCoinPicker?.(e.currentTarget)} aria-label="Change coin">
+        <button type="button" className="cmch-id" onClick={(e) => onOpenCoinPicker?.(e.currentTarget)} aria-label={t("priceChart.changeCoin")}>
           {/* Flips (spins) every time the live price ticks — keyed on the
               price so the animation restarts on each change. */}
           <span key={`spin:${currentPrice ?? ""}`} className={`cmch-logo-spin${currentPrice !== null ? " cmch-logo-spin--on" : ""}`}>
@@ -7151,20 +6908,20 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <span className="cmch-logo cmch-logo--glyph" style={{ background: COIN_COLORS[coin] ?? "var(--pc-accent)" }}>{COIN_GLYPHS[coin] ?? coin[0]}</span>
             )}
           </span>
-          <span className="cmch-name">{COIN_FULL_NAME[coin] ?? coin} price</span>
+          <span className="cmch-name">{t("priceChart.coinPrice", { name: COIN_FULL_NAME[coin] ?? coin })}</span>
           <span className="cmch-sym">{coin}</span>
           <svg className="cmch-caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
         </button>
         {/* Share. (Compact view sits beside the chart title; ProVision is
             in the interval row.) */}
         <div className="cmch-acts">
-          <button type="button" className="cmch-act" onClick={() => setStatsSheetOpen(true)} aria-label="All stats">
+          <button type="button" className="cmch-act" onClick={() => setStatsSheetOpen(true)} aria-label={t("priceChart.allStats")}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 3v18h18" /><path d="M7 16v-4M12 16V8M17 16v-7" /></svg>
           </button>
           <button
             type="button"
             className="cmch-act"
-            aria-label="Share"
+            aria-label={t("priceChart.share")}
             onClick={() => {
               hapticTap();
               // Always the public page (the app's own address is
@@ -7172,10 +6929,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               const name = COIN_FULL_NAME[coin] ?? coin;
               const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
               const url = `https://www.coinhintz.io/chart/${slug}`;
-              const title = `${name} (${coin}) price chart`;
+              const title = t("priceChart.shareTitle", { name, coin });
               // iOS app: the native share sheet (the web view has none).
               if (Capacitor.isNativePlatform()) {
-                Share.share({ title, text: title, url, dialogTitle: "Share" }).catch(() => {});
+                Share.share({ title, text: title, url, dialogTitle: t("priceChart.share") }).catch(() => {});
                 return;
               }
               const nav = navigator as Navigator & { share?: (d: { title?: string; url?: string }) => Promise<void> };
@@ -7190,7 +6947,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       <div className="cmch-price" ref={cmchPriceRef}>
         {currentPrice !== null
           ? <strong>{formatLivePrice(currentPrice)}</strong>
-          : <span className="cmch-skel" aria-label="Loading price" />}
+          : <span className="cmch-skel" aria-label={t("priceChart.loadingPrice")} />}
         {dayChangePercent !== null && (
           <span className={`cmch-chg${dayChangePercent >= 0 ? " up" : " down"}`}>
             {dayChangePercent >= 0 ? "▲" : "▼"} {Math.abs(dayChangePercent).toFixed(2)}%
@@ -7205,7 +6962,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             {headerStats}
             {quoteVolume24h !== undefined && (
               <div className="chart-bar-stat">
-                <span className="chart-bar-stat-label">24h Vol</span>
+                <span className="chart-bar-stat-label">{t("priceChart.vol24h")}</span>
                 <span className="chart-bar-stat-value">{formatCompactVolume(quoteVolume24h)}</span>
               </div>
             )}
@@ -7215,7 +6972,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       {/* The green "Trade BTC  P" button → Paper Trade. */}
       {onOpenPaperTrade && (
         <button type="button" className="chart-trade-cta cmch-cta" onClick={onOpenPaperTrade}>
-          Trade {coin}
+          {t("priceChart.tradeCoin", { coin })}
           <span className="chart-trade-cta-p" aria-hidden="true">P</span>
         </button>
       )}
@@ -7299,19 +7056,19 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
             </span>
             <strong>
-              {pvBannerReason === "pro-limit" ? `ProVision is locked on ${coin}` : pvBannerReason === "trial-ended" ? "Your ProVision trial has ended" : "Try ProVision free for 3 days"}
+              {pvBannerReason === "pro-limit" ? t("priceChart.pvbar.lockedOn", { coin }) : pvBannerReason === "trial-ended" ? t("priceChart.pvbar.trialEnded") : t("priceChart.pvbar.tryFree")}
             </strong>
             <span className="chart-tv-pvbar-sub">
               {pvBannerReason === "pro-limit"
                 ? (pvGate.access.usedCoins.length
-                  ? `You've used today's ${pvGate.access.usedCoins.length} coins. Go unlimited.`
+                  ? t("priceChart.pvbar.usedCoins", { n: pvGate.access.usedCoins.length })
                   // Server said no but no coins were used: not a daily-limit case.
-                  : "Your account doesn't include ProVision right now.")
-                : pvBannerReason === "trial-ended" ? `Keep every coin and timeframe for ${pvPrice}/year.` : "Every coin and timeframe. No card needed."}
+                  : t("priceChart.pvbar.notIncluded"))
+                : pvBannerReason === "trial-ended" ? t("priceChart.pvbar.keepFor", { price: pvPrice }) : t("priceChart.pvbar.noCard")}
             </span>
             <span className="chart-tv-pvbar-cta">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
-              {pvBannerReason === "trial-available" || pvBannerReason === "signin" ? "Try ProVision" : "Unlock ProVision"}
+              {pvBannerReason === "trial-available" || pvBannerReason === "signin" ? t("priceChart.pvbar.try") : t("priceChart.pvbar.unlock")}
             </span>
           </button>
         )}
@@ -7366,7 +7123,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 role="switch"
                 aria-checked={pvActive}
                 aria-label="ProVision"
-                title={pvActive ? "ProVision on — click to go back to the normal chart" : "ProVision: trend candles, buy/sell signals and a live signal check"}
+                title={pvActive ? t("priceChart.pvToggleOn") : t("priceChart.pvToggleOff")}
                 onClick={() => pvGate.toggle(coin)}
               >
                 <span className="pv-toggle-label">Pro<span className="pv-toggle-label-accent">Vision</span></span>
@@ -7403,7 +7160,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none">
                       <path d="M13 2L3 14h7l-1 8 11-14h-8l1-6z" />
                     </svg>
-                    {t("chart.upgrade", "Upgrade")}
+                    {t("priceChart.c.upgrade")}
                   </button>
                 )}
               </div>
@@ -7439,7 +7196,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 className="chart-bar-id chart-bar-id--tap"
                 role="button"
                 tabIndex={0}
-                aria-label="Change coin"
+                aria-label={t("priceChart.changeCoin")}
                 onClick={(e) => onOpenCoinPicker?.(e.currentTarget)}
                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpenCoinPicker?.(e.currentTarget); } }}
               >
@@ -7509,7 +7266,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     to the left info column's stats row too. */}
                 {quoteVolume24h !== undefined && (headerStats || !tradeDesktopLean) && (
                   <div className="chart-bar-stat">
-                    <span className="chart-bar-stat-label">24h Vol</span>
+                    <span className="chart-bar-stat-label">{t("priceChart.vol24h")}</span>
                     <span className="chart-bar-stat-value">{formatCompactVolume(quoteVolume24h)}</span>
                   </div>
                 )}
@@ -7524,7 +7281,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             )}
             {/* Mobile: fixed ⋮ at the right edge — all stats in a sheet. */}
             {mobileTabs && (
-              <button type="button" className="chart-bar-more" onClick={() => setStatsSheetOpen(true)} aria-label="All stats">
+              <button type="button" className="chart-bar-more" onClick={() => setStatsSheetOpen(true)} aria-label={t("priceChart.allStats")}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="12" cy="19" r="2" /></svg>
               </button>
             )}
@@ -7543,8 +7300,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             {tradeDesktopLean && pageTabBar && !pageTabContent && !isFullscreen && (
               <div className="cmct">
                 <div className="cmct-l">
-                  <div className="cmct-seg" role="tablist" aria-label="Metric">
-                    {([["price", "Price"], ["mcap", "Market cap"]] as const).map(([k, label]) => (
+                  <div className="cmct-seg" role="tablist" aria-label={t("priceChart.metric.label")}>
+                    {([["price", t("priceChart.metric.price")], ["mcap", t("priceChart.metric.mcap")]] as const).map(([k, label]) => (
                       <button
                         key={k}
                         type="button"
@@ -7611,8 +7368,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                           type="button"
                           className="cmct-btn cmct-btn--icon"
                           onClick={toggleFullscreen}
-                          aria-label={t("chart.fullscreen", "Fullscreen")}
-                          title={t("chart.fullscreen", "Fullscreen")}
+                          aria-label={t("priceChart.c.fullscreen")}
+                          title={t("priceChart.c.fullscreen")}
                         >
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3" /></svg>
                         </button>
@@ -7760,7 +7517,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                                   onClick={() => { setChartStyle(s); setTvMenu(null); }}
                                 >
                                   <span className="cmct-menu-ic" aria-hidden="true">{CHART_STYLE_ICONS[s]}</span>
-                                  {CHART_STYLE_LABELS[s]}
+                                  {t(`priceChart.style.${s}`)}
                                   {chartStyle === s && <span aria-hidden="true">✓</span>}
                                 </button>
                               ))}
@@ -7789,7 +7546,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             {mobileTabs && (
               <div className={`chart-mview-tabs chart-mview-tabs--${mobileView}${pageTabBar ? " chart-mview-tabs--more" : ""}`}>
                 <div className="chart-mview-tabs-main" role="tablist">
-                  {([["chart", "Chart"], ["orderbook", "Order Book"], ["trades", "Trades"]] as const).map(([k, label]) => (
+                  {([["chart", t("priceChart.tabs.chart")], ["orderbook", t("priceChart.tabs.orderbook")], ["trades", t("priceChart.tabs.trades")]] as const).map(([k, label]) => (
                     <button
                       key={k}
                       type="button"
@@ -7942,13 +7699,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     type="button"
                     className="chart-depth-btn ctb-full"
                     onClick={toggleFullscreen}
-                    title="Full chart"
-                    aria-label="Full chart"
+                    title={t("priceChart.c.fullChart")}
+                    aria-label={t("priceChart.c.fullChart")}
                   >
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3" />
                     </svg>
-                    <span className="chart-tool-label">Full Chart</span>
+                    <span className="chart-tool-label">{t("priceChart.c.fullChart")}</span>
                   </button>
                 </span>
               )}
@@ -8016,7 +7773,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                       type="button"
                       className="chart-fs-exit-corner-btn"
                       onClick={toggleFullscreen}
-                      title="Exit fullscreen"
+                      title={t("priceChart.exitFullscreen")}
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M18 6L6 18M6 6l12 12" />
@@ -8037,9 +7794,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     className="chart-fs-stats-strip"
                     onClick={() => setFsStatsExpanded((v) => !v)}
                   >
-                    <span className="chart-fs-strip-item">{t("chart.high", "High")} <b className="chart-fs-strip-up">{dayHigh !== null ? formatLivePrice(dayHigh) : "—"}</b></span>
-                    <span className="chart-fs-strip-item">{t("chart.low", "Low")} <b className="chart-fs-strip-down">{dayLow !== null ? formatLivePrice(dayLow) : "—"}</b></span>
-                    <span className="chart-fs-strip-item">{t("chart.volUsd", "Vol (USD)")} <b>{quoteVolume24h !== undefined ? formatCompactVolume(quoteVolume24h) : "—"}</b></span>
+                    <span className="chart-fs-strip-item">{t("priceChart.c.high")} <b className="chart-fs-strip-up">{dayHigh !== null ? formatLivePrice(dayHigh) : "—"}</b></span>
+                    <span className="chart-fs-strip-item">{t("priceChart.c.low")} <b className="chart-fs-strip-down">{dayLow !== null ? formatLivePrice(dayLow) : "—"}</b></span>
+                    <span className="chart-fs-strip-item">{t("priceChart.c.volUsd")} <b>{quoteVolume24h !== undefined ? formatCompactVolume(quoteVolume24h) : "—"}</b></span>
                     {isPaid && fsSignalBucket && (
                       <span className={`chart-fs-strip-signal chart-fs-strip-signal--${fsSignalBucket}`}>{fsSignalLabel}</span>
                     )}
@@ -8054,13 +7811,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   <div className="chart-fs-stats-grid">
                     <div className="chart-fs-stat-col">
                       <div className="chart-fs-stat-row">
-                        <span className="chart-fs-stat-label">{t("chart.bid", "Bid")}</span>
+                        <span className="chart-fs-stat-label">{t("priceChart.c.bid")}</span>
                         <span className="chart-fs-stat-value chart-fs-stat-value--up">
                           {bidPrice !== null ? formatLivePrice(bidPrice) : "—"}
                         </span>
                       </div>
                       <div className="chart-fs-stat-row">
-                        <span className="chart-fs-stat-label">{t("chart.ask", "Ask")}</span>
+                        <span className="chart-fs-stat-label">{t("priceChart.c.ask")}</span>
                         <span className="chart-fs-stat-value chart-fs-stat-value--down">
                           {askPrice !== null ? formatLivePrice(askPrice) : "—"}
                         </span>
@@ -8068,7 +7825,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     </div>
                     <div className="chart-fs-stat-col chart-fs-stat-col--right">
                       <div className="chart-fs-stat-row">
-                        <span className="chart-fs-stat-label">{t("chart.volCoin", "Vol ({{coin}})", { coin })}</span>
+                        <span className="chart-fs-stat-label">{t("priceChart.c.volCoin", { coin })}</span>
                         <span className="chart-fs-stat-value">
                           {baseVolume24h !== null ? formatCompactVolume(baseVolume24h) : "—"}
                         </span>
@@ -8077,7 +7834,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   </div>
                   {zone && isPaid && fsSignalBucket && (
                     <div className="chart-fs-meter">
-                      <span className="chart-fs-meter-label">{t("chart.signal", "Signal")}</span>
+                      <span className="chart-fs-meter-label">{t("priceChart.c.signal")}</span>
                       <div className="chart-fs-meter-row">
                         <span className="chart-fs-meter-track">
                           <span
@@ -8095,12 +7852,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                       onClick={() => onOpenUpgrade?.("pro")}
                     >
                       <span className={`zone-signal-live zone-signal-live--gate zone-signal-live--gate-${zone?.signal ?? "neutral"}`} />
-                      Unlock Status
+                      {t("priceChart.unlockStatus")}
                     </button>
                   )}
                   {isPaid && (
                     <div className="chart-fs-meter">
-                      <span className="chart-fs-meter-label">{t("chart.divergence", "Div")}</span>
+                      <span className="chart-fs-meter-label">{t("priceChart.c.div")}</span>
                       <div className="chart-fs-meter-row">
                         <span className="chart-fs-meter-track chart-fs-meter-track--rev">
                           <span
@@ -8118,7 +7875,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                       onClick={() => onOpenUpgrade?.("pro")}
                     >
                       <span className={`zone-signal-live zone-signal-live--gate zone-signal-live--gate-div-${divergence?.type ?? "neutral"}`} />
-                      Unlock Divergence
+                      {t("priceChart.unlockDivergence")}
                     </button>
                   )}
                   </div>
@@ -8194,7 +7951,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                           className={`chart-hero-top-coin${symbol === coin ? " chart-hero-top-coin--current" : ""}`}
                           style={{ zIndex: TOP5_COINS.length - i, background: COIN_COLORS[symbol] ?? "var(--pc-accent)" }}
                           onClick={() => onSelectCoin?.(symbol)}
-                          title={`Switch to ${symbol}`}
+                          title={t("priceChart.switchTo", { symbol })}
                         >
                           {COIN_GLYPHS[symbol] ?? symbol[0]}
                         </button>
@@ -8204,7 +7961,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                         className="chart-hero-top-coin chart-hero-top-coin--more"
                         style={{ zIndex: 0 }}
                         onClick={(e) => onOpenCoinPicker?.(e.currentTarget)}
-                        title="More coins"
+                        title={t("priceChart.moreCoins")}
                       >
                         …
                       </button>
@@ -8242,7 +7999,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                       >
                         {formatLivePrice(currentPrice)}
                       </span>
-                      <span className="aiqw-live-badge"><span className="aiqw-live-dot" />LIVE</span>
+                      <span className="aiqw-live-badge"><span className="aiqw-live-dot" />{t("priceChart.live")}</span>
                     </span>
                   )}
                   {/* Reference-match: the compact hero stays just
@@ -8260,7 +8017,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                       onClick={() => onOpenUpgrade?.("pro")}
                     >
                       <span className={`zone-signal-live zone-signal-live--gate zone-signal-live--gate-${zone?.signal ?? "neutral"}`} />
-                      Unlock Status
+                      {t("priceChart.unlockStatus")}
                     </button>
                   )}
                   {isFullscreen && divergence && isPaid && (
@@ -8274,7 +8031,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                       onClick={() => onOpenUpgrade?.("pro")}
                     >
                       <span className={`zone-signal-live zone-signal-live--gate zone-signal-live--gate-div-${divergence?.type ?? "neutral"}`} />
-                      Unlock Divergence
+                      {t("priceChart.unlockDivergence")}
                     </button>
                   )}
                 </div>
@@ -8285,11 +8042,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                         <span className="chart-hero-selected-interval">{INTERVAL_SHORT[interval]}</span>
                       )}
                       <div className="chart-fs-stat-row">
-                        <span className="chart-fs-stat-label">{t("chart.high", "High")}</span>
+                        <span className="chart-fs-stat-label">{t("priceChart.c.high")}</span>
                         <span className="chart-fs-stat-value chart-fs-stat-value--up">{formatLivePrice(displayDayHigh)}</span>
                       </div>
                       <div className="chart-fs-stat-row">
-                        <span className="chart-fs-stat-label">{t("chart.low", "Low")}</span>
+                        <span className="chart-fs-stat-label">{t("priceChart.c.low")}</span>
                         <span className="chart-fs-stat-value chart-fs-stat-value--down">{formatLivePrice(displayDayLow)}</span>
                       </div>
                       {!isFullscreen && quoteVolume24h !== undefined && (
@@ -8315,7 +8072,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                               </span>
                             )
                           )}
-                          <span className="chart-fs-stat-label">{t("chart.vol24h", "24hr vol")}</span>
+                          <span className="chart-fs-stat-label">{t("priceChart.c.vol24h")}</span>
                           <span className="chart-fs-stat-value">{formatCompactVolume(quoteVolume24h)}</span>
                         </div>
                       )}
@@ -8332,14 +8089,14 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                           onClick={() => onOpenUpgrade?.("pro")}
                         >
                           <span className={`zone-signal-live zone-signal-live--gate zone-signal-live--gate-${zone?.signal ?? "neutral"}`} />
-                          Unlock Status
+                          {t("priceChart.unlockStatus")}
                         </button>
                         <button
                           className={`zone-signal-gate zone-signal-gate--div-${divergence?.type ?? "neutral"}`}
                           onClick={() => onOpenUpgrade?.("pro")}
                         >
                           <span className={`zone-signal-live zone-signal-live--gate zone-signal-live--gate-div-${divergence?.type ?? "neutral"}`} />
-                          Unlock Divergence
+                          {t("priceChart.unlockDivergence")}
                         </button>
                       </div>
                     )}
@@ -8402,7 +8159,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                         <path d="M4.93 3.57 A11 11 0 0 0 4.93 20.43" />
                       </svg>
                     )}
-                    <span>{showCompactView ? t("chart.switchToFull", "Back to chart") : t("chart.switchToCompact", "Predict")}</span>
+                    <span>{showCompactView ? t("priceChart.c.switchToFull") : t("priceChart.c.switchToCompact")}</span>
                   </button>
                 )}
               </div>
@@ -8424,10 +8181,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <div className="pattern-insight-sheet-meta">
                 {bannerAt !== null && (
                   <span className="pattern-insight-updated">
-                    {t("chart.lastUpdated", "Updated")} {formatClockTime(bannerAt)}
+                    {t("priceChart.c.lastUpdated")} {formatClockTime(bannerAt)}
                   </span>
                 )}
-                <span className="aiqw-live-badge"><span className="aiqw-live-dot" />LIVE</span>
+                <span className="aiqw-live-badge"><span className="aiqw-live-dot" />{t("priceChart.live")}</span>
                 <span className="pattern-insight-ai-badge pattern-insight-ai-badge--pill">{t("chart.aiPowered")}</span>
               </div>
               <p className="pattern-insight-sheet-body">{displayBanner.body}</p>
@@ -8466,7 +8223,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             {tradeDesktopLean && !isFullscreen && <div className="chart-ohlc" ref={ohlcRef} aria-live="off" />}
             {/* ↺ reset view — after the user moves / zooms the chart. */}
             {viewMoved && (tvDrawRail || phoneCmc) && !isFullscreen && (
-              <button type="button" className="chart-view-reset" onClick={resetMovedView} aria-label="Reset chart view" title="Reset chart view">
+              <button type="button" className="chart-view-reset" onClick={resetMovedView} aria-label={t("priceChart.resetView")} title={t("priceChart.resetView")}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></svg>
               </button>
             )}
@@ -8488,7 +8245,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             {fsHint !== "gone" && mobileTabs && (
               <div className={`chart-fs-hint${fsHint === "fade" ? " chart-fs-hint--out" : ""}`} aria-live="polite">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3" /></svg>
-                <span>Some features only work in full screen</span>
+                <span>{t("priceChart.fsHint")}</span>
               </div>
             )}
             {/* "Compact" side of the Full/Compact switch above — covers
@@ -8538,9 +8295,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   setShowDepthProfile((v) => !v);
                 }}
                 title={
-                  showDepthProfile ? "Hide depth profile" : "Show depth profile"
+                  showDepthProfile ? t("priceChart.hideDepth") : t("priceChart.showDepth")
                 }
-                data-tooltip={showDepthProfile ? "Hide depth profile" : "Show depth profile"}
+                data-tooltip={showDepthProfile ? t("priceChart.hideDepth") : t("priceChart.showDepth")}
               >
                 <svg
                   width="15"
@@ -8569,7 +8326,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 <button
                   className={`chart-depth-btn${showAstroChart ? " chart-depth-btn--active" : ""}`}
                   onClick={() => setShowAstroChart(true)}
-                  title={t("astro.title", "Astro Suggestions")}
+                  title={t("priceChart.c.astroTitle")}
                 >
                   <svg
                     width="15"
@@ -8585,7 +8342,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     <path d="M19 14l.9 2.1L22 17l-2.1.9L19 20l-.9-2.1L16 17l2.1-.9z" />
                   </svg>
                   <span className="chart-icon-label">
-                    {t("astro.title", "Astro Suggestions")}
+                    {t("priceChart.c.astroTitle")}
                   </span>
                 </button>
               )}
@@ -8680,20 +8437,20 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 type="button"
                 className="chart-depth-btn chart-fullscreen-btn"
                 onClick={toggleFullscreen}
-                title={t("chart.fullscreen", "Fullscreen")}
-                data-tooltip={t("chart.fullscreen", "Fullscreen")}
+                title={t("priceChart.c.fullscreen")}
+                data-tooltip={t("priceChart.c.fullscreen")}
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3" />
                 </svg>
-                <span className="chart-icon-label">{t("chart.fullscreen", "Fullscreen")}</span>
+                <span className="chart-icon-label">{t("priceChart.c.fullscreen")}</span>
               </button>
             </div>
             )}
           {/* Phones, chart page: a clean spinner (the chart is hidden, not blurred). */}
           {loading && phoneCmc && (
             <div className="chart-loading-overlay">
-              <span className="cmch-spinner" role="status" aria-label="Loading chart" />
+              <span className="cmch-spinner" role="status" aria-label={t("chart.loading")} />
             </div>
           )}
           {/* Once loading is done, the ProVision pill (Analyze or Renew) sits
@@ -8871,7 +8628,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     className="chart-tv-ohlc-pick chart-coin-pick"
                     role="button"
                     tabIndex={0}
-                    aria-label="Switch coin"
+                    aria-label={t("priceChart.switchCoin")}
                     onClick={(e) => onOpenCoinPicker?.(e.currentTarget)}
                     onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpenCoinPicker?.(e.currentTarget); } }}
                   >
@@ -8882,7 +8639,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                       {COIN_GLYPHS[coin] ?? coin[0]}
                     </span>
                     <span className="chart-tv-ohlc-title">
-                      {COIN_FULL_NAME[coin] ?? coin} / U.S. Dollar · {INTERVAL_SHORT[interval]} · CRYPTO
+                      {t("priceChart.tvTitle", { name: COIN_FULL_NAME[coin] ?? coin, iv: INTERVAL_SHORT[interval] })}
                     </span>
                     <span className="chart-coin-pick-chev" aria-hidden="true">
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
@@ -8890,11 +8647,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   </span>
                   <span className={`chart-tv-ohlc-dot${changeUp ? " up" : " down"}`} />
                   <span className="chart-tv-ohlc-values">
-                    O<b>{formatLivePrice(lastCandle.open)}</b>{" "}
-                    H<b>{formatLivePrice(lastCandle.high)}</b>{" "}
-                    L<b>{formatLivePrice(lastCandle.low)}</b>{" "}
+                    {t("priceChart.ohlc.o")}<b>{formatLivePrice(lastCandle.open)}</b>{" "}
+                    {t("priceChart.ohlc.h")}<b>{formatLivePrice(lastCandle.high)}</b>{" "}
+                    {t("priceChart.ohlc.l")}<b>{formatLivePrice(lastCandle.low)}</b>{" "}
                     <span className={changeUp ? "chart-tv-ohlc-up" : "chart-tv-ohlc-down"}>
-                      C<b>{formatLivePrice(live)}</b>{" "}
+                      {t("priceChart.ohlc.c")}<b>{formatLivePrice(live)}</b>{" "}
                       {dayChangeAbs !== null && dayChangePercent !== null && (
                         <>
                           {changeUp ? "+" : ""}{dayChangeAbs.toFixed(2)} ({changeUp ? "+" : ""}{dayChangePercent.toFixed(2)}%)
@@ -8910,7 +8667,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     onClick={() => document.querySelector<HTMLButtonElement>(".ta-trigger")?.click()}
                   >
                     <span className="chart-tv-ticket-price">{formatLivePrice(live)}</span>
-                    <span className="chart-tv-ticket-label">SELL</span>
+                    <span className="chart-tv-ticket-label">{t("priceChart.sellCaps")}</span>
                   </button>
                   <span className="chart-tv-ticket-mid">0.00</span>
                   <button
@@ -8919,7 +8676,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     onClick={() => document.querySelector<HTMLButtonElement>(".ta-trigger")?.click()}
                   >
                     <span className="chart-tv-ticket-price">{formatLivePrice(live)}</span>
-                    <span className="chart-tv-ticket-label">BUY</span>
+                    <span className="chart-tv-ticket-label">{t("priceChart.buyCaps")}</span>
                   </button>
                 </div>
               </div>
@@ -8938,7 +8695,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 className="chart-mobile-top-row chart-coin-pick"
                 role="button"
                 tabIndex={0}
-                aria-label="Switch coin"
+                aria-label={t("priceChart.switchCoin")}
                 onClick={(e) => { hapticTap(); onOpenCoinPicker?.(e.currentTarget); }}
                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpenCoinPicker?.(e.currentTarget); } }}
               >
@@ -8948,7 +8705,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 >
                   {COIN_GLYPHS[coin] ?? coin[0]}
                 </span>
-                <span className="chart-mobile-top-name">{COIN_FULL_NAME[coin] ?? coin} / U.S. Dollar</span>
+                <span className="chart-mobile-top-name">{t("priceChart.vsUsd", { name: COIN_FULL_NAME[coin] ?? coin })}</span>
                 <span className="chart-mobile-top-live" aria-hidden="true" />
                 <span className="chart-coin-pick-chev" aria-hidden="true">
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
@@ -8980,7 +8737,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 <line x1="4" y1="12" x2="20" y2="12" />
                 <line x1="4" y1="17" x2="20" y2="17" />
               </svg>
-              Menu
+              {t("priceChart.menu")}
             </button>
           )}
           {pageMode && !isDesktopWidth && advMenuOpen && (
@@ -8991,14 +8748,14 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 {([
                   ...((prefsScope === "trade" || prefsScope === "advance")
                     ? [[
-                        pvActive ? "ProVision: On" : "ProVision: Off",
+                        pvActive ? t("priceChart.advMenu.pvOn") : t("priceChart.advMenu.pvOff"),
                         () => pvGate.toggle(coin),
                         <path key="a" d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" />,
                       ] as const]
                     : []),
-                  ["Reset Chart", () => handleResetView(), <><path key="a" d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path key="b" d="M3 3v5h5" /></>],
-                  ["Save", () => handleScreenshot(), <><path key="a" d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle key="b" cx="12" cy="13" r="4" /></>],
-                  ["Close", () => toggleFullscreen(), <><line key="a" x1="18" y1="6" x2="6" y2="18" /><line key="b" x1="6" y1="6" x2="18" y2="18" /></>],
+                  [t("priceChart.advMenu.reset"), () => handleResetView(), <><path key="a" d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path key="b" d="M3 3v5h5" /></>],
+                  [t("chart.save"), () => handleScreenshot(), <><path key="a" d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle key="b" cx="12" cy="13" r="4" /></>],
+                  [t("priceChart.advMenu.close"), () => toggleFullscreen(), <><line key="a" x1="18" y1="6" x2="6" y2="18" /><line key="b" x1="6" y1="6" x2="18" y2="18" /></>],
                 ] as const).map(([label, run, icon], i) => (
                   <button
                     key={label}
@@ -9058,7 +8815,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               in the chart's top-left corner (dismissible for the session). */}
           {/* "ghost": a blurred ProVision teaser painted over the chart. */}
           {PV_PROMO_STYLE === "ghost" && isDesktopWidth && !pvGhostDismissed && (pvBannerReason === "signin" || pvBannerReason === "trial-available") && (
-            <div className="pv-ghost" aria-label="ProVision preview">
+            <div className="pv-ghost" aria-label={t("priceChart.promo.preview")}>
               <svg className="pv-ghost-art" viewBox="0 0 1000 400" preserveAspectRatio="none" aria-hidden="true">
                 <defs>
                   <linearGradient id="pvg-band" x1="0" x2="1" y1="0" y2="0">
@@ -9080,17 +8837,17 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   />
                 ))}
               </svg>
-              <span className="pv-ghost-pill pv-ghost-pill--buy" style={{ left: "31%", top: "62%" }}>STRONG BUY</span>
-              <span className="pv-ghost-pill pv-ghost-pill--sell" style={{ left: "62%", top: "18%" }}>Sell</span>
-              <span className="pv-ghost-pill pv-ghost-pill--buy" style={{ left: "84%", top: "38%" }}>Buy</span>
+              <span className="pv-ghost-pill pv-ghost-pill--buy" style={{ left: "31%", top: "62%" }}>{t("priceChart.promo.strongBuy")}</span>
+              <span className="pv-ghost-pill pv-ghost-pill--sell" style={{ left: "62%", top: "18%" }}>{t("priceChart.promo.sell")}</span>
+              <span className="pv-ghost-pill pv-ghost-pill--buy" style={{ left: "84%", top: "38%" }}>{t("priceChart.promo.buy")}</span>
               <div className="pv-ghost-center">
                 <button type="button" className="pv-ghost-btn" onClick={() => openProVisionPaywall({ reason: pvBannerReason, coin })}>
                   <span className="pv-float-border" aria-hidden="true" />
                   <span className="pv-ghost-btn-inner">
                     <svg className="pv-float-spark" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
                     <span className="pv-ghost-btn-text">
-                      <strong>Unlock ProVision</strong>
-                      <span>See this on the real chart · 3 days free · no card</span>
+                      <strong>{t("priceChart.pvbar.unlock")}</strong>
+                      <span>{t("priceChart.promo.ghostSub")}</span>
                     </span>
                   </span>
                 </button>
@@ -9102,18 +8859,18 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     try { sessionStorage.setItem("pvGhostDismissed", "1"); } catch { /* ignore */ }
                   }}
                 >
-                  Not now
+                  {t("priceChart.promo.notNow")}
                 </button>
               </div>
             </div>
           )}
           {PV_PROMO_STYLE === "float" && isDesktopWidth && !pvPromoDismissed && (pvBannerReason === "signin" || pvBannerReason === "trial-available") && (
-            <div className="pv-float" role="complementary" aria-label="ProVision free trial">
+            <div className="pv-float" role="complementary" aria-label={t("priceChart.promo.freeTrial")}>
               <span className="pv-float-border" aria-hidden="true" />
               <button
                 type="button"
                 className="pv-float-close"
-                aria-label="Dismiss"
+                aria-label={t("priceChart.dismiss")}
                 onClick={(e) => {
                   e.stopPropagation();
                   setPvPromoDismissed(true);
@@ -9137,22 +8894,22 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     <path className="pv-float-ribbon pv-float-ribbon--2" d="M0 50 C25 54 40 56 58 44 S95 20 120 14" />
                     <path className="pv-float-ribbon pv-float-ribbon--1" d="M0 54 C25 58 40 60 58 48 S95 24 120 18" />
                   </svg>
-                  <span className="pv-float-buy">▲ BUY</span>
+                  <span className="pv-float-buy">▲ {t("priceChart.buyCaps")}</span>
                 </span>
                 <span className="pv-float-text">
                   <span className="pv-float-title">
                     <svg className="pv-float-spark" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
-                    Unlock ProVision
+                    {t("priceChart.pvbar.unlock")}
                   </span>
-                  <span className="pv-float-sub">Pro signals · 3 days free · no card</span>
+                  <span className="pv-float-sub">{t("priceChart.promo.floatSub")}</span>
                 </span>
-                <span className="pv-float-cta">Try free</span>
+                <span className="pv-float-cta">{t("priceChart.promo.tryFree")}</span>
               </button>
             </div>
           )}
           {/* Pro Vision intro: a few seconds of "preparing" over the chart. */}
           {pvIntro && ReactDOM.createPortal(
-            <div className="pvi" role="status" aria-label="Preparing ProVision" style={{ ["--pvi-ms" as string]: `${PV_INTRO_MS}ms` }}>
+            <div className="pvi" role="status" aria-label={t("priceChart.intro.preparing")} style={{ ["--pvi-ms" as string]: `${PV_INTRO_MS}ms` }}>
               <div className="pvi-scan" aria-hidden="true" />
               <div className="pvi-card">
                 <span className="pvi-orb" aria-hidden="true">
@@ -9160,8 +8917,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 </span>
                 <span className="pvi-title">ProVision</span>
                 <span className="pvi-steps" aria-hidden="true">
-                  {["Scanning trend", "Reading momentum", "Checking order flow", "Aligning timeframes", "Calibrating signals"].map((t, i) => (
-                    <span key={t} className="pvi-step" style={{ animationDelay: `${i * (PV_INTRO_MS - 300) / 5}ms` }}>{t}…</span>
+                  {[t("priceChart.intro.s1"), t("priceChart.intro.s2"), t("priceChart.intro.s3"), t("priceChart.intro.s4"), t("priceChart.intro.s5")].map((step, i) => (
+                    <span key={step} className="pvi-step" style={{ animationDelay: `${i * (PV_INTRO_MS - 300) / 5}ms` }}>{step}…</span>
                   ))}
                 </span>
                 <span className="pvi-bar" aria-hidden="true"><span className="pvi-bar-fill" /></span>
@@ -9177,7 +8934,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 if (el) requestAnimationFrame(() => pvStrengthMeasureRef.current());
               }}
               className="pv-strength"
-              aria-label={`Trend strength: bull ${pvResult.bullStrength}%`}
+              aria-label={t("priceChart.strength.aria", { pct: pvResult.bullStrength })}
               style={pvStrengthBottom !== null ? { bottom: pvStrengthBottom, top: "auto", left: pvStrengthLeft ?? 0, right: "auto" } : undefined}
             >
               <span className="pv-strength-tag">
@@ -9189,19 +8946,19 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 <div className="pv-strength-bear" style={{ width: `${100 - pvResult.bullStrength}%` }} />
               </div>
               <span className={`pv-strength-val pv-strength-val--${pvResult.bullStrength >= 50 ? "bull" : "bear"}`}>
-                {pvResult.bullStrength >= 50 ? `Bull ${pvResult.bullStrength}%` : `Bear ${100 - pvResult.bullStrength}%`}
+                {pvResult.bullStrength >= 50 ? t("priceChart.strength.bull", { pct: pvResult.bullStrength }) : t("priceChart.strength.bear", { pct: 100 - pvResult.bullStrength })}
               </span>
-              {pvResult.regime.kind === "range" && <span className="pv-strength-flag">Sideways</span>}
-              {pvResult.spikeGuard && <span className="pv-strength-flag pv-strength-flag--spike">⚡ Spike</span>}
+              {pvResult.regime.kind === "range" && <span className="pv-strength-flag">{t("priceChart.strength.sideways")}</span>}
+              {pvResult.spikeGuard && <span className="pv-strength-flag pv-strength-flag--spike">⚡ {t("priceChart.strength.spike")}</span>}
               {pvEventInfo.live ? (
-                <span className="pv-strength-flag pv-strength-flag--event">⏸ {eventShortName(pvEventInfo.live.title)} · paused</span>
+                <span className="pv-strength-flag pv-strength-flag--event">⏸ {t("priceChart.strength.eventPaused", { name: eventShortName(pvEventInfo.live.title) })}</span>
               ) : pvEventInfo.next ? (
                 <span className="pv-strength-flag pv-strength-flag--event">
-                  {eventShortName(pvEventInfo.next.title)} in {fmtCountdown(pvEventInfo.next.time - pvNow)}
+                  {t("priceChart.strength.eventIn", { name: eventShortName(pvEventInfo.next.title), time: fmtCountdown(pvEventInfo.next.time - pvNow) })}
                 </span>
               ) : null}
-              {pvResult.liquidity.thin && <span className="pv-strength-flag">Thin · signals off</span>}
-              {pvResult.signalSource && <span className="pv-strength-flag pv-strength-flag--src">Signals: {pvResult.signalSource}</span>}
+              {pvResult.liquidity.thin && <span className="pv-strength-flag">{t("priceChart.strength.thin")}</span>}
+              {pvResult.signalSource && <span className="pv-strength-flag pv-strength-flag--src">{t("priceChart.strength.signals", { src: pvResult.signalSource })}</span>}
             </div>
           )}
           <LineDotFillOverlay
@@ -9233,18 +8990,18 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               return {
                 tone,
                 // Always the question; ProVision's read goes in the line below.
-                title: `What's next for ${COINS.find((c) => c.symbol === coin)?.name ?? coin}?`,
+                title: t("priceChart.whatsNext", { name: COINS.find((c) => c.symbol === coin)?.name ?? coin }),
                 value: undefined,
                 // Second line supports the first instead of competing with
                 // it: "3 of 5 tools agree" when they match, "tools are split"
                 // / "other tools lean …" when they don't.
                 body: (() => {
                   const s = consensusSummary;
-                  if (!s) return "See what every coinhintz tool says";
+                  if (!s) return t("priceChart.seeEveryTool");
                   // Consensus only (ProVision has its own card below).
                   return `${s.headline} · ${s.countLine}`;
                 })(),
-                side: "Tap to see ›",
+                side: t("priceChart.tapToSee"),
                 onOpen: () => window.dispatchEvent(new Event("open-consensus-sheet")),
               };
             })() : null}
@@ -9275,7 +9032,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           <button
             className="chart-reset-view-btn chart-save-view-btn"
             onClick={handleScreenshot}
-            title="Save chart as PNG"
+            title={t("priceChart.savePng")}
           >
             {t("chart.save")}
           </button>
@@ -9288,9 +9045,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             <button
               className="chart-reset-view-btn chart-ios-fullscreen-btn"
               onClick={toggleFullscreen}
-              title="Fullscreen"
+              title={t("priceChart.c.fullscreen")}
             >
-              Full Screen
+              {t("chartBar.fullScreen")}
             </button>
           )}
           {/* Fullscreen only — compact view relies entirely on
@@ -9322,10 +9079,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   <>
                     <span className="czp-main czp-main--static">
                       <svg className="czp-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
-                      <span className="czp-label">Drag on the chart</span>
+                      <span className="czp-label">{t("priceChart.zone.drag")}</span>
                     </span>
                     <span className="czp-sep" aria-hidden="true" />
-                    <button type="button" className="czp-cancel" onClick={handleCancelZoneDraw}>Cancel</button>
+                    <button type="button" className="czp-cancel" onClick={handleCancelZoneDraw}>{t("priceChart.zone.cancel")}</button>
                   </>
                 ) : (
                   <>
@@ -9333,16 +9090,16 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                       type="button"
                       className="czp-main"
                       onClick={handleExplainZoneStart}
-                      title="Draw a free area on the chart and get an AI explanation of it"
+                      title={t("priceChart.zone.explainTip")}
                     >
                       <svg className="czp-icon czp-icon--spark" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
-                      <span className="czp-label">Explain Zone</span>
+                      <span className="czp-label">{t("priceChart.zone.explain")}</span>
                       {!isPaid && <span className="czp-pro">PRO</span>}
                     </button>
                     {hasZone && (
                       <>
                         <span className="czp-sep" aria-hidden="true" />
-                        <button type="button" className="czp-clear" onClick={handleClearZone} title="Clear the drawn zone" aria-label="Clear zone">
+                        <button type="button" className="czp-clear" onClick={handleClearZone} title={t("priceChart.zone.clearTip")} aria-label={t("priceChart.zone.clear")}>
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
                         </button>
                       </>
@@ -9359,8 +9116,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         {phoneCmc && (
           <div className="cmct cmct--phone">
             <div className="cmct-phone-row">
-              <div className="cmct-seg cmct-seg--grow" role="tablist" aria-label="Metric">
-                {([["price", "Price"], ["mcap", "Market cap"]] as const).map(([k, label]) => (
+              <div className="cmct-seg cmct-seg--grow" role="tablist" aria-label={t("priceChart.metric.label")}>
+                {([["price", t("priceChart.metric.price")], ["mcap", t("priceChart.metric.mcap")]] as const).map(([k, label]) => (
                   <button
                     key={k}
                     type="button"
@@ -9422,7 +9179,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             items.push({
               id: "pv", name: "ProVision",
               tone: b === "bull" ? "bull" : b === "bear" ? "bear" : "neutral",
-              label: b === "bull" ? "Bullish" : b === "bear" ? "Bearish" : "Mixed",
+              label: b === "bull" ? t("priceChart.c.bullish") : b === "bear" ? t("priceChart.c.bearish") : t("priceChart.cns.mixed"),
               pos: pvResult.bullStrength,
               onClick: () => {
                 setPvCardOpen(true);
@@ -9434,72 +9191,72 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           } else if (pvReason && !pvActive) {
             items.push({
               id: "pv", name: "ProVision", tone: null, pos: null, locked: true,
-              label: pvReason === "trial-available" || pvReason === "signin" ? "Try free" : "Unlock",
+              label: pvReason === "trial-available" || pvReason === "signin" ? t("priceChart.promo.tryFree") : t("priceChart.pill.unlock"),
               onClick: () => openProVisionPaywall({ reason: pvReason, coin }),
             });
           } else {
             items.push({
               id: "pv", name: "ProVision", tone: null, pos: null,
-              label: pvActive ? (pvError ?? "Reading…") : "Turn on",
+              label: pvActive ? (pvError ?? t("priceChart.cns.reading")) : t("priceChart.cns.turnOn"),
               onClick: pvActive ? undefined : () => pvGate.toggle(coin),
             });
           }
           // Buy & Sell Signals scanner
           if (!isPaid) {
-            items.push({ id: "sig", name: "Signals", tone: null, pos: null, locked: true, label: "Pro", onClick: () => onOpenUpgrade?.("pro") });
+            items.push({ id: "sig", name: t("priceChart.cns.signals"), tone: null, pos: null, locked: true, label: "Pro", onClick: () => onOpenUpgrade?.("pro") });
           } else {
             const live = scanSignal?.active ? scanSignal.direction : null;
             items.push({
-              id: "sig", name: "Signals",
+              id: "sig", name: t("priceChart.cns.signals"),
               tone: live === "buy" ? "bull" : live === "sell" ? "bear" : "neutral",
-              label: live === "buy" ? "Buy setup" : live === "sell" ? "Sell setup" : "No setup",
+              label: live === "buy" ? t("priceChart.cns.buySetup") : live === "sell" ? t("priceChart.cns.sellSetup") : t("priceChart.cns.noSetup"),
               pos: live === "buy" ? 80 : live === "sell" ? 20 : null,
               onClick: () => window.dispatchEvent(new CustomEvent("open-buy-signals", { detail: { coin } })),
             });
           }
           // Technicals (free)
           items.push({
-            id: "tech", name: "Technicals",
+            id: "tech", name: t("priceChart.c.technicals"),
             tone: techLean?.tone ?? null,
-            label: techLean?.label ?? "Loading…",
+            label: techLean ? t(`priceChart.cns.lean.${techLean.tone}`, techLean.label) : t("common.loading"),
             pos: techLean ? ((techLean.score + 1) / 2) * 100 : null,
             onClick: () => window.dispatchEvent(new CustomEvent("open-coin-section", { detail: { tab: "technicals" } })),
           });
           // AI Chart Read — only an existing read; never runs a paid call by itself.
           const ai = readPatternCache(coin, interval)?.data ?? null;
           if (!isPaid) {
-            items.push({ id: "ai", name: "AI Chart Read", tone: null, pos: null, locked: true, label: "Pro", onClick: () => onOpenUpgrade?.("pro") });
+            items.push({ id: "ai", name: t("priceChart.aiChartRead"), tone: null, pos: null, locked: true, label: "Pro", onClick: () => onOpenUpgrade?.("pro") });
           } else if (ai) {
             items.push({
-              id: "ai", name: "AI Chart Read",
+              id: "ai", name: t("priceChart.aiChartRead"),
               tone: ai.type === "bullish" ? "bull" : ai.type === "bearish" ? "bear" : "neutral",
-              label: ai.type === "bullish" ? "Bullish pattern" : ai.type === "bearish" ? "Bearish pattern" : "No clear pattern",
+              label: ai.type === "bullish" ? t("priceChart.cns.bullPattern") : ai.type === "bearish" ? t("priceChart.cns.bearPattern") : t("priceChart.cns.noPattern"),
               pos: ai.type === "bullish" ? 68 : ai.type === "bearish" ? 32 : 50,
               onClick: () => openAiRead(),
             });
           } else {
-            items.push({ id: "ai", name: "AI Chart Read", tone: null, pos: null, label: "Tap to run", onClick: () => openAiRead() });
+            items.push({ id: "ai", name: t("priceChart.aiChartRead"), tone: null, pos: null, label: t("priceChart.cns.tapToRun"), onClick: () => openAiRead() });
           }
           // Events / price zone
           const zs = zone?.signal;
           const zoneMap: Record<string, { tone: "bull" | "bear" | "neutral"; label: string; pos: number }> = {
-            "strong-buy": { tone: "bull", label: "Strong buy zone", pos: 90 },
-            "buy": { tone: "bull", label: "Buy zone", pos: 75 },
-            "oversold": { tone: "bull", label: "Oversold", pos: 64 },
-            "neutral": { tone: "neutral", label: "Neutral", pos: 50 },
-            "overbought": { tone: "bear", label: "Overbought", pos: 36 },
-            "sell": { tone: "bear", label: "Sell zone", pos: 25 },
-            "strong-sell": { tone: "bear", label: "Strong sell zone", pos: 10 },
+            "strong-buy": { tone: "bull", label: t("priceChart.cns.strongBuyZone"), pos: 90 },
+            "buy": { tone: "bull", label: t("priceChart.cns.buyZone"), pos: 75 },
+            "oversold": { tone: "bull", label: t("chart.oversold"), pos: 64 },
+            "neutral": { tone: "neutral", label: t("chart.neutralZone"), pos: 50 },
+            "overbought": { tone: "bear", label: t("chart.overbought"), pos: 36 },
+            "sell": { tone: "bear", label: t("priceChart.cns.sellZone"), pos: 25 },
+            "strong-sell": { tone: "bear", label: t("priceChart.cns.strongSellZone"), pos: 10 },
           };
           const z = zs ? zoneMap[zs] : null;
           items.push({
-            id: "ev", name: "Events", tone: z?.tone ?? "neutral", label: z?.label ?? "Neutral", pos: z?.pos ?? 50,
+            id: "ev", name: t("priceChart.cns.events"), tone: z?.tone ?? "neutral", label: z?.label ?? t("chart.neutralZone"), pos: z?.pos ?? 50,
             // Phones: the chart's notable moments (formerly the cards under the chart).
             detail: pvInSheet && chartEvts.length > 0 ? (
               <div className="cns-events">
                 {[...chartEvts].sort((a, b) => b.time - a.time).map((e) => {
                   const ago = Math.max(0, Date.now() / 1000 - e.time);
-                  const when = ago < 3600 ? `${Math.max(1, Math.round(ago / 60))}m ago` : ago < 86400 ? `${Math.round(ago / 3600)}h ago` : `${Math.round(ago / 86400)}d ago`;
+                  const when = ago < 3600 ? t("priceChart.ago.m", { n: Math.max(1, Math.round(ago / 60)) }) : ago < 86400 ? t("priceChart.ago.h", { n: Math.round(ago / 3600) }) : t("priceChart.ago.d", { n: Math.round(ago / 86400) });
                   return (
                     <div key={e.id} className="cns-event">
                       <span className="cns-event-head"><span>{e.title}</span><span className="cns-event-time">{when}</span></span>
@@ -9513,10 +9270,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           // Agent (Elite) — opens with a question about this read.
           const elite = authTier === "elite";
           items.push({
-            id: "agent", name: "Agent", tone: null, pos: null, locked: !elite,
-            label: elite ? "Ask why ›" : "Elite",
+            id: "agent", name: t("priceChart.cns.agent"), tone: null, pos: null, locked: !elite,
+            label: elite ? t("priceChart.cns.askWhy") : "Elite",
             onClick: () => window.dispatchEvent(new CustomEvent("open-trading-agent-with-prompt", {
-              detail: { prompt: `What do coinhintz's tools say about ${coin} on the ${tf} chart right now, and why?` },
+              detail: { prompt: t("priceChart.cns.agentPrompt", { coin, tf }) },
             })),
           });
           // Reused further down by the phone insight tiles (same render).
@@ -9557,16 +9314,16 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   <path className="pv-float-ribbon pv-float-ribbon--2" d="M0 50 C25 54 40 56 58 44 S95 20 120 14" />
                   <path className="pv-float-ribbon pv-float-ribbon--1" d="M0 54 C25 58 40 60 58 48 S95 24 120 18" />
                 </svg>
-                <span className="pv-float-buy">▲ BUY</span>
+                <span className="pv-float-buy">▲ {t("priceChart.buyCaps")}</span>
               </span>
               <span className="pv-mpromo-text">
                 <span className="pv-float-title">
                   <svg className="pv-float-spark" width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
-                  ProVision free trial
+                  {t("priceChart.promo.freeTrial")}
                 </span>
-                <span className="pv-float-sub">{pvTrialLeftLabel(pvTrialLeftMs)} left · then {pvPrice}/year</span>
+                <span className="pv-float-sub">{t("priceChart.trial.leftThen", { left: pvTrialLeftLabel(pvTrialLeftMs), price: pvPrice })}</span>
               </span>
-              <span className="pv-float-cta pv-mpromo-cta">Keep it</span>
+              <span className="pv-float-cta pv-mpromo-cta">{t("priceChart.trial.keepIt")}</span>
             </span>
           </button>
         )}
@@ -9589,16 +9346,16 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   <path className="pv-float-ribbon pv-float-ribbon--2" d="M0 50 C25 54 40 56 58 44 S95 20 120 14" />
                   <path className="pv-float-ribbon pv-float-ribbon--1" d="M0 54 C25 58 40 60 58 48 S95 24 120 18" />
                 </svg>
-                <span className="pv-float-buy">▲ BUY</span>
+                <span className="pv-float-buy">▲ {t("priceChart.buyCaps")}</span>
               </span>
               <span className="pv-mpromo-text">
                 <span className="pv-float-title">
                   <svg className="pv-float-spark" width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
-                  Unlock ProVision
+                  {t("priceChart.pvbar.unlock")}
                 </span>
-                <span className="pv-float-sub">3 days free · no card</span>
+                <span className="pv-float-sub">{t("priceChart.promo.mobileSub")}</span>
               </span>
-              <span className="pv-float-cta pv-mpromo-cta">Try free</span>
+              <span className="pv-float-cta pv-mpromo-cta">{t("priceChart.promo.tryFree")}</span>
             </span>
           </button>
         )}
@@ -9614,17 +9371,17 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             </span>
             <span className="pv-locked-text">
               <strong>
-                {pvBannerReason === "pro-limit" ? `ProVision is locked on ${coin}` : pvBannerReason === "trial-ended" ? "Your ProVision trial has ended" : "Try ProVision free for 3 days"}
+                {pvBannerReason === "pro-limit" ? t("priceChart.pvbar.lockedOn", { coin }) : pvBannerReason === "trial-ended" ? t("priceChart.pvbar.trialEnded") : t("priceChart.pvbar.tryFree")}
               </strong>
               <span>
                 {pvBannerReason === "pro-limit"
                   ? (pvGate.access.usedCoins.length
-                    ? `You've used today's ${pvGate.access.usedCoins.length} coins (${pvGate.access.usedCoins.join(", ")}). Go unlimited.`
-                    : "Your account doesn't include ProVision right now.")
-                  : pvBannerReason === "trial-ended" ? `Keep every coin and timeframe for ${pvPrice}/year.` : "Every coin and timeframe. No card needed."}
+                    ? t("priceChart.pvbar.usedCoinsList", { n: pvGate.access.usedCoins.length, list: pvGate.access.usedCoins.join(", ") })
+                    : t("priceChart.pvbar.notIncluded"))
+                  : pvBannerReason === "trial-ended" ? t("priceChart.pvbar.keepFor", { price: pvPrice }) : t("priceChart.pvbar.noCard")}
               </span>
             </span>
-            <span className="pv-locked-cta">{pvBannerReason === "trial-available" || pvBannerReason === "signin" ? "Start" : "Unlock"}</span>
+            <span className="pv-locked-cta">{pvBannerReason === "trial-available" || pvBannerReason === "signin" ? t("priceChart.pvbar.start") : t("priceChart.pill.unlock")}</span>
           </button>
         )}
 
@@ -9632,7 +9389,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             tap opens the details sheet. */}
         {pvAdvSheetMode && pvActive && pvResult && !pvRingMin && (() => {
           const b = pvResult.verdict.bias;
-          const word = b === "bull" ? "Bullish" : b === "bear" ? "Bearish" : "Mixed";
+          const word = b === "bull" ? t("priceChart.c.bullish") : b === "bear" ? t("priceChart.c.bearish") : t("priceChart.cns.mixed");
           const score = Math.max(0, Math.min(100, pvResult.bullStrength));
           const C = 2 * Math.PI * 17;
           return (
@@ -9692,8 +9449,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 <span className="pv-ring-num">{score}</span>
               </span>
               <span className="pv-ring-text">
-                <span className="pv-ring-verdict">{word} · {pvResult.verdict.agree} of {pvResult.verdict.total} indicators agree</span>
-                <span className="pv-ring-sub">ProVision Signal Check · tap for details</span>
+                <span className="pv-ring-verdict">{t("priceChart.pv.verdictAgree", { word, agree: pvResult.verdict.agree, total: pvResult.verdict.total })}</span>
+                <span className="pv-ring-sub">{t("priceChart.pv.ringSub")}</span>
               </span>
               {/* Grab handle: tap (or swipe the card down) to dock it in the
                   bottom bar; swipe up to expand into the details sheet. */}
@@ -9701,7 +9458,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 role="button"
                 tabIndex={0}
                 className="pv-ring-handle"
-                aria-label="Minimise to the bottom bar"
+                aria-label={t("priceChart.pv.minimise")}
                 onClick={(e) => { e.stopPropagation(); hapticTap(); minimizeRing(); }}
                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); minimizeRing(); } }}
               />
@@ -9735,7 +9492,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     <path d="M3 12h4l3-7 4 14 3-7h4" />
                   </svg>
                 </span>
-                <span className="pvl-title-text">ProVision Signal Check</span>
+                <span className="pvl-title-text">{t("priceChart.pv.title")}</span>
                 <span key={`hs:${pvResult.bullStrength}`} className="pvl-score">
                   {pvResult.bullStrength}<span className="pvl-score-of">/100</span>
                 </span>
@@ -9743,7 +9500,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 {(
                   <span
                     className="pvl-meter"
-                    title={`Bull strength ${pvResult.bullStrength}/100 — ${pvResult.bullStrength >= 60 ? "buyers in control" : pvResult.bullStrength <= 40 ? "sellers in control" : "balanced, no clear side"}`}
+                    title={t("priceChart.pv.meterTip", { n: pvResult.bullStrength, state: pvResult.bullStrength >= 60 ? t("priceChart.pv.buyersControl") : pvResult.bullStrength <= 40 ? t("priceChart.pv.sellersControl") : t("priceChart.pv.balanced") })}
                   >
                     <span className="pvl-meter-mid" aria-hidden="true" />
                     <i style={{ width: `${Math.max(2, Math.min(100, pvResult.bullStrength))}%` }} />
@@ -9755,14 +9512,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     its own line below so the title stays whole). */}
                 {pvTrialChip("pv-trial-chip--head")}
                 {!pvCardOpen && pvResult.stats.winRate !== null && (
-                  <span className="pv-card-mini">Hit rate {pvResult.stats.winRate}% · {pvResult.stats.total} signals</span>
+                  <span className="pv-card-mini">{t("priceChart.pv.mini", { rate: pvResult.stats.winRate, total: pvResult.stats.total })}</span>
                 )}
                 <span key={`v:${pvResult.verdict.bias}`} className={`pvl-pill pvl-pill--${pvResult.verdict.bias}`}>
                   <span className="pvl-pill-dot" aria-hidden="true" />
-                  {pvResult.verdict.bias === "bull" ? "Bullish" : pvResult.verdict.bias === "bear" ? "Bearish" : "Mixed"}
-                  {" · "}{pvResult.verdict.agree} of {pvResult.verdict.total}
+                  {t("priceChart.pv.pill", { word: pvResult.verdict.bias === "bull" ? t("priceChart.c.bullish") : pvResult.verdict.bias === "bear" ? t("priceChart.c.bearish") : t("priceChart.cns.mixed"), agree: pvResult.verdict.agree, total: pvResult.verdict.total })}
                   <span className="pvl-pill-sep">/</span>
-                  <span className="pvl-pill-live">live</span>
+                  <span className="pvl-pill-live">{t("priceChart.pv.live")}</span>
                 </span>
                 <svg className="pv-card-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
               </span>
@@ -9774,7 +9530,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             {pvCardOpen && (
               <button type="button" className="pv-howto" onClick={() => setPvGuideOpen(true)}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3" /><path d="M12 17h.01" /></svg>
-                How to use ProVision
+                {t("priceChart.pv.howTo")}
               </button>
             )}
             {/* Trial strip combined into the card (Trade + Advance Chart). */}
@@ -9783,8 +9539,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 <span className="pv-alert-icon" aria-hidden="true">⏱</span>
                 <span>
                   {pvResult.signalSource
-                    ? <><strong>Signals from the {pvResult.signalSource} chart.</strong> Moves on this short chart are too small to beat fees, so BUY/SELL, the zone, Signal check and track record come from {pvResult.signalSource} — use this chart to time your entry.</>
-                    : <><strong>Short timeframes are noisy.</strong> Moves here are too small to beat fees — use 15m and above for signals.</>}
+                    ? <Trans i18nKey="priceChart.pv.alertSource" values={{ src: pvResult.signalSource }} components={{ s: <strong /> }} />
+                    : <Trans i18nKey="priceChart.pv.alertShort" components={{ s: <strong /> }} />}
                 </span>
               </div>
             )}
@@ -9799,11 +9555,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   <span className="pv-alert-icon" aria-hidden="true">{pvEventInfo.live ? "⏸" : "⚠"}</span>
                   <span>
                     {pvEventInfo.live ? (
-                      <><strong>{name} now ({ev.title}, {at}).</strong> Big, fast moves are likely — signals are paused until {resume}.</>
+                      <Trans i18nKey="priceChart.pv.eventLive" values={{ name, title: ev.title, at, resume }} components={{ s: <strong /> }} />
                     ) : (
-                      <><strong>{name} in {fmtCountdown(ev.time - pvNow)}</strong> ({ev.title}, {at}).
-                        {" "}Expect volatility around it — signals pause from 30 min before until 1 h after.
-                        {ev.forecast ? ` Forecast ${ev.forecast}${ev.previous ? `, previous ${ev.previous}` : ""}.` : ""}</>
+                      <><Trans i18nKey="priceChart.pv.eventSoon" values={{ name, time: fmtCountdown(ev.time - pvNow), title: ev.title, at }} components={{ s: <strong /> }} />
+                        {ev.forecast ? ` ${ev.previous ? t("priceChart.pv.forecastPrev", { f: ev.forecast, p: ev.previous }) : t("priceChart.pv.forecast", { f: ev.forecast })}` : ""}</>
                     )}
                   </span>
                 </div>
@@ -9813,8 +9568,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <div className="pv-alert" role="status">
                 <span className="pv-alert-icon" aria-hidden="true">◌</span>
                 <span>
-                  <strong>Signals off — thin market.</strong> Only about ${(pvResult.liquidity.quoteVol24h / 1e6).toFixed(1)}M traded in the last 24h, too little for reliable signals.
-                  Trend colors and the checks below still update.
+                  <Trans i18nKey="priceChart.pv.alertThin" values={{ vol: (pvResult.liquidity.quoteVol24h / 1e6).toFixed(1) }} components={{ s: <strong /> }} />
                 </span>
               </div>
             )}
@@ -9822,8 +9576,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <div className="pv-alert pv-alert--spike" role="status">
                 <span className="pv-alert-icon" aria-hidden="true">⚡</span>
                 <span>
-                  <strong>Sudden {pvResult.spikeGuard.up ? "jump" : "drop"}</strong> — often news-driven.
-                  Signals against it are paused for {Math.max(1, pvResult.spikeGuard.barsLeft)} more candle{pvResult.spikeGuard.barsLeft === 1 ? "" : "s"}; expect wide swings.
+                  <Trans i18nKey={pvResult.spikeGuard.up ? "priceChart.pv.alertSpikeUp" : "priceChart.pv.alertSpikeDown"} count={Math.max(1, pvResult.spikeGuard.barsLeft)} components={{ s: <strong /> }} />
                 </span>
               </div>
             )}
@@ -9831,62 +9584,65 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <div className="pv-alert" role="status">
                 <span className="pv-alert-icon" aria-hidden="true">≈</span>
                 <span>
-                  <strong>Sideways market</strong> — no clear trend (Choppiness {pvResult.regime.chop.toFixed(0)}, ADX {pvResult.regime.adx.toFixed(0)}).
-                  {pvResult.rangeBox && ` Range ${fmtPvPrice(pvResult.rangeBox.bottom)} – ${fmtPvPrice(pvResult.rangeBox.top)}.`}
+                  <Trans i18nKey="priceChart.pv.alertRange" values={{ chop: pvResult.regime.chop.toFixed(0), adx: pvResult.regime.adx.toFixed(0) }} components={{ s: <strong /> }} />
+                  {pvResult.rangeBox && ` ${t("priceChart.pv.rangeBox", { lo: fmtPvPrice(pvResult.rangeBox.bottom), hi: fmtPvPrice(pvResult.rangeBox.top) })}`}
                   {pvResult.barSec >= 3600
-                    ? " Range mode is on: R·BUY near the floor, R·SELL near the ceiling, until price breaks out."
-                    : " Watch for a close outside the range — range signals run on 1h and above."}
+                    ? ` ${t("priceChart.pv.rangeModeOn")}`
+                    : ` ${t("priceChart.pv.rangeWatch")}`}
                 </span>
               </div>
             )}
             {/* ── Signal matrix: score meter + indicators × timeframes heat grid ── */}
             {pvCardOpen && !pvHudOn && (() => {
-              const ROWS = ["MA 20/200", "DMI", "Ichimoku", "RSI", "Stochastic", "MACD", "Volume"];
+              const ROWS = ["MA 20/200", "DMI", "Ichimoku", "RSI", t("priceChart.pv.stochastic"), "MACD", t("priceChart.vol.label")];
+              const volValue = pvResult.volume.buyPct >= pvResult.volume.sellPct
+                ? t("priceChart.vol.buyersPct", { pct: Math.max(pvResult.volume.buyPct, pvResult.volume.sellPct) })
+                : t("priceChart.vol.sellersPct", { pct: Math.max(pvResult.volume.buyPct, pvResult.volume.sellPct) });
               const openRow = (r: number) => {
                 if (r < 6) { setPvTileOpen(pvResult.tiles[r]); return; }
                 setPvTileOpen({
-                  key: "macd", label: "Volume", bias: pvResult.volume.bias,
-                  value: `${pvResult.volume.buyPct >= pvResult.volume.sellPct ? "Buyers" : "Sellers"} ${Math.max(pvResult.volume.buyPct, pvResult.volume.sellPct)}%`,
-                  detail: `${pvResult.volume.real ? "Real market buys vs market sells" : "Estimated buying vs selling (from candle colour)"} over the last 20 candles: buy ${fmtPvVol(pvResult.volume.buyVol)}, sell ${fmtPvVol(pvResult.volume.sellVol)}. 55%+ on one side counts as bullish or bearish.`,
+                  key: "macd", label: t("priceChart.vol.label"), bias: pvResult.volume.bias,
+                  value: volValue,
+                  detail: t(pvResult.volume.real ? "priceChart.vol.detailReal" : "priceChart.vol.detailEst", { buy: fmtPvVol(pvResult.volume.buyVol), sell: fmtPvVol(pvResult.volume.sellVol) }),
                 });
               };
               const vb = pvResult.verdict.bias;
               const leanBull = pvResult.checks.filter((b) => b === "bull").length;
               const leanBear = pvResult.checks.filter((b) => b === "bear").length;
               const holdouts = ROWS.filter((_, i) => vb !== "neutral" && pvResult.checks[i] !== vb && pvResult.checks[i] !== "neutral");
-              const tileVal = (r: number) => (r < 6 ? pvResult.tiles[r].value : `${pvResult.volume.buyPct >= pvResult.volume.sellPct ? "Buyers" : "Sellers"} ${Math.max(pvResult.volume.buyPct, pvResult.volume.sellPct)}%`);
+              const tileVal = (r: number) => (r < 6 ? pvResult.tiles[r].value : volValue);
               return (
                 <div className={`pvr pvr--${vb}`}>
                   <div className="pvr-side">
                     {/* Header: title + soft subtitle, status pill on the right. */}
                     <div className={`pvl-head pvs--${vb}`}>
                       <span className="pvl-head-text">
-                        <span className="pvl-sub" data-cap="Indicators">
+                        <span className="pvl-sub" data-cap={t("chart.indicators")}>
                           <span key={`lb:${leanBull}`} className="pvl-count pvl-count--bull">
                             <span className="pvl-count-arrow" aria-hidden="true">▲</span>
                             <span className="pvl-count-n">{leanBull}</span>
-                            <span className="pvl-count-l">bullish</span>
+                            <span className="pvl-count-l">{t("priceChart.pv.bullishLc")}</span>
                           </span>
                           <span key={`lr:${leanBear}`} className="pvl-count pvl-count--bear">
                             <span className="pvl-count-arrow" aria-hidden="true">▼</span>
                             <span className="pvl-count-n">{leanBear}</span>
-                            <span className="pvl-count-l">bearish</span>
+                            <span className="pvl-count-l">{t("priceChart.pv.bearishLc")}</span>
                           </span>
                           {holdouts.length > 0 && (
-                            <span className="pvl-hold">{holdouts.join(", ")} holding out</span>
+                            <span className="pvl-hold">{t("priceChart.pv.holdingOut", { list: holdouts.join(", ") })}</span>
                           )}
                           <span className="pvl-time">
                             <span className="pvl-time-dot" aria-hidden="true" />
-                            <span className="pvl-desc">Updated </span>
-                            {pvUpdatedAt ? new Date(pvUpdatedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" }) : "connecting…"}
+                            <span className="pvl-desc">{t("priceChart.c.lastUpdated")} </span>
+                            {pvUpdatedAt ? new Date(pvUpdatedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" }) : t("priceChart.pv.connecting")}
                           </span>
                         </span>
                         {/* Order flow + timeframes folded into the header as one line. */}
                         <span className="pvl-meta">
                           <span
                             className="pvl-meta-flow"
-                            data-cap="Order flow · last 20 candles"
-                            title={pvResult.volume.real ? "Real market-buy vs market-sell volume, last 20 candles" : "Estimated from candle colour, last 20 candles"}
+                            data-cap={t("priceChart.pv.flowCap")}
+                            title={pvResult.volume.real ? t("priceChart.pv.flowTipReal") : t("priceChart.pv.flowTipEst")}
                           >
                             {/* Mini half-circle gauge: green = buyers share, red = sellers, needle at the split. */}
                             {(() => {
@@ -9904,25 +9660,25 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                               );
                             })()}
                             <span className={pvResult.volume.buyPct >= pvResult.volume.sellPct ? "pvl-meta-up pvl-meta-lead" : "pvl-meta-up"}>
-                              Buyers {pvResult.volume.buyPct}%
+                              {t("priceChart.vol.buyersPct", { pct: pvResult.volume.buyPct })}
                             </span>
                             <span className="pvl-meta-dot">·</span>
                             <span className={pvResult.volume.sellPct > pvResult.volume.buyPct ? "pvl-meta-down pvl-meta-lead" : "pvl-meta-down"}>
-                              Sellers {pvResult.volume.sellPct}%
+                              {t("priceChart.vol.sellersPct", { pct: pvResult.volume.sellPct })}
                             </span>
                             <span className="pvl-desc pvl-desc--soft">
-                              {pvResult.volume.bias === "bull" ? "buyers in control" : pvResult.volume.bias === "bear" ? "sellers in control" : "evenly matched"}
+                              {pvResult.volume.bias === "bull" ? t("priceChart.pv.buyersControl") : pvResult.volume.bias === "bear" ? t("priceChart.pv.sellersControl") : t("priceChart.pv.even")}
                             </span>
                           </span>
                           {pvMtf.length > 0 && (
-                            <span className="pvl-meta-tfs" data-cap="Timeframes">
+                            <span className="pvl-meta-tfs" data-cap={t("priceChart.pv.timeframes")}>
                               {pvMtf.map((m) => {
                                 const pct = m.strength === null ? 0 : m.bias === "bear" ? 100 - m.strength : m.bias === "bull" ? m.strength : 50;
                                 return (
                                   <span
                                     key={`${m.label}:${m.bias}`}
                                     className={`pvl-meta-tf pvl-meta-tf--${m.bias}${m.iv === interval ? " pvl-meta-tf--live" : ""}`}
-                                    title={`${m.label}: ${m.bias === "bull" ? "bullish" : m.bias === "bear" ? "bearish" : "mixed"}${m.strength === null ? "" : ` · ${Math.round(pct)}%`}`}
+                                    title={`${m.label}: ${m.bias === "bull" ? t("priceChart.pv.bullishLc") : m.bias === "bear" ? t("priceChart.pv.bearishLc") : t("priceChart.pv.mixedLc")}${m.strength === null ? "" : ` · ${Math.round(pct)}%`}`}
                                   >
                                     {/* Tiny ring gauge: fill = how strongly that timeframe leans. */}
                                     <span className="pvl-ring" style={{ ["--ring-p" as string]: `${Math.max(pct, 6) * 3.6}deg` }} aria-hidden="true" />
@@ -9933,7 +9689,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                               {(() => {
                                 const up = pvMtf.filter((m) => m.bias === "bull").length;
                                 const dn = pvMtf.filter((m) => m.bias === "bear").length;
-                                const txt = up > dn ? `${up} of ${pvMtf.length} bullish` : dn > up ? `${dn} of ${pvMtf.length} bearish` : "mixed";
+                                const txt = up > dn ? t("priceChart.pv.nOfBullish", { n: up, total: pvMtf.length }) : dn > up ? t("priceChart.pv.nOfBearish", { n: dn, total: pvMtf.length }) : t("priceChart.pv.mixedLc");
                                 return <span className="pvl-desc pvl-desc--soft">{txt}</span>;
                               })()}
                             </span>
@@ -9943,7 +9699,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     </div>
                     {/* The 7 checks as diverging segment bars: bearish cells
                         light up to the left of centre, bullish to the right. */}
-                    <div className="pvsb" role="list" aria-label="Indicators">
+                    <div className="pvsb" role="list" aria-label={t("chart.indicators")}>
                       {ROWS.map((name, r) => {
                         const b = pvResult.checks[r];
                         const s = pvResult.checkStrength[r] ?? 0.5;
@@ -9960,7 +9716,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                             className={`pvsb-row pvsb-row--${b}`}
                             onClick={() => openRow(r)}
                             aria-label={`${label}: ${v}`}
-                            title={PV_ROW_DESC[r]}
+                            title={t(`priceChart.pv.rowDesc.${r}`, PV_ROW_DESC[r])}
                           >
                             <span className="pvsb-name">{label}</span>
                             <span className="pvsb-bar" aria-hidden="true" style={{ ["--row" as string]: r }}>
@@ -10011,10 +9767,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
                   </span>
                   <span className="pv-trial-line-text">
-                    <strong>Enjoying ProVision?</strong>
-                    <em>{left} left · then {pvPrice}/year</em>
+                    <strong>{t("priceChart.trial.enjoyingPv")}</strong>
+                    <em>{t("priceChart.trial.leftThen", { left, price: pvPrice })}</em>
                   </span>
-                  <span className="pv-trial-line-cta">Keep it</span>
+                  <span className="pv-trial-line-cta">{t("priceChart.trial.keepIt")}</span>
                 </button>
               );
             })()}
@@ -10033,27 +9789,27 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 <div className="pvt">
                   <div className="pvt-head">
                     <span className="pvt-title">
-                      Track record
-                      <span className="pvt-src">{pvResult.signalSource ? `${pvResult.signalSource} chart` : "this chart"} · {st.total} signal{st.total === 1 ? "" : "s"}</span>
+                      {t("priceChart.tr.title")}
+                      <span className="pvt-src">{t("priceChart.tr.src", { chart: pvResult.signalSource ? t("priceChart.tr.srcChart", { src: pvResult.signalSource }) : t("priceChart.tr.thisChart"), count: st.total })}</span>
                     </span>
                     {st.trades > 0 && (
                       <span className={`pvt-bottom pvt-bottom--${paid ? "good" : "bad"}`}>
-                        {paid ? "Paid off" : "Lost money"} · {fmtP(per)} per trade
+                        {t(paid ? "priceChart.tr.paidOff" : "priceChart.tr.lostMoney", { per: fmtP(per) })}
                       </span>
                     )}
                   </div>
 
                   <div className="pvt-strip">
-                    <span className="pvt-kv"><span className="pvt-k">Hit rate</span><span className="pvt-v">{st.winRate === null ? "—" : `${st.winRate}%`}</span></span>
-                    <span className="pvt-kv"><span className="pvt-k">Won / lost</span><span className="pvt-v"><span className="pvt-g">{st.worked}</span> / <span className="pvt-r">{st.failed}</span>{st.open ? <span className="pvt-dim"> · {st.open} open</span> : null}</span></span>
-                    <span className="pvt-kv"><span className="pvt-k">Avg win</span><span className="pvt-v pvt-g">{fmtP(st.avgWinPct)}</span></span>
-                    <span className="pvt-kv"><span className="pvt-k">Avg loss</span><span className="pvt-v pvt-r">{fmtP(st.avgLossPct, false)}</span></span>
-                    <span className="pvt-kv"><span className="pvt-k" title="Average win size vs average loss size">Win : loss</span><span className="pvt-v">{ratio === null ? "—" : `${ratio.toFixed(1)} : 1`}</span></span>
+                    <span className="pvt-kv"><span className="pvt-k">{t("priceChart.tr.hitRate")}</span><span className="pvt-v">{st.winRate === null ? "—" : `${st.winRate}%`}</span></span>
+                    <span className="pvt-kv"><span className="pvt-k">{t("priceChart.tr.wonLost")}</span><span className="pvt-v"><span className="pvt-g">{st.worked}</span> / <span className="pvt-r">{st.failed}</span>{st.open ? <span className="pvt-dim"> · {t("priceChart.tr.nOpen", { n: st.open })}</span> : null}</span></span>
+                    <span className="pvt-kv"><span className="pvt-k">{t("priceChart.tr.avgWin")}</span><span className="pvt-v pvt-g">{fmtP(st.avgWinPct)}</span></span>
+                    <span className="pvt-kv"><span className="pvt-k">{t("priceChart.tr.avgLoss")}</span><span className="pvt-v pvt-r">{fmtP(st.avgLossPct, false)}</span></span>
+                    <span className="pvt-kv"><span className="pvt-k" title={t("priceChart.tr.winLossTip")}>{t("priceChart.tr.winLoss")}</span><span className="pvt-v">{ratio === null ? "—" : `${ratio.toFixed(1)} : 1`}</span></span>
                   </div>
 
                   {recent.length > 0 && (
-                    <div className="pvt-trades" aria-label="Recent signals and their results">
-                      <span className="pvt-k">Last {recent.length}</span>
+                    <div className="pvt-trades" aria-label={t("priceChart.tr.recentAria")}>
+                      <span className="pvt-k">{t("priceChart.tr.lastN", { n: recent.length })}</span>
                       <span className="pvt-tiles">
                         {recent.map((s) => {
                           const res = s.pnlPct === null ? "open" : s.pnlPct > 0 ? "win" : "loss";
@@ -10062,10 +9818,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                             <span
                               key={s.time}
                               className={`pvt-tile pvt-tile--${res}`}
-                              title={`${s.side === "buy" ? "Buy" : "Sell"} · ${when} · ${s.pnlPct === null ? "still open" : fmtP(s.pnlPct)}`}
+                              title={`${s.side === "buy" ? t("priceChart.promo.buy") : t("priceChart.promo.sell")} · ${when} · ${s.pnlPct === null ? t("priceChart.tr.stillOpen") : fmtP(s.pnlPct)}`}
                             >
                               <span className="pvt-tile-side">{s.side === "buy" ? "▲" : "▼"}</span>
-                              <span className="pvt-tile-pnl">{s.pnlPct === null ? "open" : fmtP(s.pnlPct)}</span>
+                              <span className="pvt-tile-pnl">{s.pnlPct === null ? t("priceChart.tr.open") : fmtP(s.pnlPct)}</span>
                             </span>
                           );
                         })}
@@ -10074,12 +9830,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   )}
 
                   <details className="pvt-how">
-                    <summary>How this is measured</summary>
+                    <summary>{t("priceChart.tr.howTitle")}</summary>
                     <p>
                       {pvResult.barSec <= 300 && !pvResult.signalSource
-                        ? "Each signal is traded from its close with a stop at its invalidation line, taking profit after a typical one-candle move (or exiting after 20 candles), minus 0.1% fees. "
-                        : "Each signal is traded from its close with a stop at its invalidation line that then trails 3 typical candle-moves behind the best price — exiting when the trend turns, or after 60 candles — minus 0.1% fees. Fewer trades win, but winners run. "}
-                      Signals need 5 of 7 checks to agree and the bigger trend to match; intraday they must also hold 3 candles with ADX ≥ 20, sideways stretches and fades of ⚡ spikes are skipped, and thin markets get none. Past results on this chart only — not a promise.
+                        ? `${t("priceChart.tr.howShort")} `
+                        : `${t("priceChart.tr.howLong")} `}
+                      {t("priceChart.tr.howRules")}
                     </p>
                   </details>
                 </div>
@@ -10088,25 +9844,25 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             {/* Range mode's own track record (1h and above). */}
             {pvResult.rangeStats.trades > 0 && (
               <div className="pv-group">
-                <span className="pv-group-label">Range signals (R·BUY / R·SELL)</span>
+                <span className="pv-group-label">{t("priceChart.tr.rangeTitle")}</span>
                 <div className="pv-pnl">
                   <div className="pv-pnl-cell">
-                    <span className="pv-pnl-label">Trades</span>
+                    <span className="pv-pnl-label">{t("priceChart.tabs.trades")}</span>
                     <span className="pv-pnl-val">{pvResult.rangeStats.trades}</span>
                   </div>
                   <div className="pv-pnl-cell">
-                    <span className="pv-pnl-label">Hit rate</span>
+                    <span className="pv-pnl-label">{t("priceChart.tr.hitRate")}</span>
                     <span className="pv-pnl-val">{pvResult.rangeStats.winRate === null ? "—" : `${pvResult.rangeStats.winRate}%`}</span>
                   </div>
                   <div className="pv-pnl-cell">
-                    <span className="pv-pnl-label">Per trade</span>
+                    <span className="pv-pnl-label">{t("priceChart.tr.perTrade")}</span>
                     <span className={`pv-pnl-val ${(pvResult.rangeStats.perTradePct ?? 0) > 0 ? "pv-stat-val--bull" : "pv-stat-val--bear"}`}>
                       {pvResult.rangeStats.perTradePct === null ? "—" : `${pvResult.rangeStats.perTradePct > 0 ? "+" : ""}${pvResult.rangeStats.perTradePct.toFixed(2)}%`}
                     </span>
                   </div>
                 </div>
                 <span className="pv-note">
-                  While the market is sideways: buy a bounce off the floor, sell a rejection at the ceiling. Stop just outside the box, target the middle of the range, 0.1% fees.
+                  {t("priceChart.tr.rangeNote")}
                 </span>
               </div>
             )}
@@ -10120,8 +9876,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             open={pvAdvSheetOpen && !!pvResult}
             // ✕ or swipe down → back to the minimised icon (which pops).
             onClose={() => { setPvAdvSheetOpen(false); setPvDockPop((k) => k + 1); }}
-            title={`${COINS.find((c) => c.symbol === coin)?.name ?? coin} · Signal Check`}
-            ariaLabel="ProVision Signal Check"
+            title={t("priceChart.pv.sheetTitle", { name: COINS.find((c) => c.symbol === coin)?.name ?? coin })}
+            ariaLabel={t("priceChart.pv.title")}
             className="pv-adv-sheet"
           >
             <div className="pv-adv-sheet-body">{renderPvHud("card")}</div>
@@ -10131,7 +9887,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           open={!!pvTileOpen}
           onClose={() => setPvTileOpen(null)}
           title={<>{pvTileOpen?.label}</>}
-          ariaLabel={pvTileOpen?.label ?? "Signal detail"}
+          ariaLabel={pvTileOpen?.label ?? t("priceChart.km.signalDetail")}
           desktopModal
         >
           {pvTileOpen && (
@@ -10155,8 +9911,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               type="button"
               className="chart-depth-btn chart-mobile-interval-fs-btn"
               onClick={toggleFullscreen}
-              title={t("chart.fullscreen", "Fullscreen")}
-              data-tooltip={t("chart.fullscreen", "Fullscreen")}
+              title={t("priceChart.c.fullscreen")}
+              data-tooltip={t("priceChart.c.fullscreen")}
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3" />
@@ -10214,7 +9970,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           if (!kmReady) {
             return (
               <div className="sb-wrap">
-                <div className="km km--loading" role="status" aria-label={`Loading ${coinName} signals`}>
+                <div className="km km--loading" role="status" aria-label={t("priceChart.km.loading", { name: coinName })}>
                   <div className="km-head">
                     <span className="km-q">
                       <img
@@ -10223,7 +9979,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                         alt=""
                         onError={(e) => { e.currentTarget.style.display = "none"; }}
                       />
-                      What's next for {coinName}?
+                      {t("priceChart.whatsNext", { name: coinName })}
                     </span>
                     <span className="km-tf">{INTERVAL_SHORT[interval]}</span>
                   </div>
@@ -10232,7 +9988,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   <div className="km-skel km-skel--bar" />
                   <div className="km-loading-foot">
                     <span className="km-spinner" aria-hidden="true" />
-                    Reading the chart…
+                    {t("priceChart.c.agentThinking")}
                   </div>
                 </div>
               </div>
@@ -10248,24 +10004,24 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     alt=""
                     onError={(e) => { e.currentTarget.style.display = "none"; }}
                   />
-                  What's next for {coinName}?
+                  {t("priceChart.whatsNext", { name: coinName })}
                 </span>
-                <span className="km-tf"><i className="km-live" aria-hidden="true" />LIVE · {INTERVAL_SHORT[interval]}</span>
+                <span className="km-tf"><i className="km-live" aria-hidden="true" />{t("priceChart.live")} · {INTERVAL_SHORT[interval]}</span>
               </div>
               <div className="km-big">
                 <b>{chance}%</b>
-                <span className="km-big-label">chance {leadSide === "bull" ? "bullish" : "bearish"}</span>
-                {read.length > 0 && <span className="km-agree">{agree} of {read.length} tools agree</span>}
+                <span className="km-big-label">{leadSide === "bull" ? t("priceChart.km.chanceBull") : t("priceChart.km.chanceBear")}</span>
+                {read.length > 0 && <span className="km-agree">{t("priceChart.km.toolsAgree", { n: agree, total: read.length })}</span>}
               </div>
               {spark}
               {/* One split bar: bullish share (left) vs bearish (right). */}
-              <div className="km-gauge" role="img" aria-label={`Bullish ${bullPct}%, bearish ${bearPct}%`} style={{ ["--split" as string]: `${bullPct}%` }}>
+              <div className="km-gauge" role="img" aria-label={t("priceChart.km.gaugeAria", { bull: bullPct, bear: bearPct })} style={{ ["--split" as string]: `${bullPct}%` }}>
                 <div className="km-gauge-labels">
                   <span className={`km-gauge-side km-gauge-side--bull${leadSide === "bull" ? " km-gauge-side--lead" : ""}`}>
-                    Bullish <b>{bullPct}%</b>
+                    {t("priceChart.c.bullish")} <b>{bullPct}%</b>
                   </span>
                   <span className={`km-gauge-side km-gauge-side--bear${leadSide === "bear" ? " km-gauge-side--lead" : ""}`}>
-                    <b>{bearPct}%</b> Bearish
+                    <b>{bearPct}%</b> {t("priceChart.c.bearish")}
                   </span>
                 </div>
                 <div className="km-gauge-track" aria-hidden="true">
@@ -10281,7 +10037,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   className="km-more"
                   onClick={() => { hapticTap(); setInsightOpen(pvOn ? "pv" : "cns"); }}
                 >
-                  See full analysis ›
+                  {t("priceChart.km.seeFull")}
                 </button>
               </div>
             </div>
@@ -10293,24 +10049,24 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <BottomSheet
                 open={insightOpen !== null}
                 onClose={() => setInsightOpen(null)}
-                title={`What's next for ${coinName}?`}
-                ariaLabel="Full analysis"
+                title={t("priceChart.whatsNext", { name: coinName })}
+                ariaLabel={t("priceChart.km.fullAnalysis")}
                 floating
               >
                 <div className="km-sheet">
-                  <div className="km-seg" role="tablist" aria-label="Analysis">
+                  <div className="km-seg" role="tablist" aria-label={t("priceChart.km.analysis")}>
                     <button type="button" role="tab" aria-selected={insightOpen === "pv"} className={`km-seg-btn${insightOpen === "pv" ? " km-seg-btn--on" : ""}`} onClick={() => setInsightOpen("pv")}>
-                      ProVision Signal
+                      {t("priceChart.km.pvSignal")}
                     </button>
                     <button type="button" role="tab" aria-selected={insightOpen === "cns"} className={`km-seg-btn${insightOpen === "cns" ? " km-seg-btn--on" : ""}`} onClick={() => setInsightOpen("cns")}>
-                      Consensus
+                      {t("priceChart.km.consensus")}
                     </button>
                   </div>
                   {insightOpen === "pv" && (pvOn ? (
                     renderPvHud("pro")
                   ) : (
                     <div className="km-sheet-empty">
-                      <p>Signal Check is part of ProVision: trend, 7 indicators and a scored track record.</p>
+                      <p>{t("priceChart.km.partOfPv")}</p>
                       <button
                         type="button"
                         className="km-more"
@@ -10320,7 +10076,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                           else if (!pvActive) pvGate.toggle(coin);
                         }}
                       >
-                        {pvReason ? "Try ProVision ›" : "Turn on ProVision ›"}
+                        {pvReason ? t("priceChart.km.tryPv") : t("priceChart.km.turnOnPv")}
                       </button>
                     </div>
                   ))}
@@ -10341,7 +10097,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         {/* …then the big "Trade BTC" button → Paper Trade (mobile). */}
         {!isDesktopWidth && !isFullscreen && !pageMode && onOpenPaperTrade && !phoneCmcPage && (
           <button type="button" className="chart-trade-cta" onClick={onOpenPaperTrade}>
-            Trade {coin}
+            {t("priceChart.tradeCoin", { coin })}
             <span className="chart-trade-cta-p" aria-hidden="true">P</span>
           </button>
         )}
@@ -10386,10 +10142,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           onUpgrade={() => { setToolsIndOpen(false); onOpenUpgrade?.("pro"); }}
         />
         {statsSheetOpen && (
-          <BottomSheet open onClose={() => setStatsSheetOpen(false)} title={<>{coin} stats</>} ariaLabel={`${coin} stats`}>
+          <BottomSheet open onClose={() => setStatsSheetOpen(false)} title={<>{t("priceChart.stats.title", { coin })}</>} ariaLabel={t("priceChart.stats.title", { coin })}>
               <div className="chart-stats-sheet chart-bar-stats">
                 <div className="chart-bar-stat">
-                  <span className="chart-bar-stat-label">{INTERVAL_SHORT[interval]} Change</span>
+                  <span className="chart-bar-stat-label">{t("priceChart.stats.change", { iv: INTERVAL_SHORT[interval] })}</span>
                   <span className={`chart-bar-stat-value${dayChangePercent === null ? "" : dayChangePercent >= 0 ? " up" : " down"}`}>
                     {dayChangeAbs !== null && dayChangePercent !== null
                       ? `${dayChangeAbs >= 0 ? "+" : "-"}${formatLivePrice(Math.abs(dayChangeAbs))} / ${dayChangePercent >= 0 ? "+" : ""}${dayChangePercent.toFixed(2)}%`
@@ -10397,17 +10153,17 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   </span>
                 </div>
                 <div className="chart-bar-stat">
-                  <span className="chart-bar-stat-label">{INTERVAL_SHORT[interval]} High</span>
+                  <span className="chart-bar-stat-label">{t("priceChart.stats.high", { iv: INTERVAL_SHORT[interval] })}</span>
                   <span className="chart-bar-stat-value">{displayDayHigh !== null ? formatLivePrice(displayDayHigh) : "—"}</span>
                 </div>
                 <div className="chart-bar-stat">
-                  <span className="chart-bar-stat-label">{INTERVAL_SHORT[interval]} Low</span>
+                  <span className="chart-bar-stat-label">{t("priceChart.stats.low", { iv: INTERVAL_SHORT[interval] })}</span>
                   <span className="chart-bar-stat-value">{displayDayLow !== null ? formatLivePrice(displayDayLow) : "—"}</span>
                 </div>
                 {headerStats}
                 {quoteVolume24h !== undefined && (
                   <div className="chart-bar-stat">
-                    <span className="chart-bar-stat-label">24h Vol</span>
+                    <span className="chart-bar-stat-label">{t("priceChart.vol24h")}</span>
                     <span className="chart-bar-stat-value">{formatCompactVolume(quoteVolume24h)}</span>
                   </div>
                 )}
@@ -10415,7 +10171,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           </BottomSheet>
         )}
         {dateRangeSheetOpen && (
-          <BottomSheet open onClose={() => setDateRangeSheetOpen(false)} title={<>Date range</>} ariaLabel="Date range">
+          <BottomSheet open onClose={() => setDateRangeSheetOpen(false)} title={<>{t("priceChart.dateRange")}</>} ariaLabel={t("priceChart.dateRange")}>
               <div className="date-range-sheet-list">
                 {RANGE_PRESETS.map((x) => (
                   <button
@@ -10425,7 +10181,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     onClick={() => { setDateRangeSheetOpen(false); applyRangePreset(x); }}
                   >
                     <span className="date-range-sheet-label">{x.label}</span>
-                    <span className="date-range-sheet-sub">{x.tip}</span>
+                    <span className="date-range-sheet-sub">{t(`chartBar.rangeTip.${x.key}`, x.tip)}</span>
                     {activeRangePreset?.key === x.key && <span className="chart-style-check">✓</span>}
                   </button>
                 ))}
@@ -10434,8 +10190,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   className="date-range-sheet-item"
                   onClick={() => { setDateRangeSheetOpen(false); setGoToOpen(true); }}
                 >
-                  <span className="date-range-sheet-label">Custom</span>
-                  <span className="date-range-sheet-sub">Pick a date or a custom range</span>
+                  <span className="date-range-sheet-label">{t("priceChart.custom")}</span>
+                  <span className="date-range-sheet-sub">{t("priceChart.customSub")}</span>
                 </button>
               </div>
           </BottomSheet>
@@ -10543,18 +10299,18 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             <div className="chart-ai-placeholder-overlay">
               <div className="cap-overlay-left">
                 <div className="cap-overlay-header">
-                  <span className="cap-overlay-title">AI Chart Read</span>
+                  <span className="cap-overlay-title">{t("priceChart.aiChartRead")}</span>
                   <span className="cap-overlay-ai-badge">AI</span>
                   <span className="cap-overlay-tier-badge">PRO</span>
-                  <span className="aiqw-live-badge"><span className="aiqw-live-dot" />LIVE</span>
+                  <span className="aiqw-live-badge"><span className="aiqw-live-dot" />{t("priceChart.live")}</span>
                 </div>
                 <div className="cap-overlay-features">
                   {/* Both former banners' features, in one list. */}
                   {[
-                    "Interval sentiment & trend context",
-                    "Candlestick pattern recognition",
-                    "Bullish / bearish confidence score",
-                    "Next-move predictions & outlook",
+                    t("priceChart.ai.f1"),
+                    t("priceChart.ai.f2"),
+                    t("priceChart.ai.f3"),
+                    t("priceChart.ai.f4"),
                   ].map(f => (
                     <span key={f} className="cap-overlay-feature">
                       <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -10567,8 +10323,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 className="cap-overlay-btn"
                 onClick={() => onOpenUpgrade?.("pro")}
               >
-                <span className="cap-btn-full">Upgrade Now</span>
-                <span className="cap-btn-short">Upgrade</span>
+                <span className="cap-btn-full">{t("priceChart.ai.upgradeNow")}</span>
+                <span className="cap-btn-short">{t("priceChart.c.upgrade")}</span>
               </button>
             </div>
           </div>
@@ -10583,10 +10339,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               </svg>
             </span>
             <span className="ai-read-cta-text">
-              <span className="ai-read-cta-title">AI Chart Read</span>
-              <span className="ai-read-cta-sub">Trend bias + candlestick pattern for {coin} {INTERVAL_SHORT[interval]}</span>
+              <span className="ai-read-cta-title">{t("priceChart.aiChartRead")}</span>
+              <span className="ai-read-cta-sub">{t("priceChart.ai.ctaSub", { coin, iv: INTERVAL_SHORT[interval] })}</span>
             </span>
-            <span className="ai-read-cta-btn">Analyze</span>
+            <span className="ai-read-cta-btn">{t("priceChart.ai.analyze")}</span>
           </button>
         ) : (displayPatternInsight || (displayBanner && !isFullscreen)) ? (
           <div className={`ai-read ai-read--${displayBanner?.sentiment ?? displayPatternInsight?.type ?? "neutral"}`}>
@@ -10595,17 +10351,17 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 <span className="ai-read-spark">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 5.6L20 10l-5.6 2.4L12 18l-2.4-5.6L4 10l5.6-2.4z" /></svg>
                 </span>
-                AI Chart Read
+                {t("priceChart.aiChartRead")}
                 <span className="ai-read-head-ctx">{coin} · {INTERVAL_SHORT[interval]}</span>
               </span>
               <span className="ai-read-head-right">
                 {(bannerAt ?? patternInsightAt) !== null && (
                   <span className="ai-read-updated">
-                    {t("chart.lastUpdated", "Updated")} {formatClockTime((bannerAt ?? patternInsightAt) as number)}
+                    {t("priceChart.c.lastUpdated")} {formatClockTime((bannerAt ?? patternInsightAt) as number)}
                   </span>
                 )}
-                <span className="aiqw-live-badge"><span className="aiqw-live-dot" />LIVE</span>
-                <button type="button" className="ai-read-close" aria-label="Hide AI Chart Read" onClick={() => { setAiReadOpen(false); setAiCtaOn(false); }}>✕</button>
+                <span className="aiqw-live-badge"><span className="aiqw-live-dot" />{t("priceChart.live")}</span>
+                <button type="button" className="ai-read-close" aria-label={t("priceChart.ai.hide")} onClick={() => { setAiReadOpen(false); setAiCtaOn(false); }}>✕</button>
               </span>
             </div>
 
@@ -10618,7 +10374,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   onClick={isDesktopWidth ? undefined : () => setPatternInsightSheetOpen(true)}
                   onKeyDown={isDesktopWidth ? undefined : (e) => { if (e.key === "Enter" || e.key === " ") setPatternInsightSheetOpen(true); }}
                 >
-                  <span className="ai-read-label">Trend</span>
+                  <span className="ai-read-label">{t("priceChart.ai.trend")}</span>
                   <span className={`ai-read-chip ai-read-chip--${displayBanner.sentiment}`}>
                     {displayBanner.sentiment === "bullish" ? "▲" : displayBanner.sentiment === "bearish" ? "▼" : "●"} {displayBanner.title}
                   </span>
@@ -10632,7 +10388,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               )}
               {displayPatternInsight && (
                 <div className="ai-read-col ai-read-pattern">
-                  <span className="ai-read-label">Pattern</span>
+                  <span className="ai-read-label">{t("priceChart.ai.pattern")}</span>
                   <span className={`ai-read-chip ai-read-chip--${displayPatternInsight.type}`}>
                     {displayPatternInsight.name}
                   </span>

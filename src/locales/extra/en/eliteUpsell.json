@@ -1,0 +1,16 @@
+{
+  "eliteUpsell": {
+    "close": "Close",
+    "nowOnPre": "You're now on ",
+    "nowOnPost": ".",
+    "done": "Done",
+    "onProPre": "You're on ",
+    "onProPost": " · all features carry over",
+    "chargedPre": "You'll be charged ",
+    "chargedMid": " today — prorated for the rest of your billing period. Then ",
+    "monthlyPrice": "{{price}}/mo",
+    "chargedPost": " on your normal renewal date.",
+    "payUpgrade": "Pay {{amount}} & Upgrade to Elite",
+    "goBack": "Go back"
+  }
+}

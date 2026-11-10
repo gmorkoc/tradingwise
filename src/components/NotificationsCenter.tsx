@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import ReactDOM from "react-dom";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { useAuth } from "../contexts/AuthContext";
 import {
   UserNotification, fetchNotifications, fetchUnreadNotificationCount,
@@ -35,19 +37,20 @@ const TYPE_ICON: Record<string, string> = {
   upgrade_reminder: "✦",
 };
 
-function formatRelativeTime(iso: string): string {
+function formatRelativeTime(iso: string, t: TFunction): string {
   const diffMs = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diffMs / 60_000);
-  if (mins < 1) return "now";
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return t("notificationsCenter.now");
+  if (mins < 60) return t("notificationsCenter.minsAgo", { n: mins });
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return t("notificationsCenter.hoursAgo", { n: hours });
   const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
+  if (days < 7) return t("notificationsCenter.daysAgo", { n: days });
   return new Date(iso).toLocaleDateString();
 }
 
 export function NotificationsCenter({ open, onClose, onUnreadCountChange, anchor }: Props) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [items, setItems] = useState<UserNotification[]>([]);
   const [loading, setLoading] = useState(false);
@@ -118,21 +121,21 @@ export function NotificationsCenter({ open, onClose, onUnreadCountChange, anchor
       >
         <div className="notif-panel-header">
           <div>
-            <span className="notif-panel-title">Notifications</span>
-            <span className="notif-panel-sub">Buy/sell signals, price alerts, strategy alerts & news</span>
+            <span className="notif-panel-title">{t("notificationsCenter.title")}</span>
+            <span className="notif-panel-sub">{t("notificationsCenter.sub")}</span>
           </div>
           <div className="notif-panel-header-actions">
             {unreadCount > 0 && (
-              <button type="button" className="notif-mark-all" onClick={handleMarkAllRead}>Mark all read</button>
+              <button type="button" className="notif-mark-all" onClick={handleMarkAllRead}>{t("notificationsCenter.markAllRead")}</button>
             )}
-            <button type="button" className="notif-panel-close" onClick={onClose}>✕</button>
+            <button type="button" className="notif-panel-close" onClick={onClose} aria-label={t("notificationsCenter.close")}>✕</button>
           </div>
         </div>
 
         <div className="notif-list">
-          {user && loading && items.length === 0 && <p className="notif-empty">Loading…</p>}
+          {user && loading && items.length === 0 && <p className="notif-empty">{t("notificationsCenter.loading")}</p>}
           {user && !loading && items.length === 0 && (
-            <p className="notif-empty">No notifications yet — buy/sell signals, price alerts, strategy alerts and news will show up here.</p>
+            <p className="notif-empty">{t("notificationsCenter.empty")}</p>
           )}
           {items.map((n) => (
             <button
@@ -148,7 +151,7 @@ export function NotificationsCenter({ open, onClose, onUnreadCountChange, anchor
               </span>
               <span className="notif-item-meta">
                 {!n.read && <span className="notif-item-dot" />}
-                <span className="notif-item-time">{formatRelativeTime(n.created_at)}</span>
+                <span className="notif-item-time">{formatRelativeTime(n.created_at, t)}</span>
               </span>
             </button>
           ))}

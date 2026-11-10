@@ -1,0 +1,220 @@
+{
+  "tradingAgent": {
+    "connecting": "Agent is connecting",
+    "callout": "Meet Agent Ready — your AI trading copilot",
+    "time": {
+      "now": "now",
+      "minAgo": "{{n}}m ago",
+      "hourAgo": "{{n}}h ago",
+      "dayAgo": "{{n}}d ago"
+    },
+    "conv": {
+      "pin": "Pin",
+      "unpin": "Unpin",
+      "pinConversation": "Pin conversation",
+      "unpinConversation": "Unpin conversation",
+      "delete": "Delete",
+      "deleteConversation": "Delete conversation",
+      "empty": "(empty)",
+      "messages_one": "{{count}} message",
+      "messages_other": "{{count}} messages"
+    },
+    "head": {
+      "menu": "Menu",
+      "agentActions": "Agent actions",
+      "close": "Close",
+      "newChat": "New chat",
+      "history": "History",
+      "watchlist": "Watchlist",
+      "positions": "Positions"
+    },
+    "history": {
+      "chatsCount": "{{n}}/{{max}} chats",
+      "limitHit": "You've reached the {{max}}-chat limit. To start a new chat, delete one below first.",
+      "limitNear": "Heads up: you can keep up to {{max}} chats. {{left}} left before you'll need to delete one to start a new chat.",
+      "limitInfo": "You can keep up to {{max}} chats. Once you reach {{max}}, delete one to start a new chat.",
+      "noConversations": "No past conversations yet.",
+      "pinned": "Pinned",
+      "allChats": "All chats",
+      "backToChat": "Back to chat"
+    },
+    "watches": {
+      "active": "Active watches",
+      "noActive": "No active watches.",
+      "notifications": "Notifications",
+      "noTriggered": "No triggered watches yet.",
+      "watch": "Watch",
+      "watching": "Watching <b>{{coin}}</b>",
+      "timeframe": "Timeframe",
+      "daily": "Daily",
+      "settingUp": "Setting up…",
+      "cancel": "Cancel",
+      "cancelled": "Cancelled",
+      "triggered": "✓ Triggered"
+    },
+    "positions": {
+      "title": "Positions",
+      "refresh": "Refresh",
+      "refreshPositions": "Refresh positions",
+      "tabOpen": "Open",
+      "tabClosed": "Closed",
+      "loadingClosed": "Loading your closed positions…",
+      "openTitle": "Open Positions",
+      "closedTitle": "Closed Positions",
+      "noOpen": "No open positions right now.",
+      "noClosed": "No closed positions yet.",
+      "scrollMore": "{{count}} positions · scroll for more",
+      "tapHint": "Tap a position for full details",
+      "side": "Side",
+      "size": "Size",
+      "entry": "Entry",
+      "current": "Current",
+      "exit": "Exit",
+      "pnl": "P&L",
+      "opened": "Opened",
+      "closed": "Closed",
+      "closing": "Closing…",
+      "closePosition": "Close Position",
+      "close": "Close",
+      "closeReason": {
+        "manual": "manual",
+        "take_profit": "take profit",
+        "stop_loss": "stop loss",
+        "liquidation": "liquidation"
+      }
+    },
+    "proposal": {
+      "long": "LONG",
+      "short": "SHORT",
+      "buy": "BUY",
+      "sell": "SELL",
+      "spot": "SPOT",
+      "futures": "FUTURES {{leverage}}x",
+      "margin": "Margin",
+      "cost": "Cost",
+      "notional": "Notional",
+      "takeProfit": "Take Profit",
+      "stopLoss": "Stop Loss",
+      "executing": "Executing…",
+      "confirm": "Confirm",
+      "confirmAll": "Confirm All",
+      "dismiss": "Dismiss",
+      "executed": "✓ Executed",
+      "dismissed": "Dismissed",
+      "total": "Total",
+      "totalAcross_one": "{{amount}} across {{count}} name",
+      "totalAcross_other": "{{amount}} across {{count}} names",
+      "updateBalance": "Update Balance",
+      "newCashBalance": "New cash balance",
+      "updating": "Updating…",
+      "updated": "✓ Updated",
+      "openSection": "Open {{label}} →"
+    },
+    "consent": {
+      "strong": "Paper trading only — simulated money, simulated trades.",
+      "body": "This agent is not a registered financial or investment advisor, and nothing it says is financial advice. coinhintz is not responsible for any losses, simulated or otherwise, from using this feature. We'll only ask you to accept this once — you won't see this disclaimer again after today.",
+      "oneSec": "One sec…",
+      "agree": "I understood and agreed!"
+    },
+    "continueBanner": {
+      "text": "Pick up where you left off:",
+      "continue": "Continue →"
+    },
+    "webPush": {
+      "text": "Get a browser alert when a watch or position triggers, even with this closed.",
+      "enabling": "Enabling…",
+      "enable": "Enable"
+    },
+    "portfolio": {
+      "title": "Portfolio",
+      "cash": "Cash",
+      "edit": "Edit",
+      "winRate": "Win Rate",
+      "winLoss": "({{wins}}W–{{losses}}L)",
+      "currentPositions": "Current Positions"
+    },
+    "feed": {
+      "emptyHint": "Try \"buy $200 of BTC\", \"sell half my ETH\", or \"what do you think about SOL?\" — everything here is simulated, no real money or exchange involved.",
+      "thoughtProcess": "Thought process",
+      "chartScreenshot": "Chart screenshot",
+      "cancel": "Cancel",
+      "saveResend": "Save & resend",
+      "copied": "Copied",
+      "copyMessage": "Copy message",
+      "copy": "Copy",
+      "editMessage": "Edit message",
+      "edit": "Edit",
+      "sources_one": "{{count}} Source",
+      "sources_other": "{{count}} Sources",
+      "thinking": "Thinking",
+      "tapToInterrupt": "Tap to interrupt"
+    },
+    "snapshot": {
+      "trend": {
+        "up": "up",
+        "down": "down",
+        "range": "range"
+      },
+      "na": "n/a",
+      "funding": "Funding",
+      "chart": "Chart",
+      "orderBook": "Order Book",
+      "openingChart": "Opening {{coin}} Chart…",
+      "openingOrderBook": "Opening {{coin}} Order Book…"
+    },
+    "opener": {
+      "scanning": "I'm checking the market for the best options for ya",
+      "coinList": "Coin list",
+      "marketCap": "Market cap",
+      "topGainers": "Top gainers",
+      "tapToStart": "Tap one to start — or just tell me a coin.",
+      "noGainers": "No gainers in the top 100 right now.",
+      "marketDataDown": "Market data isn't loading right now — just tell me which coin.",
+      "topByCapAria": "Top coins by market cap",
+      "topGainersAria": "Top gainers, 24h",
+      "startWith": "Start with {{name}}",
+      "more": "+{{count}} more",
+      "headlines": "Headlines",
+      "headlinesAria": "Latest crypto headlines"
+    },
+    "speech": {
+      "gettingReady": "Getting audio ready…",
+      "speaking": "Speaking — tap to stop"
+    },
+    "composer": {
+      "pendingImageAlt": "Chart screenshot to analyze",
+      "removeImage": "Remove attached image",
+      "cancelRecording": "Cancel recording",
+      "attachImage": "Attach an image",
+      "listening": "Listening…",
+      "placeholder": "Tell the agent what to do…",
+      "stopRecording": "Stop recording",
+      "speakToAgent": "Speak to the agent",
+      "send": "Send",
+      "sending": "Sending",
+      "typing": "Typing"
+    },
+    "hub": {
+      "new": "New",
+      "history": "History",
+      "watch": "Watch",
+      "positions": "Positions",
+      "report": "Report"
+    },
+    "errors": {
+      "enableNotifications": "Couldn't enable browser notifications",
+      "saveFailed": "Couldn't save that — please try again.",
+      "loadClosed": "Couldn't load your closed positions — please try again.",
+      "refreshPositions": "Couldn't refresh your positions — please try again.",
+      "generic": "Something went wrong — please try again.",
+      "tradeFailed": "Trade failed — please try again.",
+      "basketFailed": "Some legs may not have executed — please check your positions.",
+      "balanceFailed": "Couldn't update your balance — please try again.",
+      "watchFailed": "Couldn't set up that watch — please try again.",
+      "cashInvalid": "Cash balance must be a non-negative number.",
+      "cashFailed": "Couldn't update cash balance — please try again.",
+      "closeFailed": "Couldn't close that position — please try again.",
+      "cancelWatchFailed": "Couldn't cancel the watch — please try again."
+    }
+  }
+}

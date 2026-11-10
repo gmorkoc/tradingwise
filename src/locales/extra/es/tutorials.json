@@ -1,0 +1,333 @@
+{
+  "tutorials": {
+    "title": "Tutoriales de trading",
+    "beginner": "Principiante",
+    "advanced": "Avanzado",
+    "stepByStep": "Paso a paso",
+    "commonMistakes": "Errores comunes",
+    "proTips": "Consejos pro",
+    "disclaimer": "⚠️ Solo educativo. No es asesoramiento financiero.",
+    "prevSlide": "Ilustración anterior",
+    "nextSlide": "Ilustración siguiente",
+    "goToSlide": "Ilustración {{n}}",
+    "svg": {
+      "entry": "ENTRADA",
+      "entryUp": "ENTRADA ↑",
+      "entryDown": "ENTRADA ↓",
+      "stop": "Stop",
+      "target": "Objetivo",
+      "flagpole": "① Mástil",
+      "flagpoleDown": "① Mástil bajista",
+      "flag": "② Bandera",
+      "breakout": "③ Ruptura",
+      "breakdown": "③ Ruptura bajista",
+      "bullFlagHeader": "PATRÓN DE BANDERA ALCISTA",
+      "bearFlagHeader": "PATRÓN DE BANDERA BAJISTA",
+      "supportZone": "ZONA DE SOPORTE",
+      "touch1": "Toque 1",
+      "touch2": "Toque 2",
+      "touch3Entry": "Toque 3 = Entrada",
+      "supportBounceHeader": "REBOTE EN SOPORTE — 3 TOQUES = NIVEL MÁS FUERTE",
+      "goldenZone": "Zona dorada 61.8%",
+      "fibHeader": "RETROCESO DE FIBONACCI — LONG AVANZADO",
+      "resistance": "RESISTENCIA",
+      "neckline": "NECKLINE",
+      "top1": "Techo 1",
+      "top2": "Techo 2",
+      "height": "Altura",
+      "doubleTopHeader": "DOBLE TECHO — OBJETIVO = ALTURA DEL PATRÓN",
+      "liqCluster": "🔴 CLÚSTER DE LIQUIDEZ — aquí se cazan los stops",
+      "sweepBelow": "① Barrido bajo los stops",
+      "realMoveUp": "② Subida real",
+      "sweepHeader": "BARRIDO DE LIQUIDEZ → PATRÓN DE REVERSIÓN",
+      "heatmapHeader": "MAPA DE CALOR DE LIQUIDACIONES — ANÁLISIS MULTINIVEL",
+      "levels": {
+        "extreme": "Extrema",
+        "veryHigh": "Muy alta",
+        "high": "Alta",
+        "medium": "Media",
+        "low": "Baja"
+      },
+      "priceUpper": "PRECIO",
+      "price": "Precio",
+      "rsiDivHeader": "DIVERGENCIA RSI — PRECIO VS MOMENTUM",
+      "higherHigh": "Máximo más alto",
+      "lowerHigh": "Máximo más bajo",
+      "bearishDiv": "⚠ DIVERGENCIA BAJISTA",
+      "reversalLikely": "Probable reversión próxima",
+      "confluenceHeader": "CONFLUENCIA: RSI + MACD + ACCIÓN DEL PRECIO",
+      "support": "Soporte",
+      "allAlign": "Los 3 alineados ↓",
+      "accountHeader": "CREAR CUENTA — 6 PASOS HASTA TU PRIMER TRADE",
+      "accountSteps": {
+        "signUp": { "label": "Registro", "sub1": "Email +", "sub2": "contraseña" },
+        "verify": { "label": "Verificar", "sub1": "Revisa tu", "sub2": "bandeja" },
+        "kyc": { "label": "KYC", "sub1": "ID + selfie", "sub2": "~5 min" },
+        "twoFa": { "label": "2FA", "sub1": "App autent.", "sub2": "no SMS" },
+        "deposit": { "label": "Depósito", "sub1": "Banco/tarjeta", "sub2": "o cripto" },
+        "trade": { "label": "Operar", "sub1": "Solo spot", "sub2": "¡al empezar!" }
+      },
+      "totalTime": "Tiempo total: ~15 minutos • Disponible 24/7",
+      "securityHeader": "CAPAS DE SEGURIDAD — PROTEGE TUS CRIPTOS",
+      "yourCrypto": "Tus criptos",
+      "layer1": "CAPA 1 — Contraseña fuerte (16+ caracteres, única, usa un gestor)",
+      "layer2": "CAPA 2 — 2FA con app autenticadora (no SMS — ¡riesgo de SIM-swap!)",
+      "layer3": "CAPA 3 — Hardware wallet (Ledger / Trezor) para largo plazo",
+      "basic": "Básica",
+      "must": "Clave",
+      "resistanceZone3": "ZONA DE RESISTENCIA — 3 rechazos",
+      "reject1": "Rechazo 1",
+      "reject2": "Rechazo 2",
+      "reject3Entry": "Rechazo 3=Entrada",
+      "resistanceHeader": "ZONA DE RESISTENCIA — MÁS RECHAZOS = SEÑAL MÁS FUERTE"
+    },
+    "exchanges": {
+      "binance": {
+        "tagline": "Mayor volumen del mundo",
+        "badge": "Ideal para pros",
+        "pros": ["Más de 350 monedas", "Comisiones bajas 0.1%", "Futuros y margen completos"],
+        "cons": ["No disponible en EE. UU."]
+      },
+      "coinbase": {
+        "tagline": "La más fácil para principiantes",
+        "badge": "Ideal para principiantes",
+        "pros": ["Licenciada y regulada en EE. UU.", "Interfaz muy sencilla", "Más de 200 monedas"],
+        "cons": ["Comisiones más altas ~1.5%"]
+      },
+      "kraken": {
+        "tagline": "La más confiable a nivel global",
+        "badge": "Ideal por seguridad",
+        "pros": ["Licencias completas en EE. UU. y UE", "Seguridad líder del sector", "Comisiones bajas 0.16%"],
+        "cons": ["Menos altcoins"]
+      }
+    },
+    "cexDex": {
+      "vs": "vs",
+      "cex": {
+        "sublabel": "Exchange centralizado",
+        "pros": ["Interfaz fácil para principiantes", "Depósito fiat (banco/tarjeta)", "El KYC aporta responsabilidad", "Soporte al cliente 24/7"],
+        "cons": ["Ellos guardan tus claves", "Puede ser hackeado/congelado", "Pueden bloquear tu cuenta"]
+      },
+      "dex": {
+        "sublabel": "Exchange descentralizado",
+        "pros": ["Tú controlas tus claves", "Sin KYC", "No se puede congelar", "Acceso a tokens DeFi"],
+        "cons": ["Complejo para principiantes", "Sin rampa fiat", "Sin soporte si te equivocas"]
+      }
+    },
+    "topics": {
+      "long": {
+        "title": "Detectar un long",
+        "beginner": {
+          "illustrations": ["Patrón de bandera alcista", "Rebote en soporte — regla de 3 toques"],
+          "steps": [
+            "Identifica una tendencia alcista: el precio marca máximos y mínimos cada vez más altos. Nunca abras un long en una tendencia bajista confirmada.",
+            "Espera un retroceso a un soporte clave. Busca una zona horizontal donde el precio ya haya rebotado antes.",
+            "Busca una vela de reversión alcista en el soporte: martillo, envolvente alcista o pin bar con mecha inferior larga.",
+            "Confirma con el RSI por encima de 40 y girando al alza. Si el RSI está por debajo de 30, mejor aún: se acerca un rebote por sobreventa.",
+            "Entra cuando el precio cierre por encima del máximo de la vela anterior: confirma la reversión y evita rupturas falsas.",
+            "Coloca el stop-loss justo debajo de la zona de soporte. Ajusta el tamaño para que el stop represente como máximo el 1–2% de tu cuenta.",
+            "Apunta al siguiente nivel de resistencia o a una relación beneficio/riesgo mínima de 2:1 antes de entrar."
+          ],
+          "mistakes": [
+            "Comprar antes de que la vela de reversión se confirme: estás adivinando, no operando",
+            "Entrar en la resistencia pensando que se romperá: espera la ruptura real",
+            "Ignorar la tendencia de la temporalidad mayor: los longs funcionan mejor en tendencias alcistas",
+            "Poner stops demasiado ajustados: pequeñas mechas te sacarán antes del movimiento"
+          ],
+          "tips": ["Pico de volumen en la ruptura = alta convicción", "Más toques en el soporte = nivel más fuerte", "Revisa el 4H antes de operar el 1H"]
+        },
+        "advanced": {
+          "illustrations": ["Retroceso de Fibonacci — zona dorada", "Confluencia: RSI + MACD + acción del precio"],
+          "steps": [
+            "Traza el retroceso de Fibonacci desde el último mínimo relevante hasta el máximo. El nivel 61.8% es la 'zona dorada': el long de mayor probabilidad.",
+            "Busca confluencia: el Fib 61.8% coincidiendo con una zona de soporte horizontal. Dos razones para entrar = mucha más confianza.",
+            "Añade el RSI: si está cerca de 40 o por debajo de 30 en el nivel Fib, es una triple confluencia. Setup de muy alta probabilidad.",
+            "Revisa el MACD: un cruce alcista en el nivel Fib confirma que el momentum está girando. El histograma pasando de rojo a verde es la señal.",
+            "Revisa el mapa de calor de liquidaciones: los grandes clústeres de liquidez bajo tu entrada suelen barrerse primero. Espera el barrido y luego entra.",
+            "Entra escalonado: pon el 50% de la posición en el Fib 61.8% y añade el 50% restante al cierre de la vela de confirmación.",
+            "Usa el nivel Fib 0% (máximo anterior) como TP1 y activa un trailing stop al alcanzarlo para dejar correr las ganancias."
+          ],
+          "mistakes": [
+            "Operar todos los niveles Fib: solo el 50% y el 61.8% tienen ventaja real",
+            "No esperar la confluencia MACD/RSI: Fib solo es débil sin confirmación",
+            "Ignorar la tendencia macro: los longs con Fib solo funcionan en tendencias macro alcistas",
+            "Mover el stop-loss a break-even demasiado pronto: te saca en una consolidación normal"
+          ],
+          "tips": ["Fib + soporte + RSI en sobreventa = triple confluencia, máxima probabilidad", "Los niveles Fib de BTC en gráfico semanal han funcionado notablemente bien históricamente", "Toma ganancias parciales en 38.2% y 23.6% en la subida para asegurar beneficios"]
+        }
+      },
+      "short": {
+        "title": "Detectar un short",
+        "beginner": {
+          "illustrations": ["Bandera bajista — continuación short", "Rechazo en resistencia"],
+          "steps": [
+            "Identifica una tendencia bajista o una alcista que se debilita: el precio marca máximos más bajos. Nunca abras shorts al azar en un mercado alcista.",
+            "Espera a que el precio rebote hasta una resistencia clave. Cuanto más tiempo haya respetado ese nivel, mejor.",
+            "Busca una vela de reversión bajista: estrella fugaz, envolvente bajista o doji con mecha superior.",
+            "Comprueba que el RSI esté por debajo de 60 y girando a la baja. Un RSI por encima de 70 es aún mejor: reversión por sobrecompra.",
+            "Entra cuando la vela actual cierre por debajo del mínimo de la anterior: confirma el rechazo, no solo una mecha.",
+            "Coloca el stop-loss justo por encima de la zona de resistencia o del máximo de la vela. Mantenlo ajustado.",
+            "Apunta al siguiente soporte importante, al mínimo anterior o a un R:R de 2:1."
+          ],
+          "mistakes": [
+            "Abrir shorts en una tendencia alcista fuerte: 'está demasiado alto' no es un setup",
+            "No revisar el funding rate: un funding muy positivo favorece los shorts, uno negativo es peligroso",
+            "Usar demasiado apalancamiento en shorts: en cripto, los shorts sufren squeezes violentos",
+            "Abrir shorts sin vela de confirmación: las mechas pueden engañarte"
+          ],
+          "tips": ["Revisa el funding rate: por encima de 0.1% = longs saturados, gran entorno para shorts", "El volumen debería disminuir durante el rebote hacia la resistencia", "Los shorts en cripto necesitan stops más ajustados que los longs: los squeezes son brutales"]
+        },
+        "advanced": {
+          "illustrations": ["Doble techo — patrón clásico de reversión", "Divergencia bajista del RSI"],
+          "steps": [
+            "Doble techo: el precio forma dos picos aproximadamente al mismo nivel con un valle entre ellos. Que el segundo pico no logre superar al primero es una advertencia.",
+            "La 'neckline' es el valle entre los dos techos. Romper por debajo de la neckline es el disparador de entrada en short.",
+            "Objetivo por movimiento medido: la distancia de la neckline a los techos, proyectada hacia abajo desde la ruptura de la neckline.",
+            "Confirma con divergencia bajista del RSI: si el precio marca un máximo igual o mayor pero el RSI uno menor, el momentum se agota. Señal muy potente.",
+            "El histograma del MACD debería estar reduciéndose en el segundo techo: confirma el agotamiento del momentum antes incluso de que el precio rompa.",
+            "Revisa el mapa de calor de liquidaciones en busca de clústeres bajo la neckline: esos serán tus objetivos.",
+            "Stop-loss por encima del segundo techo. Si el precio marca un nuevo máximo sobre ambos techos, el patrón queda invalidado: sal."
+          ],
+          "mistakes": [
+            "Abrir el short en el segundo techo antes de que rompa la neckline: el patrón aún no está confirmado",
+            "Ignorar la divergencia del RSI: la señal short más potente es la divergencia, no solo el precio en resistencia",
+            "Poner stops demasiado amplios: el doble techo se invalida con nuevos máximos, úsalo como stop",
+            "No tener en cuenta los soportes inferiores: sabe dónde está el soporte más cercano antes de entrar"
+          ],
+          "tips": ["Doble techo en temporalidades mayores (diario/semanal) = setup de nivel institucional", "La divergencia bajista del RSI es una de las señales con mayor tasa de acierto en cripto", "El volumen suele caer en el segundo techo: confirma distribución"]
+        }
+      },
+      "heatmap": {
+        "title": "Mapa de calor de liquidaciones",
+        "beginner": {
+          "illustrations": ["Leer los niveles de liquidez", "Barrido de liquidez → reversión"],
+          "steps": [
+            "Abre el mapa de calor de liquidaciones en coinhintz. Más brillo = más liquidez (stop-loss y órdenes de liquidación) acumulada en ese precio.",
+            "Las zonas rojas/naranjas son liquidez 'extrema': los market makers conocen estos niveles y llevarán el precio allí para recoger órdenes.",
+            "Gran clúster POR ENCIMA del precio actual = imán alcista. Probablemente el precio subirá para limpiar esos stops.",
+            "Gran clúster POR DEBAJO del precio actual = imán bajista. El precio puede bajar para barrer esos stops antes de revertir.",
+            "El patrón de barrido: el precio entra EN la zona de liquidez con una mecha, activa todos los stops y luego revierte con fuerza; esa es la operación real.",
+            "Espera a que la mecha DENTRO de la zona cierre de nuevo POR ENCIMA/POR DEBAJO de ella: esa es tu confirmación de que hubo barrido.",
+            "Combínalo con soportes/resistencias: un clúster del mapa de calor justo SOBRE un soporte = zona de probabilidad altísima."
+          ],
+          "mistakes": [
+            "Suponer que cada clúster de liquidez provocará una reversión: no lo hará si la tendencia es fuerte",
+            "Operar en contra de un movimiento hacia la liquidez antes de que cierre la mecha: estás adivinando",
+            "Ignorar la tendencia general: en una tendencia fuerte, los barridos de liquidez simplemente la continúan",
+            "Operar en zonas de poca liquidez: solo importan los clústeres de alta liquidez"
+          ],
+          "tips": ["La vela de barrido suele cerrar como pin bar: úsala como señal de entrada", "Los mapas de calor en temporalidades mayores muestran zonas de liquidez más institucionales", "Tras un barrido el precio se mueve rápido: prepárate para entrar"]
+        },
+        "advanced": {
+          "illustrations": ["Análisis multinivel del mapa de calor", "Barrido → patrón de reversión"],
+          "steps": [
+            "Analiza por capas: identifica todos los clústeres de liquidez extrema por encima y por debajo del precio. Serán tus objetivos de precio Y posibles zonas de reversión.",
+            "'Cascada de liquidez': cuando un barrido activa un clúster, puede provocar una reacción en cadena hacia el siguiente clúster inferior; así empiezan los movimientos del 10-20%.",
+            "Compara el mapa de calor con el Open Interest (OI): OI en aumento + gran clúster debajo = barrido muy probable. Alguien está construyendo posición para cazar stops.",
+            "Análisis del funding rate: funding extremadamente positivo + mapa de calor con un clúster enorme debajo = setup de short squeeze tras el barrido bajista.",
+            "Marca las zonas ANTES de que el precio llegue. Nunca persigas: pon órdenes límite EN la zona de barrido para que se ejecuten en la mecha.",
+            "Riesgo: no todos los barridos revierten. Usa confluencia: clúster del mapa de calor + nivel Fibonacci + RSI en sobreventa = reversión de muy alta probabilidad.",
+            "Al alcanzar la zona de barrido, pon un stop ajustado bajo el mínimo de la mecha. Si el precio la atraviesa sin revertir, sal de inmediato."
+          ],
+          "mistakes": [
+            "Usar órdenes de mercado en zonas de liquidez: usa órdenes límite para ejecutarte en la mecha",
+            "Esperar que cada barrido sea una reversión perfecta: a veces caen en cascada a la siguiente zona",
+            "No revisar el Open Interest junto con el mapa de calor: el contexto del OI es clave",
+            "Perder la entrada por esperar 'más confirmación' después del barrido"
+          ],
+          "tips": ["Crea alertas en los niveles clave del mapa de calor para no perderte el barrido", "Cuanto mayor el clúster, más brusca la reversión tras el barrido", "Los niveles históricos del mapa de calor que aguantaron se convierten en soportes/resistencias"]
+        }
+      },
+      "account": {
+        "title": "Abrir una cuenta",
+        "beginner": {
+          "illustrations": ["Elegir tu exchange", "Configurar la cuenta — 6 pasos"],
+          "steps": [
+            "Elige un exchange de confianza. Coinbase es el mejor para principiantes en EE. UU. Binance tiene más monedas. Kraken es confiable a nivel global. Nunca uses exchanges desconocidos: tus fondos pueden desaparecer de la noche a la mañana.",
+            "Ve a la web oficial del exchange y haz clic en Registrarse. Usa tu email real y crea una contraseña única y fuerte (16+ caracteres). Nunca reutilices contraseñas de otros sitios.",
+            "Verifica tu email. El exchange envía un enlace de confirmación en minutos. Revisa el spam si no llega. Haz clic en el enlace para activar tu cuenta.",
+            "Completa el KYC (Conoce a tu cliente). Sube un documento oficial (pasaporte o licencia de conducir) y hazte un selfie. Tarda 2–10 minutos y es obligatorio por ley.",
+            "Activa el 2FA de inmediato. Descarga Google Authenticator o Authy y escanea el código QR en la configuración de seguridad del exchange. Nunca lo omitas: te protege si tu contraseña se filtra.",
+            "Haz tu primer depósito. La transferencia bancaria es lo más barato (0–0.1% de comisión). Con tarjeta es más rápido pero cuesta 1.5–3%. Empieza poco a poco: $50–$100 bastan para aprender.",
+            "Compra tu primera cripto. Empieza con Bitcoin (BTC) o Ethereum (ETH). Usa el botón 'Comprar' y elige trading Spot (no futuros ni apalancamiento) para tu primera compra."
+          ],
+          "mistakes": [
+            "Descargar apps de exchange falsas: visita siempre primero la web oficial y luego su enlace oficial a la tienda de apps",
+            "Saltarte el 2FA: sin él, una contraseña filtrada significa perder toda la cuenta",
+            "Depositar los ahorros de toda tu vida de golpe: empieza con una cantidad que estés dispuesto a perder",
+            "Usar SMS para el 2FA: los ataques de SIM-swap pueden saltarse el SMS; usa una app autenticadora"
+          ],
+          "tips": [
+            "Anota en papel los códigos de respaldo del 2FA y guárdalos bien: los necesitarás si pierdes el móvil",
+            "Guarda en marcadores la URL oficial del exchange para evitar webs de phishing idénticas",
+            "Residentes en EE. UU.: Coinbase o Kraken. Resto del mundo: Binance u OKX"
+          ]
+        },
+        "advanced": {
+          "illustrations": ["CEX vs DEX — ¿cuál usar?", "Capas de seguridad — protege tus criptos"],
+          "steps": [
+            "Entiende el riesgo de custodia: en un CEX, el exchange guarda tus claves privadas. 'Si no son tus claves, no son tus monedas.' FTX tenía $8B de fondos de clientes y colapsó en 72 horas. Las hardware wallets son tu solución.",
+            "Usa un DEX para DeFi y privacidad. MetaMask + Uniswap (Ethereum) o Phantom + Jupiter (Solana). Primero compras en un CEX y luego transfieres a una wallet de autocustodia antes de hacer swaps en un DEX.",
+            "Protege tu frase semilla: 12 o 24 palabras que son la llave maestra de tu wallet. Escríbela en metal (no en papel: riesgo de incendio). Guarda copias en dos lugares físicos distintos. Nunca la escribas online.",
+            "Activa las listas blancas de retiro del exchange: solo direcciones aprobadas previamente pueden recibir tus fondos. Aunque un hacker acceda a tu cuenta, no podrá retirar a una dirección desconocida.",
+            "Usa un dispositivo dedicado a cripto si puedes. Un Chromebook barato restablecido de fábrica y usado solo para operar es mucho más seguro que un móvil con 50 apps instaladas.",
+            "Reparte tus fondos entre exchanges: nunca lo tengas todo en una plataforma. Las quiebras y hackeos de exchanges ocurren. Las criptos no están aseguradas por la FDIC.",
+            "Lleva el control de impuestos desde el primer día. La mayoría de países trata las criptos como propiedad: cada trade, venta o swap es un hecho imponible. Herramientas como Koinly o CoinTracking lo automatizan si conectas tus wallets pronto."
+          ],
+          "mistakes": [
+            "Guardar la frase semilla en digital (fotos, notas en la nube, email): una sola filtración lo pierde todo para siempre",
+            "Confiar en plataformas de 'rendimiento garantizado': cualquier cosa por encima del 15% APY casi siempre es insostenible o un Ponzi",
+            "Enviar por la red equivocada: ETH enviado por BSC a una dirección solo ETH se pierde para siempre; verifica siempre la cadena",
+            "Mantener grandes cantidades en un exchange a largo plazo: los exchanges son para operar, las hardware wallets para guardar"
+          ],
+          "tips": [
+            "Ledger Nano X (~$150) protege contra hackeos de exchanges, phishing y malware: vale la pena a partir de $2,000",
+            "Crea un email exclusivo para cripto: nunca lo compartas ni lo uses para nada más",
+            "Regla de almacenamiento en frío: lo que no te quitaría el sueño puede quedarse en el exchange; el resto, a la hardware wallet"
+          ]
+        }
+      },
+      "indicators": {
+        "title": "RSI y MACD",
+        "beginner": {
+          "illustrations": ["RSI: sobrecompra y sobreventa", "Señales de cruce del MACD"],
+          "steps": [
+            "El RSI (Índice de Fuerza Relativa) mide el momentum en una escala de 0–100. Por encima de 70 = sobrecompra. Por debajo de 30 = sobreventa.",
+            "Sobrecompra (RSI >70): el mercado puede estar agotado. Considera tomar ganancias en longs o buscar entradas en short.",
+            "Sobreventa (RSI <30): el mercado puede estar tocando fondo. Busca setups long, pero espera antes una vela de reversión.",
+            "RSI 50 es la zona neutral. RSI constantemente por encima de 50 = momentum alcista. Por debajo de 50 = momentum bajista.",
+            "El MACD muestra la diferencia entre las EMAs de 12 y 26 periodos. Cuando la línea MACD cruza por encima de la línea de señal → alcista.",
+            "Cuando el MACD cruza por debajo de la línea de señal → momentum bajista. Las barras del histograma muestran la fuerza: más grandes = más fuerte.",
+            "Nunca uses el RSI o el MACD por sí solos. Son herramientas de confirmación: combínalos siempre con la acción del precio y los niveles clave."
+          ],
+          "mistakes": [
+            "Comprar solo porque el RSI está en sobreventa: puede seguir así mucho tiempo en una tendencia bajista",
+            "Usar el RSI en temporalidades bajas (1m, 5m): demasiado ruido, quédate en 1H o superior",
+            "Ignorar la acción del precio y usar solo indicadores: los indicadores van con retraso, el precio manda",
+            "Pasar por alto el histograma del MACD: un histograma que se reduce avisa de un cruce antes de que ocurra"
+          ],
+          "tips": ["El cruce del RSI en 50 es una señal de tendencia: cuando el RSI supera 50, probablemente se confirma una tendencia alcista", "Las señales del RSI en 4H y diario son mucho más fiables que en temporalidades menores", "Un RSI por encima de 70 en un mercado alcista fuerte puede mantenerse alto semanas: no abras shorts solo por sobrecompra"]
+        },
+        "advanced": {
+          "illustrations": ["Divergencia bajista y alcista del RSI", "Setup de triple confluencia"],
+          "steps": [
+            "Divergencia bajista del RSI: el precio marca un máximo MÁS ALTO pero el RSI uno MÁS BAJO. El momentum se agota: se acerca una reversión. Una de las señales más fiables en cripto.",
+            "Divergencia alcista del RSI: el precio marca un mínimo MÁS BAJO pero el RSI uno MÁS ALTO. La presión vendedora se agota: probable reversión al alza.",
+            "Divergencia oculta: el precio marca un mínimo más alto (tendencia alcista) y el RSI uno más bajo = señal de continuación para longs. Más fiable que la divergencia regular.",
+            "Cruce de la línea cero del MACD: la línea MACD pasando de debajo a encima de cero = señal alcista fuerte. Es un cambio de régimen de momentum, no solo un cruce.",
+            "Triple confluencia: divergencia RSI + cruce MACD + precio en soporte/resistencia clave = el setup de mayor probabilidad disponible.",
+            "RSI en varias temporalidades: RSI en sobreventa en 4H + RSI girando al alza en 1H = timing de entrada en 1H con la confianza del 4H.",
+            "Pico/valle del histograma del MACD: un histograma que alcanza su pico y empieza a reducirse antes del cruce = aviso temprano para preparar tu posición."
+          ],
+          "mistakes": [
+            "Ver divergencias con solo una o dos velas: necesitas picos/valles claramente definidos",
+            "Operar divergencias en temporalidades muy bajas: solo son fiables en 1H o superior",
+            "Entrar por divergencia del RSI sin un disparador de acción del precio: espera también la vela de reversión",
+            "Ignorar la línea cero del MACD: un cruce en territorio negativo es más débil que uno en territorio positivo"
+          ],
+          "tips": ["La divergencia del RSI en el gráfico semanal ha precedido históricamente a cada gran techo y suelo de BTC", "El cruce de la línea cero del MACD en diario = cambio de tendencia de alta convicción, no solo un rebote", "Los mejores trades tienen divergencia RSI + setup MACD + confluencia del mapa de calor alineados"]
+        }
+      }
+    }
+  }
+}

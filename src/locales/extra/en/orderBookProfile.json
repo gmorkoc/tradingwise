@@ -1,0 +1,16 @@
+{
+  "orderBookProfile": {
+    "title": "Order Depth Chart",
+    "levelsTip": "Number of bid/ask price levels pulled from the order book per side — higher values show a wider price range",
+    "levels": "Levels",
+    "exit": "Exit",
+    "bidDepth": "Bid Depth",
+    "askDepth": "Ask Depth",
+    "spread": "Spread",
+    "bidAsk": "Bid / Ask",
+    "loading": "Cooking up your order book…",
+    "bidsCum": "Bids (cumulative)",
+    "asksCum": "Asks (cumulative)",
+    "live": "live"
+  }
+}

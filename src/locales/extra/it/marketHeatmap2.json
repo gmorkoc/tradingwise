@@ -1,0 +1,8 @@
+{
+  "marketHeatmap2": {
+    "colorScale": "Scala di colori da -8% a +8%",
+    "price": "Prezzo",
+    "marketCap": "Cap. di mercato",
+    "volume24h": "Volume (24h)"
+  }
+}

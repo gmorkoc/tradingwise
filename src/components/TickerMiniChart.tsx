@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { createChart, CandlestickSeries, IChartApi, ISeriesApi, UTCTimestamp } from "lightweight-charts";
 import { coinglass } from "../services/coinglass";
 import { RoundedCandleOverlay } from "./DrawingOverlay";
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export function TickerMiniChart({ coin, coinColor, isDark }: Props) {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef  = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
@@ -102,7 +104,7 @@ export function TickerMiniChart({ coin, coinColor, isDark }: Props) {
           fontSize: "0.72rem",
           color: isDark ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.25)",
         }}>
-          Loading…
+          {t("tickerMini.loading")}
         </div>
       )}
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />

@@ -1,0 +1,26 @@
+{
+  "aiPrediction": {
+    "title": "YZ Piyasa İstihbaratı",
+    "aiPowered": "YZ Destekli",
+    "cached": "Önbellek · {{time}}",
+    "updated": "{{time}} güncellendi",
+    "refreshing": "Yenileniyor…",
+    "refresh": "Yenile",
+    "sentiment": { "bullish": "Yükseliş", "bearish": "Düşüş", "neutral": "Nötr" },
+    "conf": { "high": "yüksek güven", "medium": "orta güven", "low": "düşük güven" },
+    "thesis": "Piyasa tezi",
+    "analyzing": "Piyasa koşulları analiz ediliyor…",
+    "fetching": "Piyasa verileri getiriliyor…",
+    "failed": "Tahmin alınamadı",
+    "ourTake": "Görüşümüz",
+    "action": { "buy": "Al", "sell": "Sat", "hold": "Tut", "watch": "İzle", "accumulate": "Biriktir" },
+    "rangeForecast": "Fiyat aralığı tahmini",
+    "current": "Güncel:",
+    "currentTitle": "Güncel: {{price}}",
+    "drivers": "Fiyat etkenleri",
+    "buying": "Kim alıyor",
+    "selling": "Kim satıyor",
+    "macro": "Makro ve haberler",
+    "risks": "Temel riskler"
+  }
+}

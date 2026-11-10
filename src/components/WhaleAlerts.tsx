@@ -216,8 +216,8 @@ export function WhaleAlerts({ btcPrice, coinChatOpen }: Props) {
             <button
               className={`whale-mute${muted ? " whale-mute--off" : ""}`}
               onClick={toggleMute}
-              aria-label={muted ? "Unmute whale alerts" : "Mute whale alerts"}
-              title={muted ? "Sound off" : "Sound on"}
+              aria-label={muted ? t("whaleAlerts2.unmute") : t("whaleAlerts2.mute")}
+              title={muted ? t("whaleAlerts2.soundOff") : t("whaleAlerts2.soundOn")}
             >
               {muted ? (
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -236,7 +236,7 @@ export function WhaleAlerts({ btcPrice, coinChatOpen }: Props) {
               target="_blank"
               rel="noopener noreferrer"
               className="whale-alert-view"
-              title="View transaction"
+              title={t("whaleAlerts2.viewTx")}
             >
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>
@@ -247,7 +247,7 @@ export function WhaleAlerts({ btcPrice, coinChatOpen }: Props) {
             <button
               className="whale-alert-close"
               onClick={dismissCurrent}
-              aria-label={pendingCount > 0 ? "Dismiss and show next" : "Dismiss"}
+              aria-label={pendingCount > 0 ? t("whaleAlerts2.dismissNext") : t("whaleAlerts2.dismiss")}
             >
               <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                 <line x1="18" y1="6" x2="6" y2="18"/>
@@ -261,7 +261,7 @@ export function WhaleAlerts({ btcPrice, coinChatOpen }: Props) {
           type="button"
           className="whale-snooze-footer"
           onClick={snooze}
-          aria-label="Snooze whale alerts for 1 hour"
+          aria-label={t("whaleAlerts2.snoozeAria")}
         >
           <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="13" r="8"/>

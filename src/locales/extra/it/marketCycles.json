@@ -1,0 +1,33 @@
+{
+  "marketCycles": {
+    "range": { "30": "30g", "365": "1a", "all": "Tutto" },
+    "title": "Cicli di mercato di Bitcoin",
+    "error": "Impossibile caricare i dati dei cicli in questo momento.",
+    "puellStatus": "Stato del Puell Multiple",
+    "undervalued": "Sottovalutato",
+    "overvalued": "Sopravvalutato",
+    "piTitle": "Indicatore Pi Cycle Top",
+    "topSignal": "Segnale di massimo",
+    "noTopSignal": "Nessun segnale di massimo",
+    "rainbowCard": "Grafico Rainbow",
+    "price": "Prezzo {{v}}",
+    "puellTip": "Ricavi giornalieri dei miner ÷ la loro media a 365 giorni. Sotto 0.5 ha segnato i minimi di ciclo; sopra 4, i massimi.",
+    "btcPrice": "Prezzo di Bitcoin",
+    "piTip": "L'incrocio della media a 111 giorni sopra 2 × la media a 350 giorni ha segnato i massimi dei cicli passati.",
+    "rainbowTitle": "Indicatore Rainbow del prezzo di Bitcoin",
+    "rainbowTip": "Una curva logaritmica adattata a tutta la storia dei prezzi di Bitcoin, divisa in 9 bande di colore da Svendita totale a Bolla massima.",
+    "now": "Ora: {{zone}}",
+    "halving": "{{n}}° halving",
+    "rainbow": {
+      "0": "Svendita totale",
+      "1": "COMPRA!",
+      "2": "Accumula",
+      "3": "Ancora economico",
+      "4": "HODL!",
+      "5": "È una bolla?",
+      "6": "Il FOMO si intensifica",
+      "7": "Vendi. Sul serio, vendi!",
+      "8": "Bolla massima"
+    }
+  }
+}

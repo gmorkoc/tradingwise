@@ -1,4 +1,5 @@
 import { useRef, useEffect, useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { CoinSymbol, fetchBn } from "../services/coinglass";
 import { CookingLoader } from "./CookingLoader";
 import "../styles/OrderBookProfile.css";
@@ -228,6 +229,7 @@ function drawChart(
 }
 
 export function OrderBookProfileModal({ coin, onClose }: Props) {
+  const { t } = useTranslation();
   const canvasRef  = useRef<HTMLCanvasElement>(null);
   const bidsRef    = useRef<Level[]>([]);
   const asksRef    = useRef<Level[]>([]);
@@ -315,11 +317,11 @@ export function OrderBookProfileModal({ coin, onClose }: Props) {
         {/* Header */}
         <div className="obp-header">
           <div className="obp-header-left">
-            <span className="obp-title">Order Depth Chart</span>
+            <span className="obp-title">{t("orderBookProfile.title")}</span>
             <span className="obp-coin">{coin}/USDT</span>
           </div>
-          <div className="obp-levels" title="Number of bid/ask price levels pulled from the order book per side — higher values show a wider price range">
-            <span className="obp-levels-label">Levels</span>
+          <div className="obp-levels" title={t("orderBookProfile.levelsTip")}>
+            <span className="obp-levels-label">{t("orderBookProfile.levels")}</span>
             {DEPTH_LEVELS.map(lvl => (
               <button
                 key={lvl}
@@ -331,7 +333,7 @@ export function OrderBookProfileModal({ coin, onClose }: Props) {
             ))}
           </div>
           <button className="obp-exit" onClick={onClose}>
-            <span className="obp-exit-label">Exit</span>
+            <span className="obp-exit-label">{t("orderBookProfile.exit")}</span>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M8 3v3a2 2 0 01-2 2H3M21 8h-3a2 2 0 01-2-2V3M3 16h3a2 2 0 012 2v3M16 21v-3a2 2 0 012-2h3"/>
             </svg>
@@ -342,19 +344,19 @@ export function OrderBookProfileModal({ coin, onClose }: Props) {
         {stats && (
           <div className="obp-stats">
             <div className="obp-stat">
-              <span className="obp-stat-label">Bid Depth</span>
+              <span className="obp-stat-label">{t("orderBookProfile.bidDepth")}</span>
               <span className="obp-stat-value obp-stat-value--bid">{fmtUsd(stats.bidUsd)}</span>
             </div>
             <div className="obp-stat">
-              <span className="obp-stat-label">Ask Depth</span>
+              <span className="obp-stat-label">{t("orderBookProfile.askDepth")}</span>
               <span className="obp-stat-value obp-stat-value--ask">{fmtUsd(stats.askUsd)}</span>
             </div>
             <div className="obp-stat">
-              <span className="obp-stat-label">Spread</span>
+              <span className="obp-stat-label">{t("orderBookProfile.spread")}</span>
               <span className="obp-stat-value">{fmtPrice(stats.spread)} <em>({stats.spreadPct.toFixed(3)}%)</em></span>
             </div>
             <div className="obp-stat obp-stat--ratio">
-              <span className="obp-stat-label">Bid / Ask</span>
+              <span className="obp-stat-label">{t("orderBookProfile.bidAsk")}</span>
               <div className="obp-ratio-bar">
                 <div className="obp-ratio-bid" style={{ width: `${bidRatio}%` }} />
                 <div className="obp-ratio-ask" style={{ width: `${100 - bidRatio}%` }} />
@@ -371,16 +373,16 @@ export function OrderBookProfileModal({ coin, onClose }: Props) {
           <canvas ref={canvasRef} className="obp-canvas" />
           {stats === null && (
             <div className="obp-loading-overlay">
-              <CookingLoader label="Cooking up your order book…" />
+              <CookingLoader label={t("orderBookProfile.loading")} />
             </div>
           )}
         </div>
 
         {/* Legend */}
         <div className="obp-footer">
-          <span className="obp-legend-bid">■ Bids (cumulative)</span>
-          <span className="obp-legend-ask">■ Asks (cumulative)</span>
-          <span className="obp-legend-src">Binance · live</span>
+          <span className="obp-legend-bid">■ {t("orderBookProfile.bidsCum")}</span>
+          <span className="obp-legend-ask">■ {t("orderBookProfile.asksCum")}</span>
+          <span className="obp-legend-src">Binance · {t("orderBookProfile.live")}</span>
         </div>
       </div>
     </div>

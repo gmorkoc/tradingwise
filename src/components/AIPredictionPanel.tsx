@@ -126,7 +126,7 @@ export const AIPredictionPanel: React.FC<AIPredictionPanelProps> = ({ btcData, c
       setIsStale(false);
       writeCache(coin, res);
     } else {
-      setError(res.error || "Failed to get prediction");
+      setError(res.error || t("aiPrediction.failed"));
     }
     setLoading(false);
   };
@@ -160,14 +160,14 @@ export const AIPredictionPanel: React.FC<AIPredictionPanelProps> = ({ btcData, c
             <span className="aip-logo">✦</span>
             <div>
               <div className="aip-title">
-                AI Market Intelligence
+                {t("aiPrediction.title")}
                 <span className="aip-coin-tag">{coin}</span>
-                <span className="aip-ai-powered-badge">✦ AI Powered</span>
+                <span className="aip-ai-powered-badge">✦ {t("aiPrediction.aiPowered")}</span>
               </div>
               {lastUpdated && (
                 <div className="aip-updated">
-                  {isStale ? "Cached · " : "Updated "}{lastUpdated.toLocaleTimeString()}
-                  {isStale && loading && <span className="aip-refreshing"> · Refreshing…</span>}
+                  {isStale ? t("aiPrediction.cached", { time: lastUpdated.toLocaleTimeString() }) : t("aiPrediction.updated", { time: lastUpdated.toLocaleTimeString() })}
+                  {isStale && loading && <span className="aip-refreshing"> · {t("aiPrediction.refreshing")}</span>}
                 </div>
               )}
             </div>
@@ -176,22 +176,22 @@ export const AIPredictionPanel: React.FC<AIPredictionPanelProps> = ({ btcData, c
           {data && (
             <div className="aip-header-gauge">
               <SentimentGauge sentiment={data.sentiment ?? "neutral"} />
-              <span className="aip-gauge-label" style={{ color: sc.text }}>{sentiment.toUpperCase()}</span>
+              <span className="aip-gauge-label" style={{ color: sc.text }}>{t(`aiPrediction.sentiment.${sentiment}`).toUpperCase()}</span>
             </div>
           )}
 
           <div className="aip-header-right">
             {data?.confidence && (
               <span className="aip-conf-badge" style={{ color: CONF_COLORS[data.confidence] }}>
-                {data.confidence} conf.
+                {t(`aiPrediction.conf.${data.confidence}`)}
               </span>
             )}
             {data && (
               <span className="aip-sentiment-badge" style={{ color: sc.text, background: sc.bg, borderColor: sc.border }}>
-                {sentiment.toUpperCase()}
+                {t(`aiPrediction.sentiment.${sentiment}`).toUpperCase()}
               </span>
             )}
-            <button className="aip-refresh-btn" onClick={fetchPrediction} disabled={loading} title="Refresh">
+            <button className="aip-refresh-btn" onClick={fetchPrediction} disabled={loading} title={t("aiPrediction.refresh")} aria-label={t("aiPrediction.refresh")}>
               ↺
             </button>
           </div>
@@ -199,7 +199,7 @@ export const AIPredictionPanel: React.FC<AIPredictionPanelProps> = ({ btcData, c
 
         {data?.message && (
           <div className="aip-header-thesis" style={{ borderLeftColor: sc.border }}>
-            <span className="aip-header-thesis-label">Market Thesis</span>
+            <span className="aip-header-thesis-label">{t("aiPrediction.thesis")}</span>
             <p className="aip-header-thesis-text">{data.message}</p>
           </div>
         )}
@@ -209,7 +209,7 @@ export const AIPredictionPanel: React.FC<AIPredictionPanelProps> = ({ btcData, c
       {loading && !data && (
         <div className="aip-loading">
           <div className="aip-spinner" />
-          <span>Analyzing market conditions…</span>
+          <span>{t("aiPrediction.analyzing")}</span>
         </div>
       )}
       {error && !loading && <div className="aip-error">{error}</div>}
@@ -232,10 +232,10 @@ export const AIPredictionPanel: React.FC<AIPredictionPanelProps> = ({ btcData, c
               data-action={data.ourTakeAction ?? "watch"}
             >
               <div className="aip-our-take-header">
-                <span className="aip-our-take-eyebrow">✦ Our Take</span>
+                <span className="aip-our-take-eyebrow">✦ {t("aiPrediction.ourTake")}</span>
                 {data.ourTakeAction && (
                   <span className={`aip-our-take-action aip-our-take-action--${data.ourTakeAction}`}>
-                    {data.ourTakeAction.toUpperCase()}
+                    {t(`aiPrediction.action.${data.ourTakeAction}`, { defaultValue: data.ourTakeAction }).toUpperCase()}
                   </span>
                 )}
               </div>
@@ -250,7 +250,7 @@ export const AIPredictionPanel: React.FC<AIPredictionPanelProps> = ({ btcData, c
               const tfs = TF_LABELS.map(tf => ({ tf, r: data.timeframes![tf] }));
               return (
                 <div className="aip-range-chart">
-                  <div className="aip-section-label">Price Range Forecast</div>
+                  <div className="aip-section-label">{t("aiPrediction.rangeForecast")}</div>
                   <div className="aip-range-rows">
                     {tfs.map(({ tf, r }) => {
                       const span = r.high - r.low;
@@ -268,7 +268,7 @@ export const AIPredictionPanel: React.FC<AIPredictionPanelProps> = ({ btcData, c
                               <div
                                 className={`aip-range-needle${outOfRange ? " aip-range-needle--out" : ""}`}
                                 style={{ top: `${cpTop}%` }}
-                                title={`Current: ${fmt(currentPrice)}`}
+                                title={t("aiPrediction.currentTitle", { price: fmt(currentPrice) })}
                               />
                             )}
                           </div>
@@ -282,7 +282,7 @@ export const AIPredictionPanel: React.FC<AIPredictionPanelProps> = ({ btcData, c
                   </div>
                   {currentPrice > 0 && (
                     <p className="aip-range-footer">
-                      <span className="aip-range-dot" /> Current: <strong>{fmt(currentPrice)}</strong>
+                      <span className="aip-range-dot" /> {t("aiPrediction.current")} <strong>{fmt(currentPrice)}</strong>
                     </p>
                   )}
                 </div>
@@ -299,7 +299,7 @@ export const AIPredictionPanel: React.FC<AIPredictionPanelProps> = ({ btcData, c
                       <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
                     </svg>
                   </div>
-                  <div className="aip-card-label">Price Drivers</div>
+                  <div className="aip-card-label">{t("aiPrediction.drivers")}</div>
                   <p className="aip-card-text">{data.priceDrivers}</p>
                 </div>
               )}
@@ -311,7 +311,7 @@ export const AIPredictionPanel: React.FC<AIPredictionPanelProps> = ({ btcData, c
                       <polyline points="17 6 23 6 23 12"/>
                     </svg>
                   </div>
-                  <div className="aip-card-label">Who's Buying</div>
+                  <div className="aip-card-label">{t("aiPrediction.buying")}</div>
                   <p className="aip-card-text">{data.whoIsBuying}</p>
                 </div>
               )}
@@ -323,7 +323,7 @@ export const AIPredictionPanel: React.FC<AIPredictionPanelProps> = ({ btcData, c
                       <polyline points="17 18 23 18 23 12"/>
                     </svg>
                   </div>
-                  <div className="aip-card-label">Who's Selling</div>
+                  <div className="aip-card-label">{t("aiPrediction.selling")}</div>
                   <p className="aip-card-text">{data.whoIsSelling}</p>
                 </div>
               )}
@@ -336,7 +336,7 @@ export const AIPredictionPanel: React.FC<AIPredictionPanelProps> = ({ btcData, c
                       <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
                     </svg>
                   </div>
-                  <div className="aip-card-label">Macro & News</div>
+                  <div className="aip-card-label">{t("aiPrediction.macro")}</div>
                   <p className="aip-card-text">{data.marketContext}</p>
                 </div>
               )}
@@ -349,7 +349,7 @@ export const AIPredictionPanel: React.FC<AIPredictionPanelProps> = ({ btcData, c
                       <line x1="12" y1="17" x2="12.01" y2="17"/>
                     </svg>
                   </div>
-                  <div className="aip-card-label">Key Risks</div>
+                  <div className="aip-card-label">{t("aiPrediction.risks")}</div>
                   <p className="aip-card-text">{data.keyRisks}</p>
                 </div>
               )}
@@ -360,7 +360,7 @@ export const AIPredictionPanel: React.FC<AIPredictionPanelProps> = ({ btcData, c
       )}
 
       {!data && !loading && !error && (
-        <div className="aip-loading"><span>Fetching market data…</span></div>
+        <div className="aip-loading"><span>{t("aiPrediction.fetching")}</span></div>
       )}
 
     </div>

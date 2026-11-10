@@ -1,0 +1,17 @@
+{
+  "positionIntel": {
+    "groups": { "whaleAccount": "Smart Money", "whalePosition": "Balene", "retail": "Retail" },
+    "longs": "Long",
+    "shorts": "Short",
+    "title": "Position Intelligence",
+    "info": "Ripartizione long/short di Smart Money (account top), Balene (posizioni più grandi per dimensione) e Retail (tutti gli account), in media tra OKX e Gate.io. Dati a 5 minuti, aggiornati ogni minuto.",
+    "aboutAria": "Info su Position Intelligence",
+    "lockedTitle": "Scopri come è posizionato lo Smart Money",
+    "lockedSub": "Ripartizioni long/short di Smart Money, Balene e trader Retail su OKX e Gate.io.",
+    "unlock": "Sblocca",
+    "proRequired": "Richiede il piano Pro",
+    "freeRequired": "Serve un account gratuito per iniziare",
+    "empty": "Dati di posizionamento non disponibili per {{coin}}.",
+    "foot": "OKX + Gate.io · dati a 5m, aggiornati ogni minuto · Dimensioni delle balene da Gate.io"
+  }
+}

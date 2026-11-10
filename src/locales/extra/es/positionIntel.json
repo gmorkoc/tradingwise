@@ -1,0 +1,17 @@
+{
+  "positionIntel": {
+    "groups": { "whaleAccount": "Dinero inteligente", "whalePosition": "Ballenas", "retail": "Retail" },
+    "longs": "Longs",
+    "shorts": "Shorts",
+    "title": "Inteligencia de posiciones",
+    "info": "Reparto long/short del Dinero inteligente (cuentas top), las Ballenas (mayores posiciones por tamaño) y el Retail (todas las cuentas), promediado entre OKX y Gate.io. Datos de 5 minutos, actualizados cada minuto.",
+    "aboutAria": "Acerca de Inteligencia de posiciones",
+    "lockedTitle": "Mira cómo está posicionado el Dinero inteligente",
+    "lockedSub": "Desglose long/short del Dinero inteligente, las Ballenas y los traders Retail en OKX y Gate.io.",
+    "unlock": "Desbloquear",
+    "proRequired": "Requiere el plan Pro",
+    "freeRequired": "Requiere una cuenta gratuita para empezar",
+    "empty": "Datos de posicionamiento no disponibles para {{coin}}.",
+    "foot": "OKX + Gate.io · datos de 5m, se actualizan cada minuto · Tamaños de ballenas de Gate.io"
+  }
+}

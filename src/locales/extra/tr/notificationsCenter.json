@@ -1,0 +1,14 @@
+{
+  "notificationsCenter": {
+    "title": "Bildirimler",
+    "sub": "Al/sat sinyalleri, fiyat uyarıları, strateji uyarıları ve haberler",
+    "markAllRead": "Tümünü okundu işaretle",
+    "close": "Kapat",
+    "loading": "Yükleniyor…",
+    "empty": "Henüz bildirim yok — al/sat sinyalleri, fiyat uyarıları, strateji uyarıları ve haberler burada görünecek.",
+    "now": "şimdi",
+    "minsAgo": "{{n}} dk önce",
+    "hoursAgo": "{{n}} sa önce",
+    "daysAgo": "{{n}} g önce"
+  }
+}

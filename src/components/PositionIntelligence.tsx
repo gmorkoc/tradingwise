@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 import type { CoinSymbol, ExchangeRatioRow } from "../services/coinglass";
 import { getPositionIntel, PositionIntelRow } from "../services/positionIntel";
@@ -90,6 +91,7 @@ function GroupCard({
   const total = row.longPct + row.shortPct || 1;
   const longShare = (row.longPct / total) * 100;
   const longWins = longShare >= 50;
+  const { t } = useTranslation();
   return (
     <div className="pi-gc" style={{ animationDelay: `${index * 0.06}s` }}>
       <div className="pi-gc-top">
@@ -103,11 +105,11 @@ function GroupCard({
       </div>
       <div className="pi-gc-sides">
         <span>
-          <span className={longWins ? "pi-long" : "pi-gc-dim"}>Longs</span>{" "}
+          <span className={longWins ? "pi-long" : "pi-gc-dim"}>{t("positionIntel.longs")}</span>{" "}
           {usd ? fmtUsd(usd.longUsd) : `${row.longPct.toFixed(1)}%`}
         </span>
         <span>
-          <span className={!longWins ? "pi-short" : "pi-gc-dim"}>Shorts</span>{" "}
+          <span className={!longWins ? "pi-short" : "pi-gc-dim"}>{t("positionIntel.shorts")}</span>{" "}
           {usd ? fmtUsd(usd.shortUsd) : `${row.shortPct.toFixed(1)}%`}
         </span>
       </div>
@@ -132,6 +134,7 @@ const PREVIEW: { key: GroupKey; label: string; hint: string; row: ExchangeRatioR
 export function PositionIntelligence({ coin, onOpenAuth, onOpenUpgrade, showHeader = true }: Props) {
   const { user, tier } = useAuth();
   const unlocked = !!user && (tier === "pro" || tier === "elite");
+  const { t } = useTranslation();
 
   const [data, setData] = useState<PositionIntelRow[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -163,11 +166,11 @@ export function PositionIntelligence({ coin, onOpenAuth, onOpenUpgrade, showHead
 
   const header = showHeader && (
     <div className="pi-header">
-      <span className="pi-title">Position Intelligence</span>
+      <span className="pi-title">{t("positionIntel.title")}</span>
       <span
         className="pi-info"
-        title="Long/short split of Smart Money (top accounts), Whales (top positions by size) and Retail (all accounts), averaged across OKX and Gate.io. 5-minute data, refreshed every minute."
-        aria-label="About Position Intelligence"
+        title={t("positionIntel.info")}
+        aria-label={t("positionIntel.aboutAria")}
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="10" />
@@ -185,18 +188,16 @@ export function PositionIntelligence({ coin, onOpenAuth, onOpenUpgrade, showHead
         <div className="pi-locked">
           <div className="pi-locked-preview" aria-hidden="true">
             {PREVIEW.map((p, i) => (
-              <GroupCard key={p.key} groupKey={p.key} label={p.label} hint={p.hint} row={p.row} index={i} />
+              <GroupCard key={p.key} groupKey={p.key} label={t(`positionIntel.groups.${p.key}`)} hint={p.hint} row={p.row} index={i} />
             ))}
           </div>
           <div className="pi-locked-overlay">
-            <p className="pi-locked-title">See how Smart Money is positioned</p>
-            <p className="pi-locked-sub">
-              Long/short breakdowns from Smart Money, Whales and Retail traders across OKX and Gate.io.
-            </p>
+            <p className="pi-locked-title">{t("positionIntel.lockedTitle")}</p>
+            <p className="pi-locked-sub">{t("positionIntel.lockedSub")}</p>
             <button type="button" className="pi-unlock-btn" onClick={onUnlock}>
-              Unlock
+              {t("positionIntel.unlock")}
             </button>
-            <p className="pi-locked-note">{user ? "Pro plan required" : "Free account required to start"}</p>
+            <p className="pi-locked-note">{user ? t("positionIntel.proRequired") : t("positionIntel.freeRequired")}</p>
           </div>
         </div>
       </div>
@@ -211,7 +212,7 @@ export function PositionIntelligence({ coin, onOpenAuth, onOpenUpgrade, showHead
           {[0, 1, 2].map((i) => <span key={i} className="pi-skeleton-row" />)}
         </div>
       )}
-      {data && data.length === 0 && <div className="pi-empty">Positioning data unavailable for {coin}.</div>}
+      {data && data.length === 0 && <div className="pi-empty">{t("positionIntel.empty", { coin })}</div>}
       {data && data.length > 0 && (
         <>
           {GROUPS.map(({ key, label, hint }, i) => {
@@ -219,10 +220,10 @@ export function PositionIntelligence({ coin, onOpenAuth, onOpenUpgrade, showHead
             if (!row) return null;
             // Dollar sizes (Gate.io only) on the Whales row.
             const usd = key === "whalePosition" ? data.find((d) => d.whaleUsd)?.whaleUsd : undefined;
-            return <GroupCard key={key} groupKey={key} label={label} hint={hint} row={row} usd={usd} index={i} />;
+            return <GroupCard key={key} groupKey={key} label={t(`positionIntel.groups.${key}`, { defaultValue: label })} hint={hint} row={row} usd={usd} index={i} />;
           })}
 
-          <p className="pi-foot">OKX + Gate.io · 5m data, refreshes every minute · Whale sizes from Gate.io</p>
+          <p className="pi-foot">{t("positionIntel.foot")}</p>
         </>
       )}
     </div>

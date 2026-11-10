@@ -262,16 +262,16 @@ export function CoinbasePremium({ onAIData }: OnChainMetricsProps) {
       {/* ── Header ── */}
       <div className="cbp-header">
         <div>
-          <div className="cbp-title">Coinbase Premium Index</div>
+          <div className="cbp-title">{t("coinbasePremium2.title")}</div>
           <div className="cbp-sub">
-            — Price USD &nbsp;·&nbsp;
+            {t("coinbasePremium2.priceUsd")} &nbsp;·&nbsp;
             <span style={{ color: "#22c55e" }}>■</span>/<span style={{ color: "#fb7185" }}>■</span>
-            {" "}Premium (Coinbase vs {refSource})
+            {" "}{t("coinbasePremium2.premiumVs", { source: refSource })}
           </div>
         </div>
         <div className="cbp-current" style={{ color: pctColor }}>
           {current === null
-            ? (liveError ? "N/A" : "—")
+            ? (liveError ? t("coinbasePremium2.na") : "—")
             : `${current >= 0 ? "+" : ""}${current.toFixed(4)}%`}
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import "../styles/FloatingNavBar.css";
 
 interface Props {
@@ -126,6 +127,7 @@ export function FloatingNavBar({
   profileOpen, agentUnread, onOpenDailyBrief, dailyBriefOpen,
   agentLocked, onAgentLocked, onGoHome, homeActive, showAgentShowcase,
 }: Props) {
+  const { t } = useTranslation();
   // Same ~5s one-shot as TradingAgent.tsx's own showcasePlaying — stops
   // early on tap too (see the Agent button's onClick below).
   const [showcasePlaying, setShowcasePlaying] = useState(false);
@@ -356,13 +358,13 @@ export function FloatingNavBar({
       onPointerUp={release}
       onPointerCancel={release}
       onPointerLeave={() => { if (pressedRef.current === item.label) release(); }}
-      aria-label={item.label}
+      aria-label={t(`floatingNav.${item.label.toLowerCase()}`)}
       aria-current={item.isActive ? "page" : undefined}
     >
       <span className="fnb-item-icon-wrap">
         {item.icon}
       </span>
-      <span className="fnb-item-label">{item.label}</span>
+      <span className="fnb-item-label">{t(`floatingNav.${item.label.toLowerCase()}`)}</span>
     </button>
   );
 
@@ -373,7 +375,7 @@ export function FloatingNavBar({
     <nav
       ref={barRef}
       className={`fnb-bar${raised ? " fnb-bar--raised" : ""}${NAV_STYLE !== "glass" ? ` fnb-bar--${NAV_STYLE}` : ""}`}
-      aria-label="Quick navigation"
+      aria-label={t("floatingNav.quickNav")}
     >
       <span
         ref={glassRef}
@@ -392,7 +394,7 @@ export function FloatingNavBar({
           setShowcasePlaying(false);
           window.dispatchEvent(new CustomEvent("toggle-trading-agent"));
         }}
-        aria-label="Trading Agent"
+        aria-label={t("floatingNav.tradingAgent")}
       >
         <span className="fnb-item-icon-wrap">
           {showcasePlaying && (
@@ -410,7 +412,7 @@ export function FloatingNavBar({
       {showcasePlaying && (
         <div className="fnb-agent-callout" role="status">
           <span className="fnb-agent-callout-sparkle" aria-hidden="true">✨</span>
-          Meet Agent Ready — your AI trading copilot
+          {t("floatingNav.agentCallout")}
         </div>
       )}
     </nav>

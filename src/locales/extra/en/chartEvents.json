@@ -1,0 +1,49 @@
+{
+  "chartEvents": {
+    "ago": {
+      "justNow": "just now",
+      "m": "{{n}}m ago",
+      "h": "{{n}}h ago",
+      "d": "{{n}}d ago",
+      "mo": "{{n}}mo ago",
+      "y": "{{n}}y ago"
+    },
+    "headline": {
+      "oversold": "Oversold zone",
+      "overbought": "Overbought zone",
+      "supportBreak": "Broke below support",
+      "resistanceReject": "Rejected at resistance",
+      "resistanceBreakout": "Broke above resistance",
+      "supportBounce": "Bounced off support",
+      "atSupport": "Testing support",
+      "atResistance": "Testing resistance"
+    },
+    "title": {
+      "current": "Happening now",
+      "supportBreak": "Below Support",
+      "resistanceReject": "Resistance Rejected",
+      "resistanceBreakout": "Resistance Breakout",
+      "supportBounce": "Support Bounce",
+      "atSupport": "At Support",
+      "atResistance": "At Resistance"
+    },
+    "body": {
+      "currentOversold": "{{name}} is trading in an oversold zone at {{price}}, suggesting the recent move may be overdone to the downside.",
+      "currentOverbought": "{{name}} is trading in an overbought zone at {{price}}, suggesting the recent move may be overdone to the upside.",
+      "supportBreak_one": "{{name}} dropped below {{price}}, a price it's mostly stayed above over the past {{count}} candle.",
+      "supportBreak_other": "{{name}} dropped below {{price}}, a price it's mostly stayed above over the past {{count}} candles.",
+      "resistanceReject": "{{name}} was rejected near {{price}} and pulled back.",
+      "resistanceBreakout_one": "{{name}} broke above {{price}}, a price it's mostly stayed under over the past {{count}} candle.",
+      "resistanceBreakout_other": "{{name}} broke above {{price}}, a price it's mostly stayed under over the past {{count}} candles.",
+      "supportBounce": "{{name}} bounced off support near {{price}} and recovered.",
+      "atSupport": "{{name}} is testing support near {{price}}.",
+      "atResistance": "{{name}} is testing resistance near {{price}}."
+    },
+    "live": "LIVE",
+    "bullishSetup": "Bullish setup",
+    "bearishSetup": "Bearish setup",
+    "show": "Show {{title}}",
+    "summary": "summary",
+    "event": "event"
+  }
+}

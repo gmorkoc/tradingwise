@@ -1,0 +1,121 @@
+{
+  "appShell": {
+    "dismiss": "Descartar",
+    "askAgent": "Preguntar a Agent Ready",
+    "fetchError": "No se pudieron obtener los datos. Revisa tu conexión a la API.",
+    "thisCoin": "Esta moneda",
+    "fullscreenHint": "Haz doble clic en el gráfico para pantalla completa",
+    "topTraders": "Top traders de {{name}}",
+    "mode": {
+      "liveMarket": "Mercado en vivo",
+      "backToAria": "Volver a {{label}}",
+      "backToMarket": "Volver al mercado",
+      "leavePaper": "Salir del paper trading",
+      "paperChipAria": "Paper trading: ${{cash}} de dinero de práctica, {{open}} abiertas",
+      "openPaperAria": "Abrir paper trading, practica con $50,000",
+      "paperShort": "PAPER",
+      "openCount": "{{n}} ABIERTAS",
+      "practice50k": "Practica con $50K",
+      "paperTradingCaps": "PAPER TRADING",
+      "paperTrading": "Paper trading",
+      "tapToSwitch": "Toca para cambiar",
+      "liveSub": "Gráficos, señales y precios reales",
+      "practiceMoney": "Dinero de práctica · ${{cash}}",
+      "openCountLower": "{{n}} abiertas",
+      "paperSub": "Practica con dinero ficticio, sin riesgo",
+      "new": "Nuevo",
+      "switchingToPaper": "Cambiando a Paper trading",
+      "switchingToLive": "Cambiando a Mercado en vivo",
+      "splashPaper": "PAPER",
+      "splashMarket": "MERCADO"
+    },
+    "tabs": {
+      "paperTrading": "Paper Trading",
+      "orderFlowPressure": "Presión del flujo de órdenes",
+      "orderBook": "Libro de órdenes",
+      "positionIntelligence": "Inteligencia de posiciones",
+      "tradeToolsAria": "Herramientas de trading"
+    },
+    "usage": {
+      "title": "Uso de IA",
+      "upgrade": "Mejorar",
+      "ofLimit": "{{used}} de {{limit}} usadas",
+      "locked": "Mejora tu plan para desbloquear solicitudes de IA"
+    },
+    "invite": {
+      "title": "Invita a un amigo",
+      "sub": "Invita a un amigo: cuando se registre, recibes $10,000 gratis en efectivo de paper trading.",
+      "placeholder": "amigo@email.com",
+      "sending": "Enviando…",
+      "sent": "Invitación enviada ✓",
+      "error": "No se pudo enviar — inténtalo de nuevo",
+      "send": "Enviar invitación"
+    },
+    "sidebar": {
+      "guest": "Invitado",
+      "signInPrompt": "Iniciar sesión",
+      "dragExpand": "Arrastra para expandir la barra lateral",
+      "dragCollapse": "Arrastra para contraer la barra lateral",
+      "account": "Cuenta",
+      "support": "Soporte",
+      "online": "En línea",
+      "signIn": "Iniciar sesión"
+    },
+    "topNav": {
+      "logoAria": "coinhintz — Inicio",
+      "home": "Inicio",
+      "menu": "Menú",
+      "mainMenu": "Menú principal",
+      "openMenu": "Abrir menú",
+      "portfolio": "Portafolio",
+      "watchlist": "Lista de seguimiento",
+      "searchTitle": "Buscar (⌘K)",
+      "search": "Buscar",
+      "notifications": "Notificaciones",
+      "signIn": "Iniciar sesión",
+      "signUp": "Registrarse"
+    },
+    "focus": {
+      "onTip": "Enfoque activado — alertas silenciadas, distracciones ocultas. Haz clic para desactivarlo",
+      "offTip": "Enfoque desactivado — haz clic para ocultar distracciones y silenciar todas las alertas",
+      "aria": "Modo enfoque",
+      "activated": "Modo enfoque activado"
+    },
+    "pv": {
+      "tryAria": "Prueba ProVision",
+      "turnMeOn": "Actívame",
+      "daysFree": "3 días gratis",
+      "buy": "COMPRA",
+      "sub": "Colores de tendencia, señales de compra/venta y una verificación de señal en vivo. Sin tarjeta.",
+      "cta": "Prueba ProVision gratis",
+      "onTip": "ProVision activado — haz clic para volver al gráfico normal",
+      "offTip": "ProVision: velas de tendencia, señales de compra/venta y verificación de señal en vivo"
+    },
+    "features": {
+      "candleai": "Análisis de Velas",
+      "altanalysis": "Análisis de Altcoins",
+      "options": "Análisis de Opciones",
+      "correlation": "Matriz de Correlación",
+      "strategyalerts": "Alertas de Estrategia"
+    },
+    "coinPicker": {
+      "title": "Selecciona una cripto",
+      "search": "Buscar…",
+      "star": "Marcar {{coin}} como favorita",
+      "unstar": "Quitar {{coin}} de favoritas",
+      "market": "Mercado",
+      "lastPrice": "Último precio",
+      "change24h": "% 24h",
+      "volume": "Volumen"
+    },
+    "portfolio": {
+      "cashOption": "Efectivo (USD)"
+    },
+    "meta": {
+      "chartTitle": "{{name}} ({{coin}}): gráfico de precio, señales en vivo y análisis | coinhintz",
+      "defaultTitle": "coinhintz | Inteligencia para trading de cripto",
+      "chartDesc": "Gráfico de precio de {{name}} ({{coin}}) en vivo con señales ProVision, análisis técnico, libro de órdenes y consenso del mercado en coinhintz.",
+      "defaultDesc": "Gráficos de cripto en tiempo real, señales de IA, mapas de liquidaciones y más. Opera de forma más inteligente con coinhintz."
+    }
+  }
+}

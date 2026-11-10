@@ -1,0 +1,15 @@
+{
+  "accountMenu": {
+    "account": "Account",
+    "free": "Gratis",
+    "language": "Lingua",
+    "currency": "Valuta",
+    "currencyTip": "I prezzi sono mostrati in dollari USA",
+    "theme": "Tema",
+    "themes": {
+      "light": "Chiaro",
+      "dark": "Scuro",
+      "system": "Sistema"
+    }
+  }
+}

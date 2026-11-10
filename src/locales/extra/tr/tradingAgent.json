@@ -1,0 +1,220 @@
+{
+  "tradingAgent": {
+    "connecting": "Agent bağlanıyor",
+    "callout": "Agent Ready ile tanış — YZ destekli işlem yardımcın",
+    "time": {
+      "now": "şimdi",
+      "minAgo": "{{n}} dk önce",
+      "hourAgo": "{{n}} sa önce",
+      "dayAgo": "{{n}} g önce"
+    },
+    "conv": {
+      "pin": "Sabitle",
+      "unpin": "Sabitlemeyi kaldır",
+      "pinConversation": "Sohbeti sabitle",
+      "unpinConversation": "Sohbetin sabitlemesini kaldır",
+      "delete": "Sil",
+      "deleteConversation": "Sohbeti sil",
+      "empty": "(boş)",
+      "messages_one": "{{count}} mesaj",
+      "messages_other": "{{count}} mesaj"
+    },
+    "head": {
+      "menu": "Menü",
+      "agentActions": "Agent işlemleri",
+      "close": "Kapat",
+      "newChat": "Yeni sohbet",
+      "history": "Geçmiş",
+      "watchlist": "Takipler",
+      "positions": "Pozisyonlar"
+    },
+    "history": {
+      "chatsCount": "{{n}}/{{max}} sohbet",
+      "limitHit": "{{max}} sohbet sınırına ulaştın. Yeni bir sohbet başlatmak için önce aşağıdan birini sil.",
+      "limitNear": "Bilgin olsun: en fazla {{max}} sohbet tutabilirsin. Yeni sohbet için birini silmen gerekmeden önce {{left}} hakkın kaldı.",
+      "limitInfo": "En fazla {{max}} sohbet tutabilirsin. {{max}} sohbete ulaştığında, yenisini başlatmak için birini sil.",
+      "noConversations": "Henüz geçmiş sohbet yok.",
+      "pinned": "Sabitlenenler",
+      "allChats": "Tüm sohbetler",
+      "backToChat": "Sohbete dön"
+    },
+    "watches": {
+      "active": "Aktif takipler",
+      "noActive": "Aktif takip yok.",
+      "notifications": "Bildirimler",
+      "noTriggered": "Henüz tetiklenen takip yok.",
+      "watch": "Takip",
+      "watching": "<b>{{coin}}</b> takip ediliyor",
+      "timeframe": "Zaman dilimi",
+      "daily": "Günlük",
+      "settingUp": "Kuruluyor…",
+      "cancel": "İptal",
+      "cancelled": "İptal edildi",
+      "triggered": "✓ Tetiklendi"
+    },
+    "positions": {
+      "title": "Pozisyonlar",
+      "refresh": "Yenile",
+      "refreshPositions": "Pozisyonları yenile",
+      "tabOpen": "Açık",
+      "tabClosed": "Kapalı",
+      "loadingClosed": "Kapalı pozisyonların yükleniyor…",
+      "openTitle": "Açık Pozisyonlar",
+      "closedTitle": "Kapalı Pozisyonlar",
+      "noOpen": "Şu anda açık pozisyon yok.",
+      "noClosed": "Henüz kapalı pozisyon yok.",
+      "scrollMore": "{{count}} pozisyon · daha fazlası için kaydır",
+      "tapHint": "Tüm ayrıntılar için bir pozisyona dokun",
+      "side": "Yön",
+      "size": "Büyüklük",
+      "entry": "Giriş",
+      "current": "Güncel",
+      "exit": "Çıkış",
+      "pnl": "K/Z",
+      "opened": "Açılış",
+      "closed": "Kapanış",
+      "closing": "Kapatılıyor…",
+      "closePosition": "Pozisyonu Kapat",
+      "close": "Kapat",
+      "closeReason": {
+        "manual": "manuel",
+        "take_profit": "kâr al",
+        "stop_loss": "stop loss",
+        "liquidation": "tasfiye"
+      }
+    },
+    "proposal": {
+      "long": "LONG",
+      "short": "SHORT",
+      "buy": "AL",
+      "sell": "SAT",
+      "spot": "SPOT",
+      "futures": "VADELİ {{leverage}}x",
+      "margin": "Teminat",
+      "cost": "Maliyet",
+      "notional": "Nominal",
+      "takeProfit": "Kâr Al",
+      "stopLoss": "Stop Loss",
+      "executing": "Gerçekleştiriliyor…",
+      "confirm": "Onayla",
+      "confirmAll": "Tümünü Onayla",
+      "dismiss": "Reddet",
+      "executed": "✓ Gerçekleşti",
+      "dismissed": "Reddedildi",
+      "total": "Toplam",
+      "totalAcross_one": "{{count}} varlıkta {{amount}}",
+      "totalAcross_other": "{{count}} varlıkta {{amount}}",
+      "updateBalance": "Bakiyeyi Güncelle",
+      "newCashBalance": "Yeni nakit bakiye",
+      "updating": "Güncelleniyor…",
+      "updated": "✓ Güncellendi",
+      "openSection": "{{label}} aç →"
+    },
+    "consent": {
+      "strong": "Yalnızca sanal işlem — simüle para, simüle işlemler.",
+      "body": "Bu agent kayıtlı bir finansal veya yatırım danışmanı değildir ve söylediği hiçbir şey yatırım tavsiyesi değildir. coinhintz, bu özelliğin kullanımından doğan simüle ya da başka türlü hiçbir kayıptan sorumlu değildir. Bunu yalnızca bir kez onaylamanı isteyeceğiz — bugünden sonra bu uyarıyı bir daha görmeyeceksin.",
+      "oneSec": "Bir saniye…",
+      "agree": "Anladım ve kabul ediyorum!"
+    },
+    "continueBanner": {
+      "text": "Kaldığın yerden devam et:",
+      "continue": "Devam et →"
+    },
+    "webPush": {
+      "text": "Bir takip veya pozisyon tetiklendiğinde, bu panel kapalıyken bile tarayıcı bildirimi al.",
+      "enabling": "Etkinleştiriliyor…",
+      "enable": "Etkinleştir"
+    },
+    "portfolio": {
+      "title": "Portföy",
+      "cash": "Nakit",
+      "edit": "Düzenle",
+      "winRate": "Kazanma Oranı",
+      "winLoss": "({{wins}}K–{{losses}}Z)",
+      "currentPositions": "Mevcut Pozisyonlar"
+    },
+    "feed": {
+      "emptyHint": "\"200$'lık BTC al\", \"ETH'imin yarısını sat\" veya \"SOL hakkında ne düşünüyorsun?\" gibi şeyler dene — buradaki her şey simüledir, gerçek para veya borsa yoktur.",
+      "thoughtProcess": "Düşünce süreci",
+      "chartScreenshot": "Grafik ekran görüntüsü",
+      "cancel": "İptal",
+      "saveResend": "Kaydet ve yeniden gönder",
+      "copied": "Kopyalandı",
+      "copyMessage": "Mesajı kopyala",
+      "copy": "Kopyala",
+      "editMessage": "Mesajı düzenle",
+      "edit": "Düzenle",
+      "sources_one": "{{count}} Kaynak",
+      "sources_other": "{{count}} Kaynak",
+      "thinking": "Düşünüyor",
+      "tapToInterrupt": "Durdurmak için dokun"
+    },
+    "snapshot": {
+      "trend": {
+        "up": "yükseliş",
+        "down": "düşüş",
+        "range": "yatay"
+      },
+      "na": "yok",
+      "funding": "Fonlama",
+      "chart": "Grafik",
+      "orderBook": "Emir Defteri",
+      "openingChart": "{{coin}} grafiği açılıyor…",
+      "openingOrderBook": "{{coin}} emir defteri açılıyor…"
+    },
+    "opener": {
+      "scanning": "Senin için en iyi seçenekleri bulmak üzere piyasayı tarıyorum",
+      "coinList": "Coin listesi",
+      "marketCap": "Piyasa değeri",
+      "topGainers": "En çok yükselenler",
+      "tapToStart": "Başlamak için birine dokun — ya da bana bir coin söyle.",
+      "noGainers": "Şu anda ilk 100'de yükselen yok.",
+      "marketDataDown": "Piyasa verileri şu anda yüklenmiyor — bana hangi coin olduğunu söylemen yeterli.",
+      "topByCapAria": "Piyasa değerine göre en büyük coinler",
+      "topGainersAria": "En çok yükselenler, 24s",
+      "startWith": "{{name}} ile başla",
+      "more": "+{{count}} daha",
+      "headlines": "Manşetler",
+      "headlinesAria": "Son kripto manşetleri"
+    },
+    "speech": {
+      "gettingReady": "Ses hazırlanıyor…",
+      "speaking": "Konuşuyor — durdurmak için dokun"
+    },
+    "composer": {
+      "pendingImageAlt": "Analiz edilecek grafik ekran görüntüsü",
+      "removeImage": "Eklenen görseli kaldır",
+      "cancelRecording": "Kaydı iptal et",
+      "attachImage": "Görsel ekle",
+      "listening": "Dinleniyor…",
+      "placeholder": "Agent'a ne yapacağını söyle…",
+      "stopRecording": "Kaydı durdur",
+      "speakToAgent": "Agent ile konuş",
+      "send": "Gönder",
+      "sending": "Gönderiliyor",
+      "typing": "Yazıyor"
+    },
+    "hub": {
+      "new": "Yeni",
+      "history": "Geçmiş",
+      "watch": "Takip",
+      "positions": "Pozisyonlar",
+      "report": "Bildir"
+    },
+    "errors": {
+      "enableNotifications": "Tarayıcı bildirimleri etkinleştirilemedi",
+      "saveFailed": "Kaydedilemedi — lütfen tekrar dene.",
+      "loadClosed": "Kapalı pozisyonların yüklenemedi — lütfen tekrar dene.",
+      "refreshPositions": "Pozisyonların yenilenemedi — lütfen tekrar dene.",
+      "generic": "Bir şeyler ters gitti — lütfen tekrar dene.",
+      "tradeFailed": "İşlem başarısız — lütfen tekrar dene.",
+      "basketFailed": "Bazı bacaklar gerçekleşmemiş olabilir — lütfen pozisyonlarını kontrol et.",
+      "balanceFailed": "Bakiyen güncellenemedi — lütfen tekrar dene.",
+      "watchFailed": "Bu takip kurulamadı — lütfen tekrar dene.",
+      "cashInvalid": "Nakit bakiye negatif olmayan bir sayı olmalıdır.",
+      "cashFailed": "Nakit bakiye güncellenemedi — lütfen tekrar dene.",
+      "closeFailed": "Bu pozisyon kapatılamadı — lütfen tekrar dene.",
+      "cancelWatchFailed": "Takip iptal edilemedi — lütfen tekrar dene."
+    }
+  }
+}

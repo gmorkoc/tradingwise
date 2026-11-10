@@ -1,0 +1,13 @@
+{
+  "orderFlowPanel": {
+    "title": "Pressione dell'order flow",
+    "spread": "Spread",
+    "live": "LIVE",
+    "unavailable": "Order flow non disponibile per {{coin}}.",
+    "buyers": "{{pct}}% acquirenti",
+    "sellers": "{{pct}}% venditori",
+    "todaysStory": "La storia di oggi",
+    "noSignals": "Nessun segnale rilevante su questo grafico al momento.",
+    "orderBook": "Order Book"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "profile2": {
+    "nav": {
+      "overview": "Overview",
+      "profileInfo": "Profile Info",
+      "security": "Security",
+      "blocked": "Blocked Users",
+      "notifications": "Notifications",
+      "activity": "Activity",
+      "danger": "Danger Zone"
+    },
+    "close": "Close",
+    "planUsage": "Plan & Usage",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "blocked": {
+      "title": "Blocked Users",
+      "sub": "Blocked accounts can't appear in your Live Chat feed and can't be tagged by you.",
+      "empty": "You haven't blocked anyone."
+    },
+    "whaleActivity": {
+      "label": "Whale Activity",
+      "desc": "A banner when a large BTC transfer moves on-chain, while you're in the app."
+    },
+    "strategyAlerts": {
+      "label": "Strategy Alerts",
+      "desc": "A push whenever one of your deployed strategies fires."
+    },
+    "deleteAccount": "Delete Account",
+    "deleteDesc": "Permanently remove your account and all data.",
+    "deleteFailed": "Failed to delete account",
+    "notAuthenticated": "Not signed in"
+  }
+}

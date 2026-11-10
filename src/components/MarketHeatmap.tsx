@@ -254,7 +254,7 @@ export function MarketHeatmap() {
               <span className="mhm-breadth-down">▼ {downCount}</span>
             </span>
           )}
-          <span className="mhm-legend" aria-label="Color scale from -8% to +8%">
+          <span className="mhm-legend" aria-label={t("marketHeatmap2.colorScale")}>
             <span className="mhm-legend-label">−8%</span>
             <span className="mhm-legend-bar" />
             <span className="mhm-legend-label">+8%</span>
@@ -346,6 +346,7 @@ const TOOLTIP_WIDTH = 220;
 function HoverCard({ hover, imgError, onImgError }: {
   hover: HoverState; imgError: Set<string>; onImgError: (symbol: string) => void;
 }) {
+  const { t } = useTranslation();
   const { tile, x, y } = hover;
   const left = Math.min(x + TOOLTIP_OFFSET, window.innerWidth - TOOLTIP_WIDTH - 8);
   const top = Math.min(y + TOOLTIP_OFFSET, window.innerHeight - 160);
@@ -368,18 +369,18 @@ function HoverCard({ hover, imgError, onImgError }: {
         <span className="mhm-tooltip-symbol">{tile.symbol}</span>
       </div>
       <div className="mhm-tooltip-row">
-        <span className="mhm-tooltip-label">Price</span>
+        <span className="mhm-tooltip-label">{t("marketHeatmap2.price")}</span>
         <span className="mhm-tooltip-price-wrap">
           <span className="mhm-tooltip-price">{fmtPrice(tile.price)}</span>
           <span className={`mhm-tooltip-badge${up ? " up" : " down"}`}>{up ? "▲" : "▼"} {Math.abs(tile.change).toFixed(2)}%</span>
         </span>
       </div>
       <div className="mhm-tooltip-row">
-        <span className="mhm-tooltip-label">Market Cap</span>
+        <span className="mhm-tooltip-label">{t("marketHeatmap2.marketCap")}</span>
         <span className="mhm-tooltip-value">{fmtBig(tile.marketCap)}</span>
       </div>
       <div className="mhm-tooltip-row">
-        <span className="mhm-tooltip-label">Volume(24h)</span>
+        <span className="mhm-tooltip-label">{t("marketHeatmap2.volume24h")}</span>
         <span className="mhm-tooltip-value">{fmtBig(tile.volume)}</span>
       </div>
     </div>

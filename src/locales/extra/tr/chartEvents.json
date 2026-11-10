@@ -1,0 +1,49 @@
+{
+  "chartEvents": {
+    "ago": {
+      "justNow": "az önce",
+      "m": "{{n}} dk önce",
+      "h": "{{n}} sa önce",
+      "d": "{{n}} g önce",
+      "mo": "{{n}} ay önce",
+      "y": "{{n}} yıl önce"
+    },
+    "headline": {
+      "oversold": "Aşırı satım bölgesi",
+      "overbought": "Aşırı alım bölgesi",
+      "supportBreak": "Desteğin altına kırdı",
+      "resistanceReject": "Dirençten geri döndü",
+      "resistanceBreakout": "Direncin üstüne kırdı",
+      "supportBounce": "Destekten sekti",
+      "atSupport": "Desteği test ediyor",
+      "atResistance": "Direnci test ediyor"
+    },
+    "title": {
+      "current": "Şu an oluyor",
+      "supportBreak": "Desteğin Altında",
+      "resistanceReject": "Direnç Reddi",
+      "resistanceBreakout": "Direnç Kırılımı",
+      "supportBounce": "Destek Sekmesi",
+      "atSupport": "Destekte",
+      "atResistance": "Dirençte"
+    },
+    "body": {
+      "currentOversold": "{{name}}, {{price}} seviyesinde aşırı satım bölgesinde işlem görüyor; son hareket aşağı yönde abartılmış olabilir.",
+      "currentOverbought": "{{name}}, {{price}} seviyesinde aşırı alım bölgesinde işlem görüyor; son hareket yukarı yönde abartılmış olabilir.",
+      "supportBreak_one": "{{name}}, son {{count}} mumdur çoğunlukla üzerinde kaldığı {{price}} seviyesinin altına düştü.",
+      "supportBreak_other": "{{name}}, son {{count}} mumdur çoğunlukla üzerinde kaldığı {{price}} seviyesinin altına düştü.",
+      "resistanceReject": "{{name}}, {{price}} yakınında reddedildi ve geri çekildi.",
+      "resistanceBreakout_one": "{{name}}, son {{count}} mumdur çoğunlukla altında kaldığı {{price}} seviyesinin üzerine çıktı.",
+      "resistanceBreakout_other": "{{name}}, son {{count}} mumdur çoğunlukla altında kaldığı {{price}} seviyesinin üzerine çıktı.",
+      "supportBounce": "{{name}}, {{price}} yakınındaki destekten sekip toparlandı.",
+      "atSupport": "{{name}}, {{price}} yakınındaki desteği test ediyor.",
+      "atResistance": "{{name}}, {{price}} yakınındaki direnci test ediyor."
+    },
+    "live": "CANLI",
+    "bullishSetup": "Yükseliş kurulumu",
+    "bearishSetup": "Düşüş kurulumu",
+    "show": "{{title}} göster",
+    "summary": "özet",
+    "event": "olay"
+  }
+}

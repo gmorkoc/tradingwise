@@ -1,0 +1,15 @@
+{
+  "accountMenu": {
+    "account": "Hesap",
+    "free": "Ücretsiz",
+    "language": "Dil",
+    "currency": "Para birimi",
+    "currencyTip": "Fiyatlar ABD doları cinsinden gösterilir",
+    "theme": "Tema",
+    "themes": {
+      "light": "Açık",
+      "dark": "Koyu",
+      "system": "Sistem"
+    }
+  }
+}

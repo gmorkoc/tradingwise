@@ -1,0 +1,36 @@
+{
+  "tradeInsights": {
+    "aria": "Análisis de {{coin}}",
+    "agoShort": { "m": "{{n}} min", "h": "{{n}} h", "d": "{{n}} d" },
+    "crowd": { "long": "longs saturados", "short": "shorts saturados", "balanced": "posicionamiento equilibrado" },
+    "sigWord": { "bull": "Long", "bear": "Short", "neutral": "Neutral" },
+    "techRead": "Los técnicos marcan {{word}} {{score}}/100",
+    "techLoading": "Los técnicos aún están cargando",
+    "maAboveBelow": " — el precio está por encima de {{above}} y por debajo de {{below}}",
+    "maAbove": " — el precio está por encima de {{above}}",
+    "maBelow": " — el precio está por debajo de {{below}}",
+    "crowdClause": ", {{crowd}}",
+    "structLine": "{{tech}}{{ma}}{{crowd}}.",
+    "structUpper": { "bull": "ESTRUCTURA ALCISTA", "bear": "ESTRUCTURA BAJISTA", "mixed": "ESTRUCTURA MIXTA" },
+    "structTitle": { "bull": "Estructura alcista", "bear": "Estructura bajista", "mixed": "Estructura mixta" },
+    "hide": "Ocultar",
+    "show": "Mostrar",
+    "updated": "Live Hintz · actualizado hace {{ago}}",
+    "range30": "{{lo}}–{{hi}} en 30 días",
+    "rsi": {
+      "overbought": "RSI {{v}} — sobrecomprado, estirado al alza.",
+      "oversold": "RSI {{v}} — sobrevendido, estirado a la baja.",
+      "up": "RSI {{v}} — momentum inclinado al alza.",
+      "down": "RSI {{v}} — momentum inclinado a la baja."
+    },
+    "rangeFallback": "Rango mensual y momentum.",
+    "funding": "Financiación",
+    "longShare": "El {{pct}}% de las cuentas de futuros está en long — {{crowd}}.",
+    "futuresFallback": "Posicionamiento en futuros.",
+    "whatsMoving": "Qué lo está moviendo",
+    "nfa": "No es asesoramiento financiero",
+    "poweredBy": "Con señales de coinhintz",
+    "askPrompt": "Dame un análisis completo de {{name}} ({{coin}}) ahora mismo: tendencia, niveles clave, posicionamiento en derivados y qué vigilar.",
+    "fullAnalysis": "Análisis completo"
+  }
+}

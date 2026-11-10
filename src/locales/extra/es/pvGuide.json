@@ -1,0 +1,50 @@
+{
+  "pvGuide": {
+    "title": "Cómo usar ProVision",
+    "seeingH": "Lo que estás viendo",
+    "bestUsesH": "Mejores usos",
+    "safeguardsH": "Protecciones integradas",
+    "limitsH": "Conviene saber",
+    "workflowH": "Un flujo de trabajo sensato",
+    "gotIt": "Entendido",
+    "onChart": {
+      "ribbon": { "title": "Cinta pintada", "text": "Un abanico de medias móviles detrás de las velas. La banda se pinta de verde mientras los compradores tienen el control y de rojo cuando lo tienen los vendedores; los cambios de color marcan dónde gira la tendencia." },
+      "candles": { "title": "Velas coloreadas", "text": "Verdes o rojas cuando hay una tendencia real en marcha, amarillas cuando no la hay." },
+      "tp": { "title": "TP", "text": "Marca dónde una Compra o Venta pasada habría cerrado con ganancia." },
+      "buySell": { "title": "COMPRA / VENTA", "text": "Solo aparece cuando la mayoría de los 7 chequeos coinciden y la tendencia mayor apunta en la misma dirección. En gráficos de menos de 4h la nueva tendencia además debe mantenerse 3 velas con fuerza sólida. Un ✓ marca las señales pasadas que terminaron en ganancia." },
+      "invalidation": { "title": "Zona de invalidación", "text": "La banda luminosa y la línea discontinua muestran dónde la última señal quedaría invalidada, con su Δ Volumen." },
+      "spikes": { "title": "⚡ Picos", "text": "Velas repentinas, como de noticia. Las señales que apuestan contra un pico reciente se omiten durante algunas velas." },
+      "events": { "title": "Cuenta atrás de eventos", "text": "Los grandes datos programados de EE. UU. — decisiones de la Fed, IPC, empleo, PIB — aparecen hasta con un día de antelación. Las señales se pausan desde 30 minutos antes hasta una hora después de cada uno." },
+      "sideways": { "title": "Etiqueta lateral + caja de rango", "text": "Cuando el precio se mueve en un rango, una caja gris marca su techo y su suelo. Las señales de tendencia se detienen en gráficos de menos de 4h; desde 1h, el modo rango añade R·BUY cerca del suelo y R·SELL cerca del techo hasta que el precio rompe." },
+      "thin": { "title": "Etiqueta de mercado fino", "text": "Aparece cuando hay muy poco volumen para señales fiables. COMPRA/VENTA se desactivan hasta que vuelve el volumen." },
+      "signals15m": { "title": "Etiqueta “Señales: 15m”", "text": "En gráficos de 1m y 5m, las señales vienen del gráfico de 15m y se colocan en el tuyo, así obtienes la dirección de 15m con el timing del gráfico corto." }
+    },
+    "bestUses": {
+      "confirm": { "title": "Confirma antes de entrar", "text": "Mira primero el veredicto del chequeo de señales. Cuando la mayoría de los chequeos apuntan en una dirección, piénsalo dos veces antes de tomar el lado contrario." },
+      "stop": { "title": "Pon tu stop con un motivo", "text": "La línea discontinua de invalidación marca dónde la señal deja de tener sentido. Es un nivel de stop listo para usar, y la distancia hasta él te dice qué tamaño de posición tomar." },
+      "trend": { "title": "Ve la tendencia al instante", "text": "Las velas coloreadas muestran un mercado que se mueve con decisión. Un gráfico lleno de gris es un mercado sin dirección, a menudo un buen momento para esperar." },
+      "stretched": { "title": "Detecta movimientos estirados", "text": "Una tendencia fuerte con el RSI o el Estocástico en un extremo puede estar perdiendo fuerza. Las entradas tardías ahí conllevan un riesgo extra." },
+      "money": { "title": "Sigue el dinero real", "text": "El Δ Volumen usa las compras y ventas reales a mercado del exchange. Una señal respaldada por un volumen fuerte en un solo sentido es más sólida que una sin él." },
+      "track": { "title": "Revisa el historial", "text": "Antes de confiar en una señal, mira cómo les fue a las anteriores de este gráfico: no solo cuántas veces ganaron, sino la ganancia media frente a la pérdida y el resultado por operación después de comisiones." },
+      "winners": { "title": "Deja correr las ganancias", "text": "Desde 15m, el historial arrastra tu stop detrás del precio y sale cuando la tendencia gira. Espera menos aciertos pero mucho mayores: cortar las ganancias pronto es lo que más perjudica." }
+    },
+    "safeguards": {
+      "tiny": { "title": "Movimientos mínimos en 1m–5m", "text": "Las velas cortas se mueven menos que las comisiones, así que estos gráficos toman las señales del de 15m. Obtienes la dirección de 15m con el timing del gráfico corto." },
+      "choppy": { "title": "Rangos erráticos", "text": "Las señales de tendencia se apartan cuando el precio va lateral. Desde 1h, el modo rango opera los rebotes en los bordes de la caja; por debajo de 1h marca la caja y espera una ruptura." },
+      "news": { "title": "Noticias programadas", "text": "Las decisiones de la Fed, el IPC, el empleo y el PIB se señalan hasta con un día de antelación, y las señales se pausan desde 30 minutos antes hasta una hora después." },
+      "shocks": { "title": "Shocks repentinos", "text": "Las velas desmesuradas se marcan con ⚡, y se omiten las señales que apuestan contra un shock reciente." },
+      "thin": { "title": "Mercados finos", "text": "Cuando hay muy poco volumen, las señales se desactivan en lugar de adivinar." }
+    },
+    "limits": {
+      "headlines": { "title": "Titulares sorpresa", "text": "Las noticias no programadas no se ven venir en ningún gráfico: dimensiona tus posiciones para lo inesperado." },
+      "past": { "title": "Pasado ≠ futuro", "text": "El historial viene del pasado reciente de este gráfico. Los mercados cambian, y las muestras pequeñas pueden embellecer o engañar." }
+    },
+    "workflow": {
+      "s1": "Toma la dirección del gráfico de 4h o diario.",
+      "s2": "Actúa sobre señales desde 15m; en 1m–5m son las señales de 15m, así que usa el gráfico corto para afinar tu entrada.",
+      "s3": "Coloca tu stop en la línea de invalidación y luego arrástralo a medida que el precio se mueve a tu favor.",
+      "s4": "Comprueba que el historial sea rentable después de comisiones.",
+      "s5": "Prueba la configuración primero en Paper Trading."
+    }
+  }
+}

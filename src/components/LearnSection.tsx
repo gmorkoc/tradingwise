@@ -164,8 +164,14 @@ const BEARISH: Pattern[] = [
   },
 ];
 
+// Translation key for a pattern: "Bullish Engulfing" → "bullishEngulfing".
+const patternKey = (name: string) =>
+  name.split(" ").map((w, i) => (i === 0 ? w.toLowerCase() : w[0].toUpperCase() + w.slice(1).toLowerCase())).join("");
+
 function PatternCard({ pattern, type }: { pattern: Pattern; type: "bullish" | "bearish" }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const k = patternKey(pattern.name);
   return (
     <div className={`learn-card learn-card--${type}`} onClick={() => setOpen(o => !o)}>
       <div className="learn-card-top">
@@ -173,11 +179,11 @@ function PatternCard({ pattern, type }: { pattern: Pattern; type: "bullish" | "b
           <MiniChart candles={pattern.candles} type={type} />
         </div>
         <div className="learn-card-info">
-          <span className="learn-card-name">{pattern.name}</span>
+          <span className="learn-card-name">{t(`learnSection2.patterns.${k}.name`, { defaultValue: pattern.name })}</span>
           <span className="learn-card-chevron">{open ? "▲" : "▼"}</span>
         </div>
       </div>
-      {open && <p className="learn-card-desc">{pattern.description}</p>}
+      {open && <p className="learn-card-desc">{t(`learnSection2.patterns.${k}.desc`, { defaultValue: pattern.description })}</p>}
     </div>
   );
 }

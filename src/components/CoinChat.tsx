@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Capacitor } from "@capacitor/core";
 import { Keyboard } from "@capacitor/keyboard";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { useAuth } from "../contexts/AuthContext";
 import { COINS, fetchCoinMarketCaps, fetchCoinChanges24h } from "../services/coinglass";
 import {
@@ -53,87 +54,8 @@ function coinName(symbol: string): string {
 
 // One-line "why this coin matters" blurbs for the chat panel's sub-header
 // (e.g. "Ethereum — the leading smart contract platform · $410B market
-// cap"). English-only for now — translating 60+ curated descriptions
-// accurately into every locale is its own project; COIN_BLURB_FALLBACK
-// covers any symbol added to COINS without an entry here.
-const COIN_BLURB_FALLBACK = "One of the top cryptocurrencies by market cap";
-const COIN_BLURBS: Partial<Record<string, string>> = {
-  BTC: "The world's first cryptocurrency",
-  ETH: "The leading smart contract platform",
-  BNB: "Native token of the Binance ecosystem",
-  SOL: "High-speed blockchain for DeFi & NFTs",
-  XRP: "Built for fast, low-cost cross-border payments",
-  ADA: "Research-driven proof-of-stake blockchain",
-  AVAX: "Fast, scalable platform for custom blockchains",
-  DOT: "Connects multiple blockchains into one network",
-  ATOM: "Hub for the Cosmos interchain ecosystem",
-  TRX: "High-throughput blockchain for content & payments",
-  ETC: "The original, immutable Ethereum chain",
-  LTC: "Fast, low-fee payments — the \"silver\" to Bitcoin's gold",
-  BCH: "Bitcoin fork focused on cheap, everyday payments",
-  NEAR: "Developer-friendly, sharded smart contract platform",
-  ICP: "Blockchain built to host full web apps on-chain",
-  FIL: "Decentralized storage network",
-  AR: "Permanent, pay-once data storage",
-  TIA: "Modular blockchain for scalable rollups",
-  EGLD: "High-throughput blockchain for Web3 & payments",
-  APT: "High-performance chain built with the Move language",
-  SUI: "Parallelized smart contract platform",
-  STX: "Brings smart contracts to Bitcoin",
-  CFX: "Hybrid-consensus chain popular in Asia",
-  DASH: "Fast, private digital cash",
-  ZEC: "Privacy-focused cryptocurrency",
-  XLM: "Cross-border payments & asset tokenization network",
-  LINK: "Connects smart contracts to real-world data",
-  UNI: "The largest decentralized token exchange",
-  AAVE: "Leading decentralized lending protocol",
-  CRV: "Stablecoin-focused decentralized exchange",
-  INJ: "Blockchain built for decentralized finance",
-  ENS: "Naming system for Ethereum wallets & sites",
-  COMP: "Decentralized lending & borrowing protocol",
-  LDO: "Leading liquid staking protocol",
-  DYDX: "Decentralized exchange for perpetual futures",
-  SNX: "Protocol for minting synthetic assets",
-  YFI: "Automated DeFi yield aggregator",
-  UMA: "Protocol for building synthetic financial contracts",
-  TRB: "Decentralized oracle network",
-  LPT: "Decentralized video streaming network",
-  NMR: "Powers a crowdsourced hedge fund",
-  AUCTION: "Governance token for the Bounce auction platform",
-  KSM: "Fast-moving canary network for Polkadot",
-  ZEN: "Privacy-focused blockchain platform",
-  SSV: "Decentralized Ethereum staking infrastructure",
-  OP: "Leading Ethereum layer-2 scaling network",
-  ARB: "Largest Ethereum layer-2 by activity",
-  HYPE: "Native token of the Hyperliquid derivatives exchange",
-  TAO: "Decentralized network for machine learning",
-  WLD: "Identity & payments network by Tools for Humanity",
-  ORDI: "First major token on the Bitcoin Ordinals protocol",
-  BERA: "EVM chain built around Proof-of-Liquidity",
-  ENA: "Powers a synthetic dollar protocol",
-  JTO: "Governance token for Jito's Solana staking protocol",
-  VIRTUAL: "Platform for launching AI agents on-chain",
-  GRASS: "Rewards users for sharing internet bandwidth",
-  RENDER: "Decentralized GPU rendering network",
-  ONDO: "Brings tokenized real-world assets on-chain",
-  DOGE: "The original meme coin",
-  SHIB: "Community-driven meme token ecosystem",
-  PEPE: "Meme coin inspired by the Pepe the Frog meme",
-  FLOKI: "Meme coin with an expanding utility ecosystem",
-  BONK: "Solana's breakout community meme coin",
-  WIF: "Dog-hat meme coin with a devoted community",
-  TRUMP: "Meme coin tied to Donald Trump",
-  MEME: "Community-driven meme coin platform",
-  BOME: "Fast-rising Solana meme coin",
-  NOT: "Meme coin from the Notcoin Telegram game",
-  GALA: "Powers the Gala Games Web3 gaming ecosystem",
-  CHZ: "Powers fan tokens for sports & entertainment",
-  APE: "Governance token for the Bored Ape ecosystem",
-  AXS: "Governance token for the Axie Infinity game",
-  SAND: "Token for The Sandbox virtual world",
-  MANA: "Token for the Decentraland virtual world",
-  ENJ: "Powers tokenized in-game items",
-};
+// cap") live in the locale files under coinChat2.blurbs.<SYMBOL>;
+// coinChat2.blurbFallback covers any symbol added to COINS without one.
 
 function fmtMarketCap(n: number): string {
   if (n >= 1e12) return `$${(n / 1e12).toFixed(2)}T`;
@@ -186,14 +108,14 @@ function renderWithMentions(body: string, isBot = false) {
   });
 }
 
-function timeAgo(iso: string): string {
+function timeAgo(iso: string, t: TFunction): string {
   const sec = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (sec < 45) return "now";
+  if (sec < 45) return t("coinChat2.timeNow");
   const min = Math.floor(sec / 60);
-  if (min < 60) return `${min}m`;
+  if (min < 60) return t("coinChat2.timeMin", { n: min });
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}h`;
-  return `${Math.floor(hr / 24)}d`;
+  if (hr < 24) return t("coinChat2.timeHour", { n: hr });
+  return t("coinChat2.timeDay", { n: Math.floor(hr / 24) });
 }
 
 function useIsDesktop(): boolean {
@@ -570,7 +492,7 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
   // its root ancestor, so rendering never has to handle arbitrary nesting.
   const replyToId = replyTarget ? (replyTarget.reply_to_id ?? replyTarget.id) : null;
 
-  const coinBlurb = COIN_BLURBS[coin] ?? COIN_BLURB_FALLBACK;
+  const coinBlurb = t(`coinChat2.blurbs.${coin}`, { defaultValue: t("coinChat2.blurbFallback") });
   const capUp = (change24h ?? 0) >= 0;
 
   const headerLogo = !logoError ? (
@@ -736,14 +658,14 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
           <span className="coin-chat-comment-name">@{c.username}</span>{" "}
           <span className={`coin-chat-tier-chip cc-tier--${c.tier}`}>{c.tier === "elite" ? "E" : "P"}</span>{" "}
           <span className="coin-chat-comment-text">{renderWithMentions(c.body, c.is_bot)}</span>{" "}
-          <span className="coin-chat-comment-time">{timeAgo(c.created_at)}</span>
+          <span className="coin-chat-comment-time">{timeAgo(c.created_at, t)}</span>
           {user && (
             <span className="coin-chat-comment-menu-wrap">
               <button
                 type="button"
                 className={`coin-chat-comment-dots${openMenuId === c.id ? " coin-chat-comment-dots--open" : ""}`}
                 onClick={() => setOpenMenuId(openMenuId === c.id ? null : c.id)}
-                aria-label="More"
+                aria-label={t("coinChat2.more")}
               >
                 ⋮
               </button>
@@ -819,16 +741,13 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
           <div className="coin-chat-bot-banner">
             <span className="coin-chat-bot-banner-icon">🤖</span>
             <p className="coin-chat-bot-banner-text">
-              {t(
-                "coinChat.botBannerText",
-                "MarketPulse posts market updates here and answers questions — tag @MarketPulse anytime.",
-              )}
+              {t("coinChat2.botBanner")}
             </p>
             <button
               type="button"
               className="coin-chat-bot-banner-close"
               onClick={dismissBotBanner}
-              aria-label={t("coinChat.dismiss", "Dismiss")}
+              aria-label={t("coinChat2.dismiss")}
             >
               ✕
             </button>
@@ -908,7 +827,7 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
                 type="button"
                 className="coin-chat-image-preview-remove"
                 onClick={clearPendingImage}
-                aria-label="Remove image"
+                aria-label={t("coinChat2.removeImage")}
               >
                 ✕
               </button>
@@ -942,7 +861,8 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
             className="coin-chat-attach-btn"
             onClick={() => fileInputRef.current?.click()}
             disabled={posting}
-            title="Attach image for MarketPulse to analyze"
+            title={t("coinChat2.attachImage")}
+            aria-label={t("coinChat2.attachImage")}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 5v14M5 12h14" />
@@ -956,7 +876,7 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
               setDraft(e.target.value);
               setMentionQuery(currentMentionQuery(e.target.value, e.target.selectionStart ?? e.target.value.length));
             }}
-            placeholder={pendingImage ? t("coinChat.placeholderImage", "Ask about the image…") : t("coinChat.placeholder", { coin })}
+            placeholder={pendingImage ? t("coinChat2.placeholderImage") : t("coinChat.placeholder", { coin })}
             maxLength={COIN_COMMENT_MAX_LENGTH}
             onKeyDown={(e) => {
               const mentionOpen = mentionQuery !== null && mentionResults.length > 0;
@@ -1035,7 +955,7 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
           <div className="coin-chat-reply-parent-meta">
             <span className="coin-chat-comment-name">@{replyTarget.username}</span>
             <span className={`coin-chat-tier-chip cc-tier--${replyTarget.tier}`}>{replyTarget.tier === "elite" ? "E" : "P"}</span>
-            <span className="coin-chat-comment-time">{timeAgo(replyTarget.created_at)}</span>
+            <span className="coin-chat-comment-time">{timeAgo(replyTarget.created_at, t)}</span>
           </div>
           <p className="coin-chat-reply-parent-text">{renderWithMentions(replyTarget.body, replyTarget.is_bot)}</p>
         </div>
@@ -1084,8 +1004,8 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
             className={`coin-chat-refresh${refreshing ? " coin-chat-refresh--spinning" : ""}`}
             onClick={refresh}
             disabled={refreshing}
-            aria-label={t("coinChat.refresh", "Refresh")}
-            title={t("coinChat.refresh", "Refresh")}
+            aria-label={t("coinChat2.refresh")}
+            title={t("coinChat2.refresh")}
           >
             ↻
           </button>
@@ -1093,8 +1013,8 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
             type="button"
             className="coin-chat-expand-toggle"
             onClick={() => onToggleExpand?.()}
-            aria-label={expanded ? t("coinChat.collapse", "Collapse") : t("coinChat.expandChat", "Expand")}
-            title={expanded ? t("coinChat.collapse", "Collapse") : t("coinChat.expandChat", "Expand")}
+            aria-label={expanded ? t("coinChat2.collapse") : t("coinChat2.expand")}
+            title={expanded ? t("coinChat2.collapse") : t("coinChat2.expand")}
           >
             {expanded ? (
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -1106,7 +1026,7 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
               </svg>
             )}
           </button>
-          <button type="button" className="coin-chat-close" onClick={() => onCloseDesktop?.()} aria-label="Close">✕</button>
+          <button type="button" className="coin-chat-close" onClick={() => onCloseDesktop?.()} aria-label={t("coinChat2.close")}>✕</button>
         </div>
         <CoinMarketMood coin={coin} />
         {feed}
@@ -1155,12 +1075,12 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
               className={`coin-chat-refresh${refreshing ? " coin-chat-refresh--spinning" : ""}`}
               onClick={refresh}
               disabled={refreshing}
-              aria-label={t("coinChat.refresh", "Refresh")}
-              title={t("coinChat.refresh", "Refresh")}
+              aria-label={t("coinChat2.refresh")}
+              title={t("coinChat2.refresh")}
             >
               ↻
             </button>
-            <button type="button" className="coin-chat-close" onClick={() => setSheetOpen(false)} aria-label="Close">✕</button>
+            <button type="button" className="coin-chat-close" onClick={() => setSheetOpen(false)} aria-label={t("coinChat2.close")}>✕</button>
           </div>
           <CoinMarketMood coin={coin} />
           {feed}

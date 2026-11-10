@@ -7,6 +7,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import { Browser } from "@capacitor/browser";
+import { useTranslation } from "react-i18next";
 import { fetchBrief, extractChips, renderChip, type BriefItem } from "./DailyBrief";
 import type { Ticker24h } from "../services/coinglass";
 import { cgFetch, COINS_MARKETS_URL, TTL } from "./GlobalMarkets";
@@ -25,8 +26,9 @@ const LINE_COLORS = ["#3dbf84", "#2a4fd6", "#e8742c"];
 // Which Polymarket events to show: the biggest macro (Fed) question and the
 // biggest crypto one, each with a pattern to find a matching news story.
 const ODDS_SOURCES = [
-  { tag: "fed-rates", eyebrow: "US Fed", match: /\b(fed|fomc|powell)\b|\brate (cut|hike)|\binterest rates?\b/i },
-  { tag: "crypto", eyebrow: "Crypto odds", match: /\b(bitcoin|btc)\b/i },
+  // eyebrow = translation key under marketStories.eyebrow
+  { tag: "fed-rates", eyebrow: "usFed", match: /\b(fed|fomc|powell)\b|\brate (cut|hike)|\binterest rates?\b/i },
+  { tag: "crypto", eyebrow: "cryptoOdds", match: /\b(bitcoin|btc)\b/i },
 ];
 
 const GAMMA = "https://gamma-api.polymarket.com";
@@ -71,9 +73,9 @@ const openLink = (url: string) => {
 const usd = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 // Time on each card before auto-play moves on — long enough to read.
 const AUTO_MS = 10000;
-const ago = (ts: number) => {
+const ago = (ts: number, t: (key: string, opts?: Record<string, unknown>) => string) => {
   const m = Math.max(1, Math.round((Date.now() - ts) / 60_000));
-  return m < 60 ? `${m}m` : m < 1440 ? `${Math.round(m / 60)}h` : `${Math.round(m / 1440)}d`;
+  return m < 60 ? t("marketStories.ago.m", { n: m }) : m < 1440 ? t("marketStories.ago.h", { n: Math.round(m / 60) }) : t("marketStories.ago.d", { n: Math.round(m / 1440) });
 };const price = (n: number) =>
   `$${n.toLocaleString("en-US", { minimumFractionDigits: n >= 1 ? 2 : 4, maximumFractionDigits: n >= 1 ? 3 : 6 })}`;
 
@@ -103,6 +105,7 @@ function GenericCover({ item }: { item: BriefItem }) {
 function NewsBlock({ item, own, tickers }: { item: BriefItem; own?: boolean; tickers?: Map<string, Ticker24h> }) {
   // Same chips as the Daily Brief: a live price for coins it mentions,
   // topic tags (CPI, FED, ETF…) for the rest.
+  const { t } = useTranslation();
   const chips = extractChips(item.title);
   const [broken, setBroken] = useState(false);
   return (
@@ -114,14 +117,14 @@ function NewsBlock({ item, own, tickers }: { item: BriefItem; own?: boolean; tic
       </span>
       <div className="mkst-news-meta">
         <i className={`mkst-cat mkst-cat--${item.category}`} />
-        {item.source}<span>·</span>{ago(item.pubDate)}
+        {item.source}<span>·</span>{ago(item.pubDate, t)}
       </div>
       <p className="mkst-news-text">{item.title}</p>
       {chips.length > 0 && (
         <div className="mkst-chips">{chips.map((c) => renderChip(c, item.category, tickers))}</div>
       )}
       <span className="mkst-more">
-        Read more
+        {t("marketStories.readMore")}
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
       </span>
     </div>
@@ -129,6 +132,7 @@ function NewsBlock({ item, own, tickers }: { item: BriefItem; own?: boolean; tic
 }
 
 function OddsBlock({ ev }: { ev: OddsEvent }) {
+  const { t } = useTranslation();
   // Lines on a 0–100% scale, stretched to the box; end dots placed in % so
   // they stay round.
   const W = 100, H = 100;
@@ -139,13 +143,13 @@ function OddsBlock({ ev }: { ev: OddsEvent }) {
   });
   return (
     <div className="mkst-odds">
-      <div className="mkst-eyebrow">{ev.eyebrow}<span className="mkst-live"><i />Live</span></div>
+      <div className="mkst-eyebrow">{t(`marketStories.eyebrow.${ev.eyebrow}`, ev.eyebrow)}<span className="mkst-live"><i />{t("marketStories.live")}</span></div>
       <div className="mkst-title">{ev.title}</div>
       <div className="mkst-legend">
         {ev.outcomes.map((o) => (
           <span key={o.label} className="mkst-legend-item">
             <i style={{ background: o.color }} />
-            {o.label} <b>{Math.round(o.prob * 100)}%</b>
+            {o.label === "Yes" ? t("marketStories.yes") : o.label} <b>{Math.round(o.prob * 100)}%</b>
           </span>
         ))}
       </div>
@@ -165,12 +169,14 @@ function OddsBlock({ ev }: { ev: OddsEvent }) {
         </div>
         <div className="mkst-axis"><span>100%</span><span>50%</span><span>0%</span></div>
       </div>
-      <div className="mkst-foot">{usd(ev.volume)} volume</div>
+      <div className="mkst-foot">{t("marketStories.volume", { value: usd(ev.volume) })}</div>
     </div>
   );
 }
 
+// eyebrow = translation key under marketStories.movers
 function CoinBlock({ coin, eyebrow }: { coin: CgCoin; eyebrow: string }) {
+  const { t } = useTranslation();
   const pct = coin.price_change_percentage_24h ?? 0;
   const up = pct >= 0;
   const series = coin.sparkline_in_7d?.price ?? [];
@@ -185,7 +191,7 @@ function CoinBlock({ coin, eyebrow }: { coin: CgCoin; eyebrow: string }) {
   const color = up ? "#16a34a" : "#e5484d";
   return (
     <div className={`mkst-coin mkst-coin--${up ? "up" : "down"}`}>
-      <div className="mkst-eyebrow">{eyebrow}</div>
+      <div className="mkst-eyebrow">{t(`marketStories.movers.${eyebrow}`, eyebrow)}</div>
       <div className="mkst-coin-head">
         <img src={coin.image} alt="" />
         <span className="mkst-coin-sym">{coin.symbol.toUpperCase()}</span>
@@ -214,13 +220,14 @@ function CoinBlock({ coin, eyebrow }: { coin: CgCoin; eyebrow: string }) {
           {lastY != null && <span className="mkst-enddot" style={{ top: `${lastY}%`, color }} />}
         </div>
       </div>
-      <div className="mkst-foot">{usd(coin.total_volume)} 24h volume</div>
+      <div className="mkst-foot">{t("marketStories.volume24h", { value: usd(coin.total_volume) })}</div>
     </div>
   );
 }
 
 // ── Carousel ──────────────────────────────────────────────────────────────────
 export function MarketStories({ onSelectCoin, coinTickers }: { onSelectCoin: (symbol: string) => void; coinTickers?: Map<string, Ticker24h> }) {
+  const { t } = useTranslation();
   const [news, setNews] = useState<BriefItem[]>([]);
   // The first news fetch has finished (or timed out) — until then the
   // placeholders stay, so cards don't arrive in two waves.
@@ -281,8 +288,8 @@ export function MarketStories({ onSelectCoin, coinTickers }: { onSelectCoin: (sy
     const extraMovers: { coin: CgCoin; label: string }[] = [];
     for (let i = 1; i < 21; i++) {
       const g = sorted[i], l = sorted[sorted.length - 1 - i];
-      if (g && (g.price_change_percentage_24h ?? 0) > 0) extraMovers.push({ coin: g, label: "Gainer · 24h" });
-      if (l && l !== g && (l.price_change_percentage_24h ?? 0) < 0) extraMovers.push({ coin: l, label: "Loser · 24h" });
+      if (g && (g.price_change_percentage_24h ?? 0) > 0) extraMovers.push({ coin: g, label: "gainer" });
+      if (l && l !== g && (l.price_change_percentage_24h ?? 0) < 0) extraMovers.push({ coin: l, label: "loser" });
     }
     // `open` = what clicking anywhere on the panel does.
     const list: { key: string; el: React.ReactNode; size?: "wide" | "odds"; open: () => void }[] = [];
@@ -307,11 +314,11 @@ export function MarketStories({ onSelectCoin, coinTickers }: { onSelectCoin: (sy
       if (o.story) pushNews(o.story);
     };
     pushOdds(0);
-    if (gainer) pushCoin(gainer, "Top gainer · 24h");
+    if (gainer) pushCoin(gainer, "topGainer");
     const second = take();
     if (second) pushNews(second);
     pushOdds(1);
-    if (loser && loser !== gainer) pushCoin(loser, "Top loser · 24h");
+    if (loser && loser !== gainer) pushCoin(loser, "topLoser");
     // Then every remaining story, each followed by a mover card.
     // Generic-cover stories are spread evenly between the ones with photos
     // (never two side by side); any extras get a mover card between them.
@@ -455,7 +462,7 @@ export function MarketStories({ onSelectCoin, coinTickers }: { onSelectCoin: (sy
     <div className="mkst-wrap">
     <section
       className="mkst"
-      aria-label="Market stories"
+      aria-label={t("marketStories.ariaStories")}
       // Hover-pause is desktop only; on phones a tap fires these too and
       // would re-render the whole carousel for nothing.
       onMouseEnter={isPhone ? undefined : () => setHovered(true)}
@@ -477,17 +484,17 @@ export function MarketStories({ onSelectCoin, coinTickers }: { onSelectCoin: (sy
           </div>
         )))}
       </div>
-      <button type="button" className="mkst-arrow mkst-arrow--prev" onClick={() => scroll(-1)} aria-label="Previous">
+      <button type="button" className="mkst-arrow mkst-arrow--prev" onClick={() => scroll(-1)} aria-label={t("marketStories.previous")}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
       </button>
-      <button type="button" className="mkst-arrow mkst-arrow--next" onClick={() => scroll(1)} aria-label="Next">
+      <button type="button" className="mkst-arrow mkst-arrow--next" onClick={() => scroll(1)} aria-label={t("marketStories.next")}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
       </button>
     </section>
     {/* Under the carousel: position dots (auto-play on) · Auto-play switch. */}
     <div className={`mkst-ctrl${isPhone ? " mkst-ctrl--phone" : ""}`}>
       {auto && dot.n > 1 ? (
-        <div className="mkst-dots" role="tablist" aria-label="Carousel position">
+        <div className="mkst-dots" role="tablist" aria-label={t("marketStories.carouselPosition")}>
           {/* At most 7 dots: a window that follows the current position
               (it loops, so it wraps); the outer ones shrink. */}
           {Array.from({ length: Math.min(7, dot.n) }, (_, k) => {
@@ -501,7 +508,7 @@ export function MarketStories({ onSelectCoin, coinTickers }: { onSelectCoin: (sy
                 type="button"
                 role="tab"
                 aria-selected={i === dot.i}
-                aria-label={`Go to ${i + 1} of ${dot.n}`}
+                aria-label={t("marketStories.goTo", { n: i + 1, total: dot.n })}
                 className={`mkst-dot${i === dot.i ? " mkst-dot--on" : ""}${i === dot.i && (!hovered || isPhone) ? " mkst-dot--run" : ""}${edge === 3 ? " mkst-dot--xs" : edge === 2 ? " mkst-dot--sm" : ""}`}
                 style={{ ["--mkst-auto" as string]: `${AUTO_MS}ms` }}
                 onClick={() => goDot(i)}
@@ -513,7 +520,7 @@ export function MarketStories({ onSelectCoin, coinTickers }: { onSelectCoin: (sy
       {/* Desktop only — phones always auto-play. */}
       {!isPhone && (
         <button type="button" className={`mkst-auto${auto ? " mkst-auto--on" : ""}`} role="switch" aria-checked={auto} onClick={toggleAuto}>
-          Auto-play
+          {t("marketStories.autoPlay")}
           <span className="mkst-auto-sw" aria-hidden="true"><i /></span>
         </button>
       )}

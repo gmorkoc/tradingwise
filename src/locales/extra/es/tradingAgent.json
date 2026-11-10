@@ -1,0 +1,220 @@
+{
+  "tradingAgent": {
+    "connecting": "El Agent se está conectando",
+    "callout": "Conoce Agent Ready — tu copiloto de trading con IA",
+    "time": {
+      "now": "ahora",
+      "minAgo": "hace {{n}} min",
+      "hourAgo": "hace {{n}} h",
+      "dayAgo": "hace {{n}} d"
+    },
+    "conv": {
+      "pin": "Fijar",
+      "unpin": "Desfijar",
+      "pinConversation": "Fijar conversación",
+      "unpinConversation": "Desfijar conversación",
+      "delete": "Eliminar",
+      "deleteConversation": "Eliminar conversación",
+      "empty": "(vacía)",
+      "messages_one": "{{count}} mensaje",
+      "messages_other": "{{count}} mensajes"
+    },
+    "head": {
+      "menu": "Menú",
+      "agentActions": "Acciones del Agent",
+      "close": "Cerrar",
+      "newChat": "Nuevo chat",
+      "history": "Historial",
+      "watchlist": "Vigilancias",
+      "positions": "Posiciones"
+    },
+    "history": {
+      "chatsCount": "{{n}}/{{max}} chats",
+      "limitHit": "Has alcanzado el límite de {{max}} chats. Para empezar uno nuevo, elimina uno de abajo primero.",
+      "limitNear": "Atención: puedes guardar hasta {{max}} chats. Te quedan {{left}} antes de tener que eliminar uno para empezar otro.",
+      "limitInfo": "Puedes guardar hasta {{max}} chats. Cuando llegues a {{max}}, elimina uno para empezar un chat nuevo.",
+      "noConversations": "Aún no hay conversaciones anteriores.",
+      "pinned": "Fijados",
+      "allChats": "Todos los chats",
+      "backToChat": "Volver al chat"
+    },
+    "watches": {
+      "active": "Vigilancias activas",
+      "noActive": "No hay vigilancias activas.",
+      "notifications": "Notificaciones",
+      "noTriggered": "Aún no se ha activado ninguna vigilancia.",
+      "watch": "Vigilancia",
+      "watching": "Vigilando <b>{{coin}}</b>",
+      "timeframe": "Temporalidad",
+      "daily": "Diario",
+      "settingUp": "Configurando…",
+      "cancel": "Cancelar",
+      "cancelled": "Cancelada",
+      "triggered": "✓ Activada"
+    },
+    "positions": {
+      "title": "Posiciones",
+      "refresh": "Actualizar",
+      "refreshPositions": "Actualizar posiciones",
+      "tabOpen": "Abiertas",
+      "tabClosed": "Cerradas",
+      "loadingClosed": "Cargando tus posiciones cerradas…",
+      "openTitle": "Posiciones abiertas",
+      "closedTitle": "Posiciones cerradas",
+      "noOpen": "No tienes posiciones abiertas ahora mismo.",
+      "noClosed": "Aún no hay posiciones cerradas.",
+      "scrollMore": "{{count}} posiciones · desplázate para ver más",
+      "tapHint": "Toca una posición para ver todos los detalles",
+      "side": "Lado",
+      "size": "Tamaño",
+      "entry": "Entrada",
+      "current": "Actual",
+      "exit": "Salida",
+      "pnl": "P&L",
+      "opened": "Abierta",
+      "closed": "Cerrada",
+      "closing": "Cerrando…",
+      "closePosition": "Cerrar posición",
+      "close": "Cerrar",
+      "closeReason": {
+        "manual": "manual",
+        "take_profit": "take profit",
+        "stop_loss": "stop loss",
+        "liquidation": "liquidación"
+      }
+    },
+    "proposal": {
+      "long": "LONG",
+      "short": "SHORT",
+      "buy": "COMPRA",
+      "sell": "VENTA",
+      "spot": "SPOT",
+      "futures": "FUTUROS {{leverage}}x",
+      "margin": "Margen",
+      "cost": "Coste",
+      "notional": "Nocional",
+      "takeProfit": "Take Profit",
+      "stopLoss": "Stop Loss",
+      "executing": "Ejecutando…",
+      "confirm": "Confirmar",
+      "confirmAll": "Confirmar todo",
+      "dismiss": "Descartar",
+      "executed": "✓ Ejecutada",
+      "dismissed": "Descartada",
+      "total": "Total",
+      "totalAcross_one": "{{amount}} en {{count}} activo",
+      "totalAcross_other": "{{amount}} en {{count}} activos",
+      "updateBalance": "Actualizar saldo",
+      "newCashBalance": "Nuevo saldo en efectivo",
+      "updating": "Actualizando…",
+      "updated": "✓ Actualizado",
+      "openSection": "Abrir {{label}} →"
+    },
+    "consent": {
+      "strong": "Solo paper trading — dinero simulado, operaciones simuladas.",
+      "body": "Este agente no es un asesor financiero ni de inversiones registrado, y nada de lo que dice es asesoramiento financiero. coinhintz no se hace responsable de ninguna pérdida, simulada o no, derivada del uso de esta función. Solo te pediremos que aceptes esto una vez — no volverás a ver este aviso después de hoy.",
+      "oneSec": "Un segundo…",
+      "agree": "¡Lo he entendido y acepto!"
+    },
+    "continueBanner": {
+      "text": "Continúa donde lo dejaste:",
+      "continue": "Continuar →"
+    },
+    "webPush": {
+      "text": "Recibe una alerta en el navegador cuando se active una vigilancia o posición, incluso con esto cerrado.",
+      "enabling": "Activando…",
+      "enable": "Activar"
+    },
+    "portfolio": {
+      "title": "Cartera",
+      "cash": "Efectivo",
+      "edit": "Editar",
+      "winRate": "Tasa de acierto",
+      "winLoss": "({{wins}}G–{{losses}}P)",
+      "currentPositions": "Posiciones actuales"
+    },
+    "feed": {
+      "emptyHint": "Prueba \"compra $200 de BTC\", \"vende la mitad de mi ETH\" o \"¿qué opinas de SOL?\" — todo aquí es simulado, sin dinero real ni exchange de por medio.",
+      "thoughtProcess": "Razonamiento",
+      "chartScreenshot": "Captura del gráfico",
+      "cancel": "Cancelar",
+      "saveResend": "Guardar y reenviar",
+      "copied": "Copiado",
+      "copyMessage": "Copiar mensaje",
+      "copy": "Copiar",
+      "editMessage": "Editar mensaje",
+      "edit": "Editar",
+      "sources_one": "{{count}} fuente",
+      "sources_other": "{{count}} fuentes",
+      "thinking": "Pensando",
+      "tapToInterrupt": "Toca para interrumpir"
+    },
+    "snapshot": {
+      "trend": {
+        "up": "alcista",
+        "down": "bajista",
+        "range": "lateral"
+      },
+      "na": "n/d",
+      "funding": "Financiación",
+      "chart": "Gráfico",
+      "orderBook": "Libro de órdenes",
+      "openingChart": "Abriendo gráfico de {{coin}}…",
+      "openingOrderBook": "Abriendo libro de órdenes de {{coin}}…"
+    },
+    "opener": {
+      "scanning": "Estoy revisando el mercado para buscarte las mejores opciones",
+      "coinList": "Lista de monedas",
+      "marketCap": "Capitalización",
+      "topGainers": "Más alcistas",
+      "tapToStart": "Toca una para empezar — o simplemente dime una moneda.",
+      "noGainers": "Ahora mismo no hay subidas en el top 100.",
+      "marketDataDown": "Los datos de mercado no cargan ahora mismo — simplemente dime qué moneda.",
+      "topByCapAria": "Principales monedas por capitalización",
+      "topGainersAria": "Mayores subidas, 24 h",
+      "startWith": "Empezar con {{name}}",
+      "more": "+{{count}} más",
+      "headlines": "Titulares",
+      "headlinesAria": "Últimos titulares cripto"
+    },
+    "speech": {
+      "gettingReady": "Preparando el audio…",
+      "speaking": "Hablando — toca para detener"
+    },
+    "composer": {
+      "pendingImageAlt": "Captura del gráfico para analizar",
+      "removeImage": "Quitar imagen adjunta",
+      "cancelRecording": "Cancelar grabación",
+      "attachImage": "Adjuntar una imagen",
+      "listening": "Escuchando…",
+      "placeholder": "Dile al agente qué hacer…",
+      "stopRecording": "Detener grabación",
+      "speakToAgent": "Hablar con el agente",
+      "send": "Enviar",
+      "sending": "Enviando",
+      "typing": "Escribiendo"
+    },
+    "hub": {
+      "new": "Nuevo",
+      "history": "Historial",
+      "watch": "Vigilar",
+      "positions": "Posiciones",
+      "report": "Reportar"
+    },
+    "errors": {
+      "enableNotifications": "No se pudieron activar las notificaciones del navegador",
+      "saveFailed": "No se pudo guardar — inténtalo de nuevo.",
+      "loadClosed": "No se pudieron cargar tus posiciones cerradas — inténtalo de nuevo.",
+      "refreshPositions": "No se pudieron actualizar tus posiciones — inténtalo de nuevo.",
+      "generic": "Algo salió mal — inténtalo de nuevo.",
+      "tradeFailed": "La operación falló — inténtalo de nuevo.",
+      "basketFailed": "Puede que algunas partes no se hayan ejecutado — revisa tus posiciones.",
+      "balanceFailed": "No se pudo actualizar tu saldo — inténtalo de nuevo.",
+      "watchFailed": "No se pudo configurar esa vigilancia — inténtalo de nuevo.",
+      "cashInvalid": "El saldo en efectivo debe ser un número no negativo.",
+      "cashFailed": "No se pudo actualizar el saldo en efectivo — inténtalo de nuevo.",
+      "closeFailed": "No se pudo cerrar esa posición — inténtalo de nuevo.",
+      "cancelWatchFailed": "No se pudo cancelar la vigilancia — inténtalo de nuevo."
+    }
+  }
+}

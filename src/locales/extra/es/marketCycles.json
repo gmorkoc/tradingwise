@@ -1,0 +1,33 @@
+{
+  "marketCycles": {
+    "range": { "30": "30d", "365": "1a", "all": "Todo" },
+    "title": "Ciclos de mercado de Bitcoin",
+    "error": "No se pudieron cargar los datos de ciclos ahora mismo.",
+    "puellStatus": "Estado del Puell Multiple",
+    "undervalued": "Infravalorado",
+    "overvalued": "Sobrevalorado",
+    "piTitle": "Indicador Pi Cycle Top",
+    "topSignal": "Señal de techo",
+    "noTopSignal": "Sin señal de techo",
+    "rainbowCard": "Gráfico Rainbow",
+    "price": "Precio {{v}}",
+    "puellTip": "Ingresos diarios de los mineros ÷ su media de 365 días. Por debajo de 0.5 ha marcado suelos de ciclo; por encima de 4, techos.",
+    "btcPrice": "Precio de Bitcoin",
+    "piTip": "Cuando la media de 111 días cruza por encima de 2 × la media de 350 días ha marcado techos de ciclos pasados.",
+    "rainbowTitle": "Indicador Rainbow del precio de Bitcoin",
+    "rainbowTip": "Una curva logarítmica ajustada a todo el historial de precios de Bitcoin, dividida en 9 bandas de color desde Liquidación total hasta Burbuja máxima.",
+    "now": "Ahora: {{zone}}",
+    "halving": "{{n}}.º halving",
+    "rainbow": {
+      "0": "Liquidación total",
+      "1": "¡COMPRA!",
+      "2": "Acumula",
+      "3": "Aún barato",
+      "4": "¡HODL!",
+      "5": "¿Es una burbuja?",
+      "6": "El FOMO se intensifica",
+      "7": "Vende. En serio, ¡vende!",
+      "8": "Burbuja máxima"
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "topTraders": {
+    "justNow": "just now",
+    "agoM": "{{n}}m ago",
+    "agoH": "{{n}}h ago",
+    "chart": "Chart",
+    "trader": "Trader",
+    "pnl": "Unrealized PnL",
+    "value": "Position Value",
+    "entry": "Entry",
+    "liq": "Liquidation",
+    "liqSortTip": "Sorts by distance to liquidation",
+    "funding": "Funding",
+    "acct": "Account Value",
+    "openOnHl": "Open this trader on Hyperliquid",
+    "loading": "Loading top traders…",
+    "unavailable": "Top traders data isn't available yet.",
+    "none": {
+      "all": "No top-trader positions on {{coin}} right now.",
+      "winners": "No winning top-trader positions on {{coin}} right now.",
+      "losers": "No losing top-trader positions on {{coin}} right now."
+    },
+    "range": "{{from}}–{{to}} of {{total}}",
+    "rangeEmpty": "0 of 0",
+    "foot": "Hyperliquid top traders by 30-day PnL · updated {{ago}}",
+    "prev": "Previous page",
+    "next": "Next page"
+  }
+}

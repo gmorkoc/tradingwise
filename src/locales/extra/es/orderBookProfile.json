@@ -1,0 +1,16 @@
+{
+  "orderBookProfile": {
+    "title": "Gráfico de profundidad",
+    "levelsTip": "Número de niveles de precio de compra/venta tomados del libro de órdenes por lado: valores más altos muestran un rango de precios más amplio",
+    "levels": "Niveles",
+    "exit": "Salir",
+    "bidDepth": "Profundidad de compra",
+    "askDepth": "Profundidad de venta",
+    "spread": "Spread",
+    "bidAsk": "Compra / Venta",
+    "loading": "Preparando tu libro de órdenes…",
+    "bidsCum": "Compras (acumulado)",
+    "asksCum": "Ventas (acumulado)",
+    "live": "en vivo"
+  }
+}

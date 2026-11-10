@@ -1,0 +1,36 @@
+{
+  "tradeInsights": {
+    "aria": "{{coin}} içgörüleri",
+    "agoShort": { "m": "{{n}} dk", "h": "{{n}} sa", "d": "{{n}} g" },
+    "crowd": { "long": "longlar kalabalık", "short": "shortlar kalabalık", "balanced": "dengeli pozisyonlanma" },
+    "sigWord": { "bull": "Long", "bear": "Short", "neutral": "Nötr" },
+    "techRead": "Teknikler {{word}} {{score}}/100 gösteriyor",
+    "techLoading": "Teknikler hâlâ yükleniyor",
+    "maAboveBelow": " — fiyat {{above}} üstünde ve {{below}} altında",
+    "maAbove": " — fiyat {{above}} üstünde",
+    "maBelow": " — fiyat {{below}} altında",
+    "crowdClause": ", {{crowd}}",
+    "structLine": "{{tech}}{{ma}}{{crowd}}.",
+    "structUpper": { "bull": "YÜKSELİŞ YAPISI", "bear": "DÜŞÜŞ YAPISI", "mixed": "KARIŞIK YAPI" },
+    "structTitle": { "bull": "Yükseliş yapısı", "bear": "Düşüş yapısı", "mixed": "Karışık yapı" },
+    "hide": "Gizle",
+    "show": "Göster",
+    "updated": "Live Hintz · {{ago}} önce güncellendi",
+    "range30": "30 günde {{lo}}–{{hi}}",
+    "rsi": {
+      "overbought": "RSI {{v}} — aşırı alım, yukarı yönde gerilmiş.",
+      "oversold": "RSI {{v}} — aşırı satım, aşağı yönde gerilmiş.",
+      "up": "RSI {{v}} — momentum yukarı eğilimli.",
+      "down": "RSI {{v}} — momentum aşağı eğilimli."
+    },
+    "rangeFallback": "Aylık aralık ve momentum.",
+    "funding": "Fonlama",
+    "longShare": "Vadeli işlem hesaplarının %{{pct}}'i long — {{crowd}}.",
+    "futuresFallback": "Vadeli işlem pozisyonlanması.",
+    "whatsMoving": "Fiyatı ne hareket ettiriyor",
+    "nfa": "Finansal tavsiye değildir",
+    "poweredBy": "coinhintz sinyalleriyle desteklenir",
+    "askPrompt": "Bana şu anda {{name}} ({{coin}}) için tam bir analiz ver: trend, kilit seviyeler, türev pozisyonlanması ve nelerin izlenmesi gerektiği.",
+    "fullAnalysis": "Tam Analiz"
+  }
+}

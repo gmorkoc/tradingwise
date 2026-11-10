@@ -1,0 +1,25 @@
+{
+  "contactForm": {
+    "title": "Contáctanos",
+    "subtitle": "Leemos todos los mensajes.",
+    "close": "Cerrar",
+    "sentTitle": "¡Mensaje enviado!",
+    "sentBody": "Gracias por escribirnos. Te responderemos pronto.",
+    "category": "Categoría",
+    "categories": {
+      "bug": "Reportar un error",
+      "feature": "Solicitar una función",
+      "feedback": "Comentarios generales",
+      "other": "Otro"
+    },
+    "yourEmail": "Tu email",
+    "emailPlaceholder": "tu@ejemplo.com",
+    "message": "Mensaje",
+    "messagePlaceholder": "Describe el problema o comparte tu opinión...",
+    "sending": "Enviando…",
+    "send": "Enviar mensaje",
+    "errMessage": "Escribe un mensaje antes de enviarlo.",
+    "errEmail": "Introduce tu dirección de email.",
+    "errGeneric": "Algo salió mal. Inténtalo de nuevo."
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "whatsNew": {
+    "badge": "New",
+    "justUpdated": "just updated!",
+    "expand": "Expand",
+    "collapse": "Collapse",
+    "close": "Close",
+    "slideN": "Slide {{n}}",
+    "dontShowAgain": "Do not show this again",
+    "back": "Back",
+    "next": "Next",
+    "done": "Done",
+    "slides": {
+      "candleInsights": {
+        "title": "Institutional-grade chart reading",
+        "desc": "Elliott Wave with invalidation levels, ICT smart money concepts, Wyckoff phases, and Volume Profile — all in one AI-powered read.",
+        "cta": "Open Candle Insights"
+      },
+      "chartAnalyzer": {
+        "title": "Any chart, any platform, one AI read",
+        "desc": "Snap or upload a chart from TradingView, your broker, anywhere — get a full technical breakdown: patterns, levels, and a real take.",
+        "cta": "Open Chart Analyzer"
+      },
+      "marketHeatmap": {
+        "title": "See the whole market at a glance",
+        "desc": "120 coins sized by market cap, colored by 24h change — spot the movers instantly on the new Market Heatmap.",
+        "cta": "View Market Heatmap"
+      },
+      "dailyBrief": {
+        "title": "Watch the story, not just read it",
+        "desc": "Your Daily Brief now finds and plays a video for the lead headline — no more guessing what actually happened.",
+        "cta": "Open Daily Brief"
+      }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "topCrypto": {
+    "filters": { "all": "Tutte le monete", "watchlist": "Lista osservazione", "gainers": "Vincenti", "losers": "Perdenti", "trending": "Di tendenza" },
+    "title": "Principali criptovalute",
+    "coinsByMcap": "{{n}} monete per capitalizzazione di mercato",
+    "emptyWatchlist": "Nessuna moneta nella tua lista di osservazione — tocca ☆ su una moneta per aggiungerla.",
+    "cols": { "rank": "Posizione", "name": "Nome", "price": "Prezzo", "last7": "Ultimi 7 giorni", "mcap": "Cap. di mercato", "vol": "Volume (24h)" },
+    "removeWatch": "Rimuovi {{name}} dalla lista di osservazione",
+    "addWatch": "Aggiungi {{name}} alla lista di osservazione",
+    "range": "{{from}}–{{to}} di {{total}}",
+    "prevPage": "Pagina precedente",
+    "nextPage": "Pagina successiva"
+  }
+}

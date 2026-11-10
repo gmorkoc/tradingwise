@@ -1,0 +1,22 @@
+{
+  "learnSection2": {
+    "patterns": {
+      "hammer": { "name": "Hammer", "desc": "Small body near the top with a long lower wick (2× body or more). After a downtrend, buyers pushed price back up — strong potential reversal signal." },
+      "invertedHammer": { "name": "Inverted Hammer", "desc": "Small body near the bottom with a long upper wick. Buyers attempted a rally; sellers couldn't sustain the pressure — watch for follow-through confirmation." },
+      "bullishEngulfing": { "name": "Bullish Engulfing", "desc": "A large green candle completely engulfs the prior red candle's body. Strong reversal signal — buyers have taken decisive control from sellers." },
+      "piercingLine": { "name": "Piercing Line", "desc": "Green candle opens below the prior red candle's low but closes above its midpoint. Shows buyers stepping in aggressively after a flush lower." },
+      "morningStar": { "name": "Morning Star", "desc": "Three-candle reversal: large red, small indecisive candle, then large green. Classic bottom-reversal pattern showing increasing buyer conviction." },
+      "threeWhiteSoldiers": { "name": "Three White Soldiers", "desc": "Three consecutive green candles, each opening near the prior close and closing higher. Signals a powerful, sustained shift to buying pressure." },
+      "bullishHarami": { "name": "Bullish Harami", "desc": "A small green candle entirely within the prior large red candle's body. The downtrend is losing momentum — a reversal may be near." },
+      "dragonflyDoji": { "name": "Dragonfly Doji", "desc": "Open, high, and close near the top with a very long lower wick. Sellers drove price down hard but buyers fully reclaimed — strong demand signal." },
+      "shootingStar": { "name": "Shooting Star", "desc": "Small body near the low with a long upper wick (2× body or more). At market tops, buyers rallied but sellers crushed them back — potential reversal." },
+      "hangingMan": { "name": "Hanging Man", "desc": "Looks like a hammer but forms at the top of an uptrend. The long lower wick reveals growing selling pressure even though bulls recovered for now." },
+      "bearishEngulfing": { "name": "Bearish Engulfing", "desc": "A large red candle completely engulfs the prior green candle's body. Strong reversal signal — sellers have taken decisive control from buyers." },
+      "darkCloudCover": { "name": "Dark Cloud Cover", "desc": "Red candle opens above the prior green candle's high but closes below its midpoint. Shows sellers aggressively stepping in at elevated prices." },
+      "eveningStar": { "name": "Evening Star", "desc": "Three-candle reversal: large green, small indecisive candle, then large red. Classic top-reversal showing buyers exhausted and sellers taking over." },
+      "threeBlackCrows": { "name": "Three Black Crows", "desc": "Three consecutive red candles, each opening near the prior close and closing lower. Signals a powerful, sustained shift to heavy selling pressure." },
+      "bearishHarami": { "name": "Bearish Harami", "desc": "A small red candle entirely within the prior large green candle's body. The uptrend is losing steam — watch for a breakdown below support." },
+      "gravestoneDoji": { "name": "Gravestone Doji", "desc": "Open, low, and close near the bottom with a very long upper wick. Buyers pushed hard but sellers fully reclaimed — strong supply rejection signal." }
+    }
+  }
+}

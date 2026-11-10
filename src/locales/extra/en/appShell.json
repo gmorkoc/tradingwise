@@ -1,0 +1,121 @@
+{
+  "appShell": {
+    "dismiss": "Dismiss",
+    "askAgent": "Ask Agent Ready",
+    "fetchError": "Failed to fetch data. Please check your API connection.",
+    "thisCoin": "This coin",
+    "fullscreenHint": "Double-click chart for fullscreen",
+    "topTraders": "{{name}} Top Traders",
+    "mode": {
+      "liveMarket": "Live market",
+      "backToAria": "Back to {{label}}",
+      "backToMarket": "Back to market",
+      "leavePaper": "Leave paper trading",
+      "paperChipAria": "Paper trading: ${{cash}} practice money, {{open}} open",
+      "openPaperAria": "Open paper trading, practice with $50,000",
+      "paperShort": "PAPER",
+      "openCount": "{{n}} OPEN",
+      "practice50k": "Practice $50K",
+      "paperTradingCaps": "PAPER TRADING",
+      "paperTrading": "Paper trading",
+      "tapToSwitch": "Tap to switch",
+      "liveSub": "Charts, signals and real prices",
+      "practiceMoney": "Practice money · ${{cash}}",
+      "openCountLower": "{{n}} open",
+      "paperSub": "Practice with fake money, no risk",
+      "new": "New",
+      "switchingToPaper": "Switching to Paper trading",
+      "switchingToLive": "Switching to Live market",
+      "splashPaper": "PAPER",
+      "splashMarket": "MARKET"
+    },
+    "tabs": {
+      "paperTrading": "Paper Trading",
+      "orderFlowPressure": "Order Flow Pressure",
+      "orderBook": "Order Book",
+      "positionIntelligence": "Position Intelligence",
+      "tradeToolsAria": "Trading tools"
+    },
+    "usage": {
+      "title": "AI Usage",
+      "upgrade": "Upgrade",
+      "ofLimit": "{{used}} of {{limit}} used",
+      "locked": "Upgrade to unlock AI requests"
+    },
+    "invite": {
+      "title": "Invite a friend",
+      "sub": "Invite a friend — when they sign up, you get $10,000 in free paper trading cash.",
+      "placeholder": "friend@email.com",
+      "sending": "Sending…",
+      "sent": "Invite sent ✓",
+      "error": "Couldn't send — try again",
+      "send": "Send invite"
+    },
+    "sidebar": {
+      "guest": "Guest",
+      "signInPrompt": "Sign in",
+      "dragExpand": "Drag to expand sidebar",
+      "dragCollapse": "Drag to collapse sidebar",
+      "account": "Account",
+      "support": "Support",
+      "online": "Online",
+      "signIn": "Sign In"
+    },
+    "topNav": {
+      "logoAria": "coinhintz — Home",
+      "home": "Home",
+      "menu": "Menu",
+      "mainMenu": "Main menu",
+      "openMenu": "Open menu",
+      "portfolio": "Portfolio",
+      "watchlist": "Watchlist",
+      "searchTitle": "Search (⌘K)",
+      "search": "Search",
+      "notifications": "Notifications",
+      "signIn": "Sign in",
+      "signUp": "Sign up"
+    },
+    "focus": {
+      "onTip": "Focus on — alerts muted, distractions hidden. Click to turn off",
+      "offTip": "Focus off — click to hide distractions and mute all alerts",
+      "aria": "Focus mode",
+      "activated": "Focus mode activated"
+    },
+    "pv": {
+      "tryAria": "Try ProVision",
+      "turnMeOn": "Turn me on",
+      "daysFree": "3 days free",
+      "buy": "BUY",
+      "sub": "Trend colors, buy/sell signals and a live signal check. No card needed.",
+      "cta": "Try ProVision free",
+      "onTip": "ProVision on — click to go back to the normal chart",
+      "offTip": "ProVision: trend candles, buy/sell signals and a live signal check"
+    },
+    "features": {
+      "candleai": "Candle Insights",
+      "altanalysis": "Alt Analysis",
+      "options": "Options Analytics",
+      "correlation": "Correlation Matrix",
+      "strategyalerts": "Strategy Alerts"
+    },
+    "coinPicker": {
+      "title": "Select a Crypto",
+      "search": "Search…",
+      "star": "Star {{coin}}",
+      "unstar": "Unstar {{coin}}",
+      "market": "Market",
+      "lastPrice": "Last price",
+      "change24h": "24h %",
+      "volume": "Volume"
+    },
+    "portfolio": {
+      "cashOption": "Cash (USD)"
+    },
+    "meta": {
+      "chartTitle": "{{name}} ({{coin}}) Price Chart, Live Signals & Analysis | coinhintz",
+      "defaultTitle": "coinhintz | Crypto Trading Intelligence",
+      "chartDesc": "Live {{name}} ({{coin}}) price chart with ProVision signals, technical analysis, order book and market consensus on coinhintz.",
+      "defaultDesc": "Real-time crypto charts, AI signals, liquidation heatmaps and more. Trade smarter with coinhintz."
+    }
+  }
+}

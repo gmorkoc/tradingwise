@@ -1,0 +1,21 @@
+{
+  "drawingTools": {
+    "tools": {
+      "cursor": "Cursor",
+      "brush": "Free Brush",
+      "trendline": "Trend Line",
+      "hline": "Horizontal Line",
+      "vline": "Vertical Line",
+      "rect": "Rectangle",
+      "fib": "Fibonacci",
+      "text": "Text",
+      "eraser": "Eraser"
+    },
+    "saveChart": "Save Chart",
+    "resetView": "Reset View",
+    "magnetOn": "Magnet On",
+    "magnetOff": "Magnet Off",
+    "clearAll": "Clear All",
+    "labelPrompt": "Label text:"
+  }
+}

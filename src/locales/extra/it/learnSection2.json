@@ -1,0 +1,22 @@
+{
+  "learnSection2": {
+    "patterns": {
+      "hammer": { "name": "Martello", "desc": "Corpo piccolo vicino al massimo con una lunga ombra inferiore (2× il corpo o più). Dopo un trend ribassista, i compratori hanno riportato il prezzo in alto: forte segnale potenziale di inversione." },
+      "invertedHammer": { "name": "Martello rovesciato", "desc": "Corpo piccolo vicino al minimo con una lunga ombra superiore. I compratori hanno tentato un rally e i venditori non sono riusciti a sostenere la pressione: attendi una conferma successiva." },
+      "bullishEngulfing": { "name": "Engulfing rialzista", "desc": "Una grande candela verde ingloba completamente il corpo della candela rossa precedente. Forte segnale di inversione: i compratori hanno preso il controllo deciso dai venditori." },
+      "piercingLine": { "name": "Piercing line", "desc": "La candela verde apre sotto il minimo della candela rossa precedente ma chiude sopra il suo punto medio. Mostra i compratori che entrano con decisione dopo un crollo." },
+      "morningStar": { "name": "Stella del mattino", "desc": "Inversione a tre candele: rossa grande, piccola candela indecisa, poi verde grande. Classico pattern di inversione dal minimo che mostra una convinzione crescente dei compratori." },
+      "threeWhiteSoldiers": { "name": "Tre soldati bianchi", "desc": "Tre candele verdi consecutive, ognuna apre vicino alla chiusura precedente e chiude più in alto. Segnala uno spostamento potente e sostenuto verso la pressione d'acquisto." },
+      "bullishHarami": { "name": "Harami rialzista", "desc": "Una piccola candela verde interamente dentro il corpo della grande candela rossa precedente. Il trend ribassista perde slancio: un'inversione potrebbe essere vicina." },
+      "dragonflyDoji": { "name": "Doji libellula", "desc": "Apertura, massimo e chiusura vicino al massimo con un'ombra inferiore molto lunga. I venditori hanno spinto giù il prezzo ma i compratori l'hanno recuperato del tutto: forte segnale di domanda." },
+      "shootingStar": { "name": "Stella cadente", "desc": "Corpo piccolo vicino al minimo con una lunga ombra superiore (2× il corpo o più). Ai massimi di mercato i compratori sono saliti ma i venditori li hanno respinti: possibile inversione." },
+      "hangingMan": { "name": "Impiccato", "desc": "Sembra un martello ma si forma in cima a un trend rialzista. La lunga ombra inferiore rivela una pressione di vendita crescente, anche se per ora i rialzisti hanno recuperato." },
+      "bearishEngulfing": { "name": "Engulfing ribassista", "desc": "Una grande candela rossa ingloba completamente il corpo della candela verde precedente. Forte segnale di inversione: i venditori hanno preso il controllo deciso dai compratori." },
+      "darkCloudCover": { "name": "Copertura a nuvola nera", "desc": "La candela rossa apre sopra il massimo della candela verde precedente ma chiude sotto il suo punto medio. Mostra i venditori che entrano con decisione a prezzi elevati." },
+      "eveningStar": { "name": "Stella della sera", "desc": "Inversione a tre candele: verde grande, piccola candela indecisa, poi rossa grande. Classica inversione dal massimo che mostra compratori esausti e venditori che prendono il sopravvento." },
+      "threeBlackCrows": { "name": "Tre corvi neri", "desc": "Tre candele rosse consecutive, ognuna apre vicino alla chiusura precedente e chiude più in basso. Segnala uno spostamento potente e sostenuto verso una forte pressione di vendita." },
+      "bearishHarami": { "name": "Harami ribassista", "desc": "Una piccola candela rossa interamente dentro il corpo della grande candela verde precedente. Il trend rialzista perde forza: attenzione a una rottura sotto il supporto." },
+      "gravestoneDoji": { "name": "Doji lapide", "desc": "Apertura, minimo e chiusura vicino al minimo con un'ombra superiore molto lunga. I compratori hanno spinto forte ma i venditori hanno recuperato tutto: forte segnale di rifiuto dell'offerta." }
+    }
+  }
+}

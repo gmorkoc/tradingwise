@@ -1,0 +1,16 @@
+{
+  "orderBookProfile": {
+    "title": "Emir Derinliği Grafiği",
+    "levelsTip": "Emir defterinden her taraf için çekilen alış/satış fiyat seviyesi sayısı — daha yüksek değerler daha geniş bir fiyat aralığı gösterir",
+    "levels": "Seviyeler",
+    "exit": "Çık",
+    "bidDepth": "Alış Derinliği",
+    "askDepth": "Satış Derinliği",
+    "spread": "Spread",
+    "bidAsk": "Alış / Satış",
+    "loading": "Emir defterin hazırlanıyor…",
+    "bidsCum": "Alışlar (kümülatif)",
+    "asksCum": "Satışlar (kümülatif)",
+    "live": "canlı"
+  }
+}

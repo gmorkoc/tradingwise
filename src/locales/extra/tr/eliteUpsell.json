@@ -1,0 +1,16 @@
+{
+  "eliteUpsell": {
+    "close": "Kapat",
+    "nowOnPre": "Artık ",
+    "nowOnPost": " planındasın.",
+    "done": "Tamam",
+    "onProPre": "",
+    "onProPost": " planındasın · tüm özellikler korunur",
+    "chargedPre": "Bugün ",
+    "chargedMid": " ücretlendirileceksin — fatura döneminin kalanı için orantılı. Ardından normal yenileme tarihinde ",
+    "monthlyPrice": "{{price}}/ay",
+    "chargedPost": ".",
+    "payUpgrade": "{{amount}} öde ve Elite'e yükselt",
+    "goBack": "Geri dön"
+  }
+}

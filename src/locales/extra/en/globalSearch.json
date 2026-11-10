@@ -1,0 +1,35 @@
+{
+  "globalSearch": {
+    "placeholder": "Search coins, sections, features…",
+    "ask": "Ask",
+    "askAgentTitle": "Ask Agent Ready",
+    "clear": "Clear",
+    "cancel": "Cancel",
+    "noResults": "No results for \"{{query}}\"",
+    "coins": "Coins",
+    "pages": "Pages",
+    "allPages": "All Pages",
+    "kbdNavigate": "navigate",
+    "kbdOpen": "open",
+    "kbdClose": "close",
+    "sections": {
+      "chart": { "label": "Price Chart", "desc": "Live candlestick chart with indicators" },
+      "candleai": { "label": "Candle Insights", "desc": "AI pattern analysis, smart money, forecasts" },
+      "heatmap": { "label": "Liquidation Heatmap", "desc": "Futures liquidation zones and stop-hunt levels" },
+      "onchain": { "label": "On-Chain Metrics", "desc": "Network data, exchange flows and whale activity" },
+      "positions": { "label": "Positions & Flows", "desc": "Long/short ratios and taker buy/sell volume" },
+      "htf": { "label": "HTF Analysis", "desc": "Higher timeframe structure, macro trend and bias" },
+      "orderflow": { "label": "Order Flow", "desc": "Footprint chart, delta and large-order tape" },
+      "signals": { "label": "Signals", "desc": "AI-generated, multi-exchange confluence trade signals" },
+      "fundingbot": { "label": "Funding Bot", "desc": "Perpetual funding rates across exchanges" },
+      "riskcalc": { "label": "Position Size Calc", "desc": "Position sizing, dollar risk and R:R calculator" },
+      "markets": { "label": "Markets", "desc": "Market cap, dominance, top coins overview" },
+      "marketheatmap": { "label": "Market Heatmap", "desc": "Top coins by market cap, sized by cap, colored by 24h change" },
+      "altanalysis": { "label": "Alt Analysis", "desc": "AI-powered analysis for alternative cryptocurrencies" },
+      "options": { "label": "Options", "desc": "BTC/ETH options data — open interest, max pain, IV" },
+      "correlation": { "label": "Correlation", "desc": "Cross-asset correlation vs gold, DXY and the S&P 500" },
+      "strategyalerts": { "label": "Strategy Alerts", "desc": "Custom rules engine — indicator and price alerts" },
+      "agentReady": { "label": "Agent Ready", "desc": "Chat with the AI trading agent — ask about any coin, get trade ideas" }
+    }
+  }
+}

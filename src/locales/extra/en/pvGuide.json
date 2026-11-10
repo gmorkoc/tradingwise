@@ -1,0 +1,50 @@
+{
+  "pvGuide": {
+    "title": "How to use ProVision",
+    "seeingH": "What you’re seeing",
+    "bestUsesH": "Best uses",
+    "safeguardsH": "Built-in safeguards",
+    "limitsH": "Still worth knowing",
+    "workflowH": "A sensible workflow",
+    "gotIt": "Got it",
+    "onChart": {
+      "ribbon": { "title": "Painted ribbon", "text": "A fan of moving averages behind the candles. The band paints green while buyers are in control and red while sellers are — flips in color are where trends turn." },
+      "candles": { "title": "Colored candles", "text": "Green or red when a real trend is underway, yellow when there isn’t one." },
+      "tp": { "title": "TP", "text": "Marks where a past Buy or Sell would have closed in profit." },
+      "buySell": { "title": "BUY / SELL", "text": "Fires only when most of the 7 checks agree and the bigger-picture trend points the same way. On charts under 4h the new trend must also hold for 3 candles with solid strength. A ✓ marks past signals that ended in profit." },
+      "invalidation": { "title": "Invalidation zone", "text": "The glowing band and dashed line show where the latest signal would be proven wrong, tagged with its Δ Volume." },
+      "spikes": { "title": "⚡ Spikes", "text": "Sudden, news-like candles. Signals that bet against a fresh spike are skipped for a few candles." },
+      "events": { "title": "Event countdown", "text": "Big scheduled US releases — Fed decisions, CPI, jobs, GDP — show up to a day ahead. Signals pause from 30 minutes before until an hour after each one." },
+      "sideways": { "title": "Sideways tag + range box", "text": "When price drifts in a range, a grey box marks its ceiling and floor. Trend signals hold off on charts under 4h; from 1h up, range mode adds R·BUY near the floor and R·SELL near the ceiling until price breaks out." },
+      "thin": { "title": "Thin market tag", "text": "Shows when too little is trading for reliable signals. BUY/SELL switch off until volume returns." },
+      "signals15m": { "title": "“Signals: 15m” tag", "text": "On 1m and 5m charts, signals come from the 15m chart and are placed on yours, so you get 15m direction with short-chart timing." }
+    },
+    "bestUses": {
+      "confirm": { "title": "Confirm before you enter", "text": "Glance at the Signal check verdict first. When most checks point one way, think twice before taking the other side." },
+      "stop": { "title": "Set your stop with a reason", "text": "The dashed invalidation line marks where the signal stops making sense. It’s a ready-made stop level, and the gap to it tells you how big a position to take." },
+      "trend": { "title": "See the trend instantly", "text": "Colored candles show a market that’s moving with purpose. A chart full of grey is a market without direction — often a good time to wait." },
+      "stretched": { "title": "Catch stretched moves", "text": "A strong trend with RSI or Stochastic at an extreme may be running out of steam. Late entries there carry extra risk." },
+      "money": { "title": "Follow the real money", "text": "Δ Volume uses actual market buys and sells from the exchange. A signal backed by heavy one-sided volume is stronger than one without it." },
+      "track": { "title": "Check the track record", "text": "Before trusting a signal, look at how this chart’s past ones did — not just how often they won, but average win vs. loss and the result per trade after fees." },
+      "winners": { "title": "Let winners run", "text": "From 15m up, the track record trails your stop behind the price and exits when the trend turns. Expect fewer wins but much bigger ones — cutting winners early is what hurts most." }
+    },
+    "safeguards": {
+      "tiny": { "title": "Tiny moves on 1m–5m", "text": "Short candles move less than fees, so these charts borrow the 15m chart’s signals. You get 15m direction with short-chart timing." },
+      "choppy": { "title": "Choppy ranges", "text": "Trend signals step aside when price goes sideways. From 1h up, range mode trades bounces off the box edges instead; below 1h it marks the box and waits for a breakout." },
+      "news": { "title": "Scheduled news", "text": "Fed decisions, CPI, jobs and GDP are flagged up to a day ahead, and signals pause from 30 minutes before to an hour after." },
+      "shocks": { "title": "Sudden shocks", "text": "Outsized candles are marked ⚡, and signals that bet against a fresh shock are skipped." },
+      "thin": { "title": "Thin markets", "text": "When too little is trading, signals switch off instead of guessing." }
+    },
+    "limits": {
+      "headlines": { "title": "Surprise headlines", "text": "Unscheduled news can’t be seen coming on any chart — size positions for the unexpected." },
+      "past": { "title": "Past ≠ future", "text": "Track records come from this chart’s recent history. Markets change, and small samples can flatter or mislead." }
+    },
+    "workflow": {
+      "s1": "Take your direction from the 4h or daily chart.",
+      "s2": "Act on signals from 15m up; on 1m–5m they’re the 15m signals, so use the short chart to time your entry.",
+      "s3": "Place your stop at the invalidation line, then trail it as price moves your way.",
+      "s4": "Check the track record pays off after fees.",
+      "s5": "Try the setup in Paper Trading first."
+    }
+  }
+}

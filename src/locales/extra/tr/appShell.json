@@ -1,0 +1,121 @@
+{
+  "appShell": {
+    "dismiss": "Kapat",
+    "askAgent": "Agent Ready'ye sor",
+    "fetchError": "Veriler alınamadı. Lütfen API bağlantınızı kontrol edin.",
+    "thisCoin": "Bu coin",
+    "fullscreenHint": "Tam ekran için grafiğe çift tıklayın",
+    "topTraders": "{{name}} En İyi Trader'lar",
+    "mode": {
+      "liveMarket": "Canlı piyasa",
+      "backToAria": "{{label}} sayfasına dön",
+      "backToMarket": "Piyasaya dön",
+      "leavePaper": "Sanal işlemden çık",
+      "paperChipAria": "Sanal işlem: ${{cash}} sanal para, {{open}} açık",
+      "openPaperAria": "Sanal işlemi aç, $50.000 ile pratik yap",
+      "paperShort": "SANAL",
+      "openCount": "{{n}} AÇIK",
+      "practice50k": "$50K ile pratik",
+      "paperTradingCaps": "SANAL İŞLEM",
+      "paperTrading": "Sanal işlem",
+      "tapToSwitch": "Değiştirmek için dokun",
+      "liveSub": "Grafikler, sinyaller ve gerçek fiyatlar",
+      "practiceMoney": "Sanal para · ${{cash}}",
+      "openCountLower": "{{n}} açık",
+      "paperSub": "Sanal parayla, risksiz pratik yap",
+      "new": "Yeni",
+      "switchingToPaper": "Sanal işleme geçiliyor",
+      "switchingToLive": "Canlı piyasaya geçiliyor",
+      "splashPaper": "SANAL",
+      "splashMarket": "PİYASA"
+    },
+    "tabs": {
+      "paperTrading": "Sanal İşlem",
+      "orderFlowPressure": "Emir Akışı Baskısı",
+      "orderBook": "Emir Defteri",
+      "positionIntelligence": "Pozisyon Analizi",
+      "tradeToolsAria": "İşlem araçları"
+    },
+    "usage": {
+      "title": "YZ Kullanımı",
+      "upgrade": "Yükselt",
+      "ofLimit": "{{limit}} hakkın {{used}} tanesi kullanıldı",
+      "locked": "YZ isteklerinin kilidini açmak için yükseltin"
+    },
+    "invite": {
+      "title": "Bir arkadaşını davet et",
+      "sub": "Bir arkadaşını davet et — kaydolduğunda $10.000 ücretsiz sanal işlem bakiyesi kazanırsın.",
+      "placeholder": "arkadas@email.com",
+      "sending": "Gönderiliyor…",
+      "sent": "Davet gönderildi ✓",
+      "error": "Gönderilemedi — tekrar deneyin",
+      "send": "Davet gönder"
+    },
+    "sidebar": {
+      "guest": "Misafir",
+      "signInPrompt": "Giriş yap",
+      "dragExpand": "Kenar çubuğunu genişletmek için sürükleyin",
+      "dragCollapse": "Kenar çubuğunu daraltmak için sürükleyin",
+      "account": "Hesap",
+      "support": "Destek",
+      "online": "Çevrimiçi",
+      "signIn": "Giriş Yap"
+    },
+    "topNav": {
+      "logoAria": "coinhintz — Ana sayfa",
+      "home": "Ana sayfa",
+      "menu": "Menü",
+      "mainMenu": "Ana menü",
+      "openMenu": "Menüyü aç",
+      "portfolio": "Portföy",
+      "watchlist": "İzleme listesi",
+      "searchTitle": "Ara (⌘K)",
+      "search": "Ara",
+      "notifications": "Bildirimler",
+      "signIn": "Giriş yap",
+      "signUp": "Kaydol"
+    },
+    "focus": {
+      "onTip": "Odak açık — uyarılar sessizde, dikkat dağıtıcılar gizli. Kapatmak için tıklayın",
+      "offTip": "Odak kapalı — dikkat dağıtıcıları gizlemek ve tüm uyarıları susturmak için tıklayın",
+      "aria": "Odak modu",
+      "activated": "Odak modu etkinleştirildi"
+    },
+    "pv": {
+      "tryAria": "ProVision'ı dene",
+      "turnMeOn": "Beni aç",
+      "daysFree": "3 gün ücretsiz",
+      "buy": "AL",
+      "sub": "Trend renkleri, al/sat sinyalleri ve canlı sinyal kontrolü. Kart gerekmez.",
+      "cta": "ProVision'ı ücretsiz dene",
+      "onTip": "ProVision açık — normal grafiğe dönmek için tıklayın",
+      "offTip": "ProVision: trend mumları, al/sat sinyalleri ve canlı sinyal kontrolü"
+    },
+    "features": {
+      "candleai": "Mum Analizi",
+      "altanalysis": "Altcoin Analizi",
+      "options": "Opsiyon Analitiği",
+      "correlation": "Korelasyon Matrisi",
+      "strategyalerts": "Strateji Uyarıları"
+    },
+    "coinPicker": {
+      "title": "Bir kripto seçin",
+      "search": "Ara…",
+      "star": "{{coin}} favorilere ekle",
+      "unstar": "{{coin}} favorilerden çıkar",
+      "market": "Piyasa",
+      "lastPrice": "Son fiyat",
+      "change24h": "24s %",
+      "volume": "Hacim"
+    },
+    "portfolio": {
+      "cashOption": "Nakit (USD)"
+    },
+    "meta": {
+      "chartTitle": "{{name}} ({{coin}}) Fiyat Grafiği, Canlı Sinyaller ve Analiz | coinhintz",
+      "defaultTitle": "coinhintz | Kripto İşlem Zekâsı",
+      "chartDesc": "coinhintz'te ProVision sinyalleri, teknik analiz, emir defteri ve piyasa konsensüsü ile canlı {{name}} ({{coin}}) fiyat grafiği.",
+      "defaultDesc": "Gerçek zamanlı kripto grafikleri, YZ sinyalleri, tasfiye ısı haritaları ve daha fazlası. coinhintz ile daha akıllı işlem yapın."
+    }
+  }
+}

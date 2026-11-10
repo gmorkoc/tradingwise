@@ -1,0 +1,113 @@
+{
+  "indicatorPicker": {
+    "title": "Indicatori",
+    "close": "Chiudi",
+    "back": "Indietro",
+    "search": "Cerca",
+    "searchAria": "Cerca indicatori",
+    "clear": "Cancella",
+    "personal": "Personali",
+    "favorites": "Preferiti",
+    "onChart": "Sul grafico",
+    "buildWithAi": "Crea con IA",
+    "buildNew": "Creane uno nuovo con IA",
+    "buildSub": "Descrivi un indicatore — l'IA lo crea per il tuo grafico",
+    "builtIn": "Integrati",
+    "allIndicators": "Tutti gli indicatori",
+    "yourIndicators": "I tuoi indicatori",
+    "resultsFor": "Risultati per “{{q}}”",
+    "clearAll": "Rimuovi tutto",
+    "clearAllCount": "Rimuovi tutto ({{count}})",
+    "saved_one": "{{count}} salvato",
+    "saved_other": "{{count}} salvati",
+    "nOn": "{{count}} attivi",
+    "nIndicators_one": "{{count}} indicatore",
+    "nIndicators_other": "{{count}} indicatori",
+    "edit": "Modifica",
+    "editWithAi": "Modifica con IA",
+    "delete": "Elimina",
+    "deleteConfirm": "Eliminare “{{name}}”?",
+    "addFav": "Aggiungi ai preferiti",
+    "removeFav": "Rimuovi dai preferiti",
+    "kind": {
+      "all": "Tutti",
+      "overlay": "Sul prezzo",
+      "pane": "Pannello proprio"
+    },
+    "col": {
+      "name": "Nome",
+      "type": "Tipo",
+      "category": "Categoria"
+    },
+    "empty": {
+      "noMatch": "Nessun indicatore corrisponde a “{{q}}”.",
+      "fav": "Metti una stella (★) a un indicatore per tenerlo qui.",
+      "on": "Ancora niente sul grafico.",
+      "mine": "Ancora nessun indicatore IA — usa Crea con IA per crearne uno.",
+      "nothing": "Niente qui."
+    },
+    "mineAbout": {
+      "title": "Cosa sono I miei indicatori?",
+      "about": "Indicatori che hai creato descrivendoli all'IA. Funzionano su ogni grafico come quelli integrati. Usa Modifica per cambiarne uno a parole, oppure eliminalo."
+    },
+    "about": {
+      "all": {
+        "title": "Come funzionano gli indicatori?",
+        "about": "Tutti gli indicatori disponibili su questo grafico. Clicca una riga per aggiungerlo, cliccala di nuovo per rimuoverlo. Gli overlay si disegnano sopra il prezzo; gli indicatori a pannello hanno il proprio spazio sotto il grafico. Metti una stella a quelli che usi di più per trovarli nei Preferiti."
+      },
+      "fav": {
+        "title": "Cosa sono i Preferiti?",
+        "about": "I tuoi indicatori con la stella, tenuti qui per un accesso rapido. Clicca la ☆ accanto a qualsiasi indicatore per aggiungerlo."
+      },
+      "on": {
+        "title": "Cosa c'è sul tuo grafico?",
+        "about": "Tutto ciò che è attualmente disegnato su questo grafico. Clicca una riga per rimuoverla, oppure usa Rimuovi tutto."
+      }
+    },
+    "cats": {
+      "movingAverages": {
+        "name": "Medie mobili",
+        "question": "Cosa sono le medie mobili?",
+        "about": "Smussano il prezzo per mostrare il trend di fondo. Un prezzo sopra una media in salita tende al rialzo, sotto una media in discesa al ribasso. Le medie veloci (EMA 9/20) reagiscono presto alle inversioni; quelle lente (100/200) fanno da supporto e resistenza di lungo periodo. Gli incroci tra una media veloce e una lenta sono classici segnali di cambio di trend."
+      },
+      "trend": {
+        "name": "Trend",
+        "question": "Cosa mostrano gli indicatori di trend?",
+        "about": "Ti dicono dove sta andando il mercato e con quanta forza. Usali per seguire il trend, capire quando si indebolisce e piazzare trailing stop — ad es. i punti del Parabolic SAR cambiano lato quando il trend gira, e la nuvola di Ichimoku mostra trend, momentum e supporto in un'unica vista."
+      },
+      "momentum": {
+        "name": "Momentum",
+        "question": "Cos'è il momentum?",
+        "about": "Misurano quanto velocemente si muove il prezzo e se la spinta sta accelerando o svanendo. Segnalano condizioni di ipercomprato e ipervenduto, e le divergenze — il prezzo fa un nuovo massimo ma il momentum no — spesso anticipano un'inversione prima che si veda nel prezzo."
+      },
+      "oscillators": {
+        "name": "Oscillatori",
+        "question": "Come funzionano gli oscillatori?",
+        "about": "Oscillano tra livelli fissi o intorno allo zero, ognuno nel proprio pannello. Le letture estreme indicano movimenti tirati che probabilmente rientreranno; attraversare la linea dello zero conferma un cambio di direzione. Rendono al meglio nei mercati laterali e come conferma insieme a uno strumento di trend."
+      },
+      "volatility": {
+        "name": "Volatilità",
+        "question": "Cosa ti dice la volatilità?",
+        "about": "Mostrano quanto si muove il prezzo, non in che direzione. Bande e canali si allargano nei mercati agitati e si stringono prima dei grandi movimenti (uno 'squeeze'). Gli strumenti basati sull'ATR aiutano a dimensionare stop e posizioni così che un'oscillazione normale non ti faccia uscire dal trade."
+      },
+      "volume": {
+        "name": "Volume",
+        "question": "Perché il volume conta?",
+        "about": "Guardano il denaro dietro ogni movimento. Un prezzo in salita con volume in aumento è un movimento convinto; un prezzo in salita con volume in calo è sospetto. Il VWAP indica il prezzo medio pagato oggi — una linea di fair value intorno a cui molti trader comprano e vendono."
+      },
+      "levelsZones": {
+        "name": "Livelli e zone",
+        "question": "Cosa sono livelli e zone?",
+        "about": "Disegnano sul grafico i prezzi che contano: supporto e resistenza, ritracciamenti di Fibonacci, massimo e minimo del giorno e i gap del CME. Sono i punti in cui il prezzo reagisce spesso — utili per ingressi, target e posizionamento degli stop."
+      },
+      "smartMoney": {
+        "name": "Smart Money",
+        "question": "Cos'è lo Smart Money?",
+        "about": "Concetti per seguire dove probabilmente hanno comprato o venduto i grandi operatori: order block, fair-value gap, rotture di struttura e retest, più pattern di candele e fasi di Wyckoff. Evidenziano le zone che il prezzo tende a rivisitare prima di proseguire."
+      },
+      "mine": {
+        "name": "I miei indicatori"
+      }
+    }
+  }
+}

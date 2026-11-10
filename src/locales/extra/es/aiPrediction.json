@@ -1,0 +1,26 @@
+{
+  "aiPrediction": {
+    "title": "Inteligencia de Mercado IA",
+    "aiPowered": "Con IA",
+    "cached": "En caché · {{time}}",
+    "updated": "Actualizado {{time}}",
+    "refreshing": "Actualizando…",
+    "refresh": "Actualizar",
+    "sentiment": { "bullish": "Alcista", "bearish": "Bajista", "neutral": "Neutral" },
+    "conf": { "high": "confianza alta", "medium": "confianza media", "low": "confianza baja" },
+    "thesis": "Tesis de mercado",
+    "analyzing": "Analizando las condiciones del mercado…",
+    "fetching": "Obteniendo datos de mercado…",
+    "failed": "No se pudo obtener la predicción",
+    "ourTake": "Nuestra opinión",
+    "action": { "buy": "Comprar", "sell": "Vender", "hold": "Mantener", "watch": "Vigilar", "accumulate": "Acumular" },
+    "rangeForecast": "Previsión de rango de precio",
+    "current": "Actual:",
+    "currentTitle": "Actual: {{price}}",
+    "drivers": "Impulsores del precio",
+    "buying": "Quién compra",
+    "selling": "Quién vende",
+    "macro": "Macro y noticias",
+    "risks": "Riesgos clave"
+  }
+}

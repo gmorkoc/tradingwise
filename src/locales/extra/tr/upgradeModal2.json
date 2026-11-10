@@ -1,0 +1,24 @@
+{
+  "upgradeModal2": {
+    "close": "Kapat",
+    "back": "Geri",
+    "taglines": {
+      "free": "Piyasaları keşfet ve trading pratiği yap.",
+      "pro": "Aktif trader'lar için YZ analizleri ve sinyaller.",
+      "elite": "Sınırsız YZ ve kendi trading ajanın."
+    },
+    "plus": "{{base}}, ek olarak:",
+    "includes": "İçerir:",
+    "planUnavailable": "Bu plan şu anda satın alınamıyor. Lütfen birazdan tekrar dene.",
+    "paymentFailed": "Ödeme başarısız — planın yükseltilmedi.",
+    "paymentFailedSub": "Lütfen faturalama ayarlarından ödeme yöntemini güncelle ve tekrar dene.",
+    "nothingToRestore": "Geri yüklenecek bir şey yok.",
+    "restored": "Satın alımlar geri yüklendi",
+    "restoredSub": "{{plan}} aboneliğin yeniden aktif.",
+    "manageAppStore": "App Store'da yönet",
+    "instantAccess": "Anında erişim",
+    "cancelInAppStore": "Planını istediğin zaman App Store abonelik ayarlarından iptal edebilir veya değiştirebilirsin.",
+    "alreadySubscribed": "Bu Apple ID ile zaten abone misin?",
+    "restorePurchases": "Satın alımları geri yükle"
+  }
+}

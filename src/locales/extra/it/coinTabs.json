@@ -1,0 +1,171 @@
+{
+  "coinTabs": {
+    "tabs": {
+      "overview": "Grafico",
+      "chart": "Grafico",
+      "stats": "Statistiche",
+      "cycles": "Cicli di mercato",
+      "news": "Notizie",
+      "technicals": "Tecnici",
+      "seasonals": "Stagionalità",
+      "markets": "Mercati",
+      "fundamentals": "Fondamentali",
+      "traders": "Top trader"
+    },
+    "sub": {
+      "overview": "Grafico live, statistiche e ProVision",
+      "chart": "Prezzo, intervalli e strumenti di disegno",
+      "stats": "Cap. di mercato, volume, offerta e link",
+      "cycles": "Puell Multiple, Pi Cycle Top, Rainbow",
+      "news": "Ultimi titoli su questa moneta",
+      "technicals": "Lettura acquisto/vendita da oscillatori e medie",
+      "seasonals": "Com'è andato ogni mese, anno per anno",
+      "markets": "Dove si scambia e con quale volume",
+      "fundamentals": "Cap. di mercato, offerta e info",
+      "traders": "Posizioni più grandi, vincitori e perdenti"
+    },
+    "coinSections": "Sezioni della moneta",
+    "proVisionOff": "Disattiva ProVision",
+    "proVisionOn": "Attiva ProVision — disegna su questo grafico",
+    "more": "Altro",
+    "backToSections": "Torna alle sezioni",
+    "explore": "Esplora {{name}}",
+    "loading": "Caricamento…",
+    "notEnoughData": "Dati insufficienti",
+    "oscillators": "Oscillatori",
+    "movingAverages": "Medie mobili",
+    "vol24": "Volume 24h",
+    "ago": {
+      "m": "{{n}} min fa",
+      "h": "{{n}} h fa",
+      "d": "{{n}} g fa"
+    },
+    "news": {
+      "loading": "Caricamento notizie su {{name}}…",
+      "emptyTitle": "Nessuna notizia al momento",
+      "emptyText": "Ricontrolla tra poco — i titoli si aggiornano ogni pochi minuti.",
+      "title": "Notizie su {{name}}",
+      "sortAria": "Ordina notizie",
+      "top": "In evidenza",
+      "latest": "Ultime",
+      "noCoinNews": "Nessun titolo specifico su {{name}} al momento — ecco le ultime notizie crypto."
+    },
+    "verdict": {
+      "strongBuy": "Acquisto forte",
+      "buy": "Acquisto",
+      "strongSell": "Vendita forte",
+      "sell": "Vendita",
+      "neutral": "Neutrale"
+    },
+    "desk": {
+      "kicker": "Segnale tecnico",
+      "votesBuy": "acquisto",
+      "votesNeutral": "neutrali",
+      "votesSell": "vendita",
+      "vsBarsAgo": "vs {{n}} candele fa",
+      "history": "Storico del segnale · ultime {{n}} candele",
+      "histScale": "+100 acquisto / −100 vendita",
+      "everyIndicator": "Tutti gli indicatori",
+      "rsiNA": "non disponibile",
+      "rsiOversold": "ipervenduto ({{v}})",
+      "rsiOverbought": "ipercomprato ({{v}})",
+      "rsiNeutral": "neutrale ({{v}})",
+      "readMaAbove": "Il prezzo è sopra {{n}} di {{total}} medie mobili",
+      "readMaBelow": "Il prezzo è sotto {{n}} di {{total}} medie mobili",
+      "macdAbove": "MACD sopra il segnale",
+      "macdBelow": "MACD sotto il segnale",
+      "read": "{{ma}} · RSI {{rsi}} · {{macd}} · momentum {{mom}}% in 10 candele."
+    },
+    "osc": {
+      "macdBullUp": "Rialzista e in rafforzamento — barre in crescita sopra lo zero.",
+      "macdBullFade": "Ancora rialzista, ma le barre si stanno riducendo.",
+      "macdBearUp": "Ribassista e in rafforzamento — barre in crescita sotto lo zero.",
+      "macdBearFade": "Ancora ribassista, ma la pressione di vendita si attenua.",
+      "rsiNA": "Dati insufficienti.",
+      "rsiOversold": "Ipervenduto — i venditori potrebbero esaurirsi.",
+      "rsiOverbought": "Ipercomprato — i compratori potrebbero essere al limite.",
+      "rsiMid": "Tra 30 e 70 — nessun estremo in nessuna direzione.",
+      "stoch": "Il prezzo è al {{k}}% del suo range di 14 candele.",
+      "low": "Min {{v}}",
+      "high": "Max {{v}}",
+      "momUp": "Su del {{v}}% rispetto a 10 candele fa.",
+      "momDown": "Giù del {{v}}% rispetto a 10 candele fa."
+    },
+    "ma": {
+      "sub": "Il prezzo {{px}} è sopra <b>{{n}}</b> di {{total}}",
+      "priceBelow": "Prezzo sotto",
+      "priceAbove": "Prezzo sopra"
+    },
+    "mtf": {
+      "timeframe": "Timeframe",
+      "movingAvgs": "Medie mobili",
+      "summary": "Riepilogo",
+      "vsEma": "vs EMA {{n}}"
+    },
+    "table": {
+      "indicator": "Indicatore",
+      "value": "Valore",
+      "action": "Azione",
+      "bbWidth": "Ampiezza Bollinger"
+    },
+    "levels": {
+      "price": "Prezzo",
+      "pivot": "Pivot",
+      "longStop": "Stop long · 1.5 ATR",
+      "shortStop": "Stop short · 1.5 ATR"
+    },
+    "frames": {
+      "15min": "15 min",
+      "1h": "1 ora",
+      "4h": "4 ore",
+      "1day": "1 giorno",
+      "1week": "1 settimana"
+    },
+    "tech": {
+      "title": "Tecnici di {{name}}",
+      "notEnoughText": "Questa moneta non ha ancora abbastanza candele su questo timeframe.",
+      "reading": "Lettura degli indicatori…",
+      "acrossTf": "Su tutti i timeframe",
+      "allIndicators": "Tutti gli indicatori",
+      "keyLevels": "Livelli chiave · pivot classici",
+      "disclaimer": "Letture degli indicatori, non è una consulenza finanziaria."
+    },
+    "seasonals": {
+      "emptyTitle": "Nessun dato stagionale",
+      "emptyText": "{{name}} non è quotata su Binance, quindi non possiamo costruirne lo storico mensile.",
+      "building": "Costruzione dello storico mensile…",
+      "title": "Stagionalità di {{name}}",
+      "note": "Rendimento mensile (apertura → chiusura) per ogni anno. Questo mese: <m>{{month}}</m> ha registrato in media <v>{{avg}}</v> storicamente.",
+      "year": "Anno",
+      "avg": "Media"
+    },
+    "markets": {
+      "stillLoading": "Ancora in caricamento i dati degli exchange…",
+      "finding": "Ricerca di dove si scambia…",
+      "title": "Mercati di {{name}}",
+      "exchange": "Exchange",
+      "pair": "Coppia",
+      "price": "Prezzo",
+      "trust": "Affidabilità",
+      "trustAria": "Affidabilità {{v}}",
+      "trustUnknown": "Affidabilità sconosciuta"
+    },
+    "fund": {
+      "stillLoading": "Ancora in caricamento i fondamentali…",
+      "loading": "Caricamento fondamentali…",
+      "title": "Fondamentali di {{name}}",
+      "marketCap": "Cap. di mercato",
+      "fdv": "Valutazione completamente diluita",
+      "volMcap": "Volume / cap. di mercato",
+      "circ": "Offerta circolante",
+      "ofMax": "{{pct}}% dell'offerta massima ({{n}})",
+      "ofTotal": "{{pct}}% dell'offerta totale ({{n}})",
+      "ath": "Massimo storico",
+      "atl": "Minimo storico",
+      "fromAth": "{{date}} · {{pct}}% dall'ATH",
+      "sinceAtl": "{{date}} · +{{pct}}% da allora",
+      "about": "Info su {{name}}",
+      "website": "Sito ufficiale ↗"
+    }
+  }
+}

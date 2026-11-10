@@ -1,0 +1,8 @@
+{
+  "coinbasePremium2": {
+    "title": "Coinbase Premium Index",
+    "priceUsd": "— Price USD",
+    "premiumVs": "Premium (Coinbase vs {{source}})",
+    "na": "N/A"
+  }
+}

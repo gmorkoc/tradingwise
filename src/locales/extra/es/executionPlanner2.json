@@ -1,0 +1,11 @@
+{
+  "executionPlanner2": {
+    "factors": {
+      "support": "Nivel de soporte",
+      "resistance": "Nivel de resistencia",
+      "orderBlock": "Order Block",
+      "fairValueGap": "Fair Value Gap",
+      "liquidity": "Nivel de liquidez"
+    }
+  }
+}

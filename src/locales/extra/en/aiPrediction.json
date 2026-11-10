@@ -1,0 +1,26 @@
+{
+  "aiPrediction": {
+    "title": "AI Market Intelligence",
+    "aiPowered": "AI Powered",
+    "cached": "Cached · {{time}}",
+    "updated": "Updated {{time}}",
+    "refreshing": "Refreshing…",
+    "refresh": "Refresh",
+    "sentiment": { "bullish": "Bullish", "bearish": "Bearish", "neutral": "Neutral" },
+    "conf": { "high": "high conf.", "medium": "medium conf.", "low": "low conf." },
+    "thesis": "Market Thesis",
+    "analyzing": "Analyzing market conditions…",
+    "fetching": "Fetching market data…",
+    "failed": "Failed to get prediction",
+    "ourTake": "Our Take",
+    "action": { "buy": "Buy", "sell": "Sell", "hold": "Hold", "watch": "Watch", "accumulate": "Accumulate" },
+    "rangeForecast": "Price Range Forecast",
+    "current": "Current:",
+    "currentTitle": "Current: {{price}}",
+    "drivers": "Price Drivers",
+    "buying": "Who's Buying",
+    "selling": "Who's Selling",
+    "macro": "Macro & News",
+    "risks": "Key Risks"
+  }
+}

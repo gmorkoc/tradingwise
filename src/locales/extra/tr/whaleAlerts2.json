@@ -1,0 +1,12 @@
+{
+  "whaleAlerts2": {
+    "unmute": "Balina uyarılarının sesini aç",
+    "mute": "Balina uyarılarının sesini kapat",
+    "soundOff": "Ses kapalı",
+    "soundOn": "Ses açık",
+    "viewTx": "İşlemi görüntüle",
+    "dismissNext": "Kapat ve sonrakini göster",
+    "dismiss": "Kapat",
+    "snoozeAria": "Balina uyarılarını 1 saat ertele"
+  }
+}

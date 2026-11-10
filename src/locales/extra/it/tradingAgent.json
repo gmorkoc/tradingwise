@@ -1,0 +1,220 @@
+{
+  "tradingAgent": {
+    "connecting": "L'Agent si sta connettendo",
+    "callout": "Ecco Agent Ready — il tuo copilota di trading con IA",
+    "time": {
+      "now": "ora",
+      "minAgo": "{{n}} min fa",
+      "hourAgo": "{{n}} h fa",
+      "dayAgo": "{{n}} g fa"
+    },
+    "conv": {
+      "pin": "Fissa",
+      "unpin": "Sblocca",
+      "pinConversation": "Fissa conversazione",
+      "unpinConversation": "Rimuovi conversazione fissata",
+      "delete": "Elimina",
+      "deleteConversation": "Elimina conversazione",
+      "empty": "(vuota)",
+      "messages_one": "{{count}} messaggio",
+      "messages_other": "{{count}} messaggi"
+    },
+    "head": {
+      "menu": "Menu",
+      "agentActions": "Azioni dell'Agent",
+      "close": "Chiudi",
+      "newChat": "Nuova chat",
+      "history": "Cronologia",
+      "watchlist": "Monitoraggi",
+      "positions": "Posizioni"
+    },
+    "history": {
+      "chatsCount": "{{n}}/{{max}} chat",
+      "limitHit": "Hai raggiunto il limite di {{max}} chat. Per iniziarne una nuova, eliminane prima una qui sotto.",
+      "limitNear": "Attenzione: puoi tenere fino a {{max}} chat. Ne restano {{left}} prima di doverne eliminare una per iniziarne una nuova.",
+      "limitInfo": "Puoi tenere fino a {{max}} chat. Raggiunte le {{max}}, eliminane una per iniziare una nuova chat.",
+      "noConversations": "Nessuna conversazione precedente.",
+      "pinned": "Fissate",
+      "allChats": "Tutte le chat",
+      "backToChat": "Torna alla chat"
+    },
+    "watches": {
+      "active": "Monitoraggi attivi",
+      "noActive": "Nessun monitoraggio attivo.",
+      "notifications": "Notifiche",
+      "noTriggered": "Nessun monitoraggio ancora scattato.",
+      "watch": "Monitoraggio",
+      "watching": "Monitoraggio di <b>{{coin}}</b>",
+      "timeframe": "Timeframe",
+      "daily": "Giornaliero",
+      "settingUp": "Configurazione…",
+      "cancel": "Annulla",
+      "cancelled": "Annullato",
+      "triggered": "✓ Scattato"
+    },
+    "positions": {
+      "title": "Posizioni",
+      "refresh": "Aggiorna",
+      "refreshPositions": "Aggiorna posizioni",
+      "tabOpen": "Aperte",
+      "tabClosed": "Chiuse",
+      "loadingClosed": "Caricamento delle posizioni chiuse…",
+      "openTitle": "Posizioni aperte",
+      "closedTitle": "Posizioni chiuse",
+      "noOpen": "Nessuna posizione aperta al momento.",
+      "noClosed": "Nessuna posizione chiusa finora.",
+      "scrollMore": "{{count}} posizioni · scorri per vederne altre",
+      "tapHint": "Tocca una posizione per tutti i dettagli",
+      "side": "Lato",
+      "size": "Dimensione",
+      "entry": "Ingresso",
+      "current": "Attuale",
+      "exit": "Uscita",
+      "pnl": "P&L",
+      "opened": "Aperta",
+      "closed": "Chiusa",
+      "closing": "Chiusura…",
+      "closePosition": "Chiudi posizione",
+      "close": "Chiudi",
+      "closeReason": {
+        "manual": "manuale",
+        "take_profit": "take profit",
+        "stop_loss": "stop loss",
+        "liquidation": "liquidazione"
+      }
+    },
+    "proposal": {
+      "long": "LONG",
+      "short": "SHORT",
+      "buy": "ACQUISTO",
+      "sell": "VENDITA",
+      "spot": "SPOT",
+      "futures": "FUTURES {{leverage}}x",
+      "margin": "Margine",
+      "cost": "Costo",
+      "notional": "Nozionale",
+      "takeProfit": "Take Profit",
+      "stopLoss": "Stop Loss",
+      "executing": "Esecuzione…",
+      "confirm": "Conferma",
+      "confirmAll": "Conferma tutto",
+      "dismiss": "Ignora",
+      "executed": "✓ Eseguito",
+      "dismissed": "Ignorato",
+      "total": "Totale",
+      "totalAcross_one": "{{amount}} su {{count}} asset",
+      "totalAcross_other": "{{amount}} su {{count}} asset",
+      "updateBalance": "Aggiorna saldo",
+      "newCashBalance": "Nuovo saldo liquido",
+      "updating": "Aggiornamento…",
+      "updated": "✓ Aggiornato",
+      "openSection": "Apri {{label}} →"
+    },
+    "consent": {
+      "strong": "Solo paper trading — denaro simulato, operazioni simulate.",
+      "body": "Questo agente non è un consulente finanziario o d'investimento registrato, e nulla di ciò che dice costituisce consulenza finanziaria. coinhintz non è responsabile di eventuali perdite, simulate o meno, derivanti dall'uso di questa funzione. Ti chiederemo di accettarlo una sola volta — dopo oggi non vedrai più questo avviso.",
+      "oneSec": "Un attimo…",
+      "agree": "Ho capito e accetto!"
+    },
+    "continueBanner": {
+      "text": "Riprendi da dove avevi lasciato:",
+      "continue": "Continua →"
+    },
+    "webPush": {
+      "text": "Ricevi un avviso nel browser quando scatta un monitoraggio o una posizione, anche con questo pannello chiuso.",
+      "enabling": "Attivazione…",
+      "enable": "Attiva"
+    },
+    "portfolio": {
+      "title": "Portafoglio",
+      "cash": "Liquidità",
+      "edit": "Modifica",
+      "winRate": "Tasso di successo",
+      "winLoss": "({{wins}}V–{{losses}}P)",
+      "currentPositions": "Posizioni attuali"
+    },
+    "feed": {
+      "emptyHint": "Prova \"compra $200 di BTC\", \"vendi metà dei miei ETH\" o \"cosa ne pensi di SOL?\" — qui è tutto simulato, niente denaro reale né exchange coinvolti.",
+      "thoughtProcess": "Ragionamento",
+      "chartScreenshot": "Screenshot del grafico",
+      "cancel": "Annulla",
+      "saveResend": "Salva e reinvia",
+      "copied": "Copiato",
+      "copyMessage": "Copia messaggio",
+      "copy": "Copia",
+      "editMessage": "Modifica messaggio",
+      "edit": "Modifica",
+      "sources_one": "{{count}} fonte",
+      "sources_other": "{{count}} fonti",
+      "thinking": "Sto pensando",
+      "tapToInterrupt": "Tocca per interrompere"
+    },
+    "snapshot": {
+      "trend": {
+        "up": "rialzista",
+        "down": "ribassista",
+        "range": "laterale"
+      },
+      "na": "n/d",
+      "funding": "Funding",
+      "chart": "Grafico",
+      "orderBook": "Order Book",
+      "openingChart": "Apertura grafico di {{coin}}…",
+      "openingOrderBook": "Apertura order book di {{coin}}…"
+    },
+    "opener": {
+      "scanning": "Sto controllando il mercato per trovarti le opzioni migliori",
+      "coinList": "Elenco monete",
+      "marketCap": "Capitalizzazione",
+      "topGainers": "Maggiori rialzi",
+      "tapToStart": "Toccane una per iniziare — o dimmi semplicemente una moneta.",
+      "noGainers": "Nessun rialzo nella top 100 al momento.",
+      "marketDataDown": "I dati di mercato non si caricano al momento — dimmi semplicemente quale moneta.",
+      "topByCapAria": "Principali monete per capitalizzazione",
+      "topGainersAria": "Maggiori rialzi, 24h",
+      "startWith": "Inizia con {{name}}",
+      "more": "+{{count}} altre",
+      "headlines": "Notizie",
+      "headlinesAria": "Ultime notizie crypto"
+    },
+    "speech": {
+      "gettingReady": "Preparazione audio…",
+      "speaking": "Sto parlando — tocca per fermare"
+    },
+    "composer": {
+      "pendingImageAlt": "Screenshot del grafico da analizzare",
+      "removeImage": "Rimuovi immagine allegata",
+      "cancelRecording": "Annulla registrazione",
+      "attachImage": "Allega un'immagine",
+      "listening": "In ascolto…",
+      "placeholder": "Di' all'agente cosa fare…",
+      "stopRecording": "Interrompi registrazione",
+      "speakToAgent": "Parla con l'agente",
+      "send": "Invia",
+      "sending": "Invio in corso",
+      "typing": "Sta scrivendo"
+    },
+    "hub": {
+      "new": "Nuova",
+      "history": "Cronologia",
+      "watch": "Monitora",
+      "positions": "Posizioni",
+      "report": "Segnala"
+    },
+    "errors": {
+      "enableNotifications": "Impossibile attivare le notifiche del browser",
+      "saveFailed": "Impossibile salvare — riprova.",
+      "loadClosed": "Impossibile caricare le posizioni chiuse — riprova.",
+      "refreshPositions": "Impossibile aggiornare le posizioni — riprova.",
+      "generic": "Qualcosa è andato storto — riprova.",
+      "tradeFailed": "Operazione non riuscita — riprova.",
+      "basketFailed": "Alcune parti potrebbero non essere state eseguite — controlla le tue posizioni.",
+      "balanceFailed": "Impossibile aggiornare il saldo — riprova.",
+      "watchFailed": "Impossibile impostare quel monitoraggio — riprova.",
+      "cashInvalid": "Il saldo liquido deve essere un numero non negativo.",
+      "cashFailed": "Impossibile aggiornare il saldo liquido — riprova.",
+      "closeFailed": "Impossibile chiudere quella posizione — riprova.",
+      "cancelWatchFailed": "Impossibile annullare il monitoraggio — riprova."
+    }
+  }
+}

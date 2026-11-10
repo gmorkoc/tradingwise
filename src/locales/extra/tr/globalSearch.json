@@ -1,0 +1,35 @@
+{
+  "globalSearch": {
+    "placeholder": "Coin, bölüm, özellik ara…",
+    "ask": "Sor",
+    "askAgentTitle": "Agent Ready'ye sor",
+    "clear": "Temizle",
+    "cancel": "İptal",
+    "noResults": "\"{{query}}\" için sonuç yok",
+    "coins": "Coinler",
+    "pages": "Sayfalar",
+    "allPages": "Tüm sayfalar",
+    "kbdNavigate": "gezin",
+    "kbdOpen": "aç",
+    "kbdClose": "kapat",
+    "sections": {
+      "chart": { "label": "Fiyat Grafiği", "desc": "Göstergeli canlı mum grafiği" },
+      "candleai": { "label": "Mum Analizi", "desc": "YZ formasyon analizi, akıllı para, tahminler" },
+      "heatmap": { "label": "Tasfiye Isı Haritası", "desc": "Vadeli işlem tasfiye bölgeleri ve stop avı seviyeleri" },
+      "onchain": { "label": "On-Chain Metrikler", "desc": "Ağ verileri, borsa akışları ve balina hareketleri" },
+      "positions": { "label": "Pozisyonlar ve Akışlar", "desc": "Long/short oranları ve taker alış/satış hacmi" },
+      "htf": { "label": "HTF Analizi", "desc": "Üst zaman dilimi yapısı, makro trend ve yön" },
+      "orderflow": { "label": "Emir Akışı", "desc": "Footprint grafiği, delta ve büyük emir akışı" },
+      "signals": { "label": "Sinyaller", "desc": "YZ tarafından üretilen, çoklu borsa uyumlu işlem sinyalleri" },
+      "fundingbot": { "label": "Fonlama Botu", "desc": "Borsalar genelinde perpetual fonlama oranları" },
+      "riskcalc": { "label": "Pozisyon Hesaplayıcı", "desc": "Pozisyon büyüklüğü, dolar riski ve R:R hesaplayıcı" },
+      "markets": { "label": "Piyasalar", "desc": "Piyasa değeri, dominans ve önde gelen coinlere genel bakış" },
+      "marketheatmap": { "label": "Piyasa Isı Haritası", "desc": "Piyasa değerine göre önde gelen coinler; boyut değere, renk 24s değişime göre" },
+      "altanalysis": { "label": "Altcoin Analizi", "desc": "Alternatif kripto paralar için YZ destekli analiz" },
+      "options": { "label": "Opsiyonlar", "desc": "BTC/ETH opsiyon verileri — açık pozisyon, max pain, IV" },
+      "correlation": { "label": "Korelasyon", "desc": "Altın, DXY ve S&P 500'e karşı varlıklar arası korelasyon" },
+      "strategyalerts": { "label": "Strateji Uyarıları", "desc": "Özel kural motoru — gösterge ve fiyat uyarıları" },
+      "agentReady": { "label": "Agent Ready", "desc": "YZ işlem asistanıyla sohbet et — herhangi bir coini sor, işlem fikirleri al" }
+    }
+  }
+}

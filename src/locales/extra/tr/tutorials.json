@@ -1,0 +1,333 @@
+{
+  "tutorials": {
+    "title": "Trading Eğitimleri",
+    "beginner": "Başlangıç",
+    "advanced": "İleri",
+    "stepByStep": "Adım Adım",
+    "commonMistakes": "Sık Yapılan Hatalar",
+    "proTips": "Pro İpuçları",
+    "disclaimer": "⚠️ Yalnızca eğitim amaçlıdır. Yatırım tavsiyesi değildir.",
+    "prevSlide": "Önceki görsel",
+    "nextSlide": "Sonraki görsel",
+    "goToSlide": "Görsel {{n}}",
+    "svg": {
+      "entry": "GİRİŞ",
+      "entryUp": "GİRİŞ ↑",
+      "entryDown": "GİRİŞ ↓",
+      "stop": "Stop",
+      "target": "Hedef",
+      "flagpole": "① Bayrak direği",
+      "flagpoleDown": "① Düşen direk",
+      "flag": "② Bayrak",
+      "breakout": "③ Kırılım",
+      "breakdown": "③ Aşağı kırılım",
+      "bullFlagHeader": "BOĞA BAYRAĞI FORMASYONU",
+      "bearFlagHeader": "AYI BAYRAĞI FORMASYONU",
+      "supportZone": "DESTEK BÖLGESİ",
+      "touch1": "Temas 1",
+      "touch2": "Temas 2",
+      "touch3Entry": "Temas 3 = Giriş",
+      "supportBounceHeader": "DESTEKTEN SEKME — 3 TEMAS = DAHA GÜÇLÜ SEVİYE",
+      "goldenZone": "Altın Bölge 61.8%",
+      "fibHeader": "FIBONACCI DÜZELTMESİ — İLERİ LONG",
+      "resistance": "DİRENÇ",
+      "neckline": "BOYUN ÇİZGİSİ",
+      "top1": "Tepe 1",
+      "top2": "Tepe 2",
+      "height": "Yükseklik",
+      "doubleTopHeader": "İKİLİ TEPE — HEDEF = FORMASYON YÜKSEKLİĞİ",
+      "liqCluster": "🔴 LİKİDİTE KÜMESİ — Stoplar burada avlanır",
+      "sweepBelow": "① Stopların altına süpürme",
+      "realMoveUp": "② Gerçek yükseliş",
+      "sweepHeader": "LİKİDİTE SÜPÜRMESİ → DÖNÜŞ FORMASYONU",
+      "heatmapHeader": "TASFİYE ISI HARİTASI — ÇOK SEVİYELİ ANALİZ",
+      "levels": {
+        "extreme": "Aşırı",
+        "veryHigh": "Çok yüksek",
+        "high": "Yüksek",
+        "medium": "Orta",
+        "low": "Düşük"
+      },
+      "priceUpper": "FİYAT",
+      "price": "Fiyat",
+      "rsiDivHeader": "RSI UYUMSUZLUĞU — FİYAT VS MOMENTUM",
+      "higherHigh": "Daha yüksek tepe",
+      "lowerHigh": "Daha düşük tepe",
+      "bearishDiv": "⚠ NEGATİF UYUMSUZLUK",
+      "reversalLikely": "Dönüş yakın olabilir",
+      "confluenceHeader": "KESİŞİM: RSI + MACD + FİYAT HAREKETİ",
+      "support": "Destek",
+      "allAlign": "Üçü de uyumlu ↓",
+      "accountHeader": "HESAP KURULUMU — İLK İŞLEMİNE 6 ADIM",
+      "accountSteps": {
+        "signUp": { "label": "Kayıt", "sub1": "E-posta +", "sub2": "şifre" },
+        "verify": { "label": "Doğrula", "sub1": "Gelen kutunu", "sub2": "kontrol et" },
+        "kyc": { "label": "KYC", "sub1": "Kimlik + selfie", "sub2": "~5 dk" },
+        "twoFa": { "label": "2FA", "sub1": "Doğrulama", "sub2": "uyg. (SMS değil)" },
+        "deposit": { "label": "Yatır", "sub1": "Banka/kart", "sub2": "veya kripto" },
+        "trade": { "label": "İşlem", "sub1": "Başlangıçta", "sub2": "sadece spot!" }
+      },
+      "totalTime": "Toplam süre: ~15 dakika • 7/24 erişilebilir",
+      "securityHeader": "GÜVENLİK KATMANLARI — KRİPTONU KORU",
+      "yourCrypto": "Kriptoların",
+      "layer1": "KATMAN 1 — Güçlü şifre (16+ karakter, benzersiz, şifre yöneticisi kullan)",
+      "layer2": "KATMAN 2 — Doğrulama uygulamasıyla 2FA (SMS değil — SIM-swap riski!)",
+      "layer3": "KATMAN 3 — Uzun vade için donanım cüzdanı (Ledger / Trezor)",
+      "basic": "Temel",
+      "must": "Şart",
+      "resistanceZone3": "DİRENÇ BÖLGESİ — 3 Ret",
+      "reject1": "Ret 1",
+      "reject2": "Ret 2",
+      "reject3Entry": "Ret 3=Giriş",
+      "resistanceHeader": "DİRENÇ BÖLGESİ — DAHA FAZLA RET = DAHA GÜÇLÜ SİNYAL"
+    },
+    "exchanges": {
+      "binance": {
+        "tagline": "Dünyanın en yüksek hacmi",
+        "badge": "Profesyoneller için",
+        "pros": ["350+ coin mevcut", "Düşük işlem ücreti %0.1", "Tam vadeli ve marjin"],
+        "cons": ["ABD'de kullanılamaz"]
+      },
+      "coinbase": {
+        "tagline": "Yeni başlayanlar için en kolayı",
+        "badge": "Yeni başlayanlar için",
+        "pros": ["ABD lisanslı ve denetimli", "Çok basit arayüz", "200+ coin"],
+        "cons": ["Daha yüksek ücretler ~%1.5"]
+      },
+      "kraken": {
+        "tagline": "Dünyada en güvenilen",
+        "badge": "Güvenlik için en iyisi",
+        "pros": ["ABD ve AB'de tam lisanslı", "Sektör lideri güvenlik", "Düşük ücret %0.16"],
+        "cons": ["Daha az altcoin"]
+      }
+    },
+    "cexDex": {
+      "vs": "vs",
+      "cex": {
+        "sublabel": "Merkezi Borsa",
+        "pros": ["Yeni başlayan dostu arayüz", "Fiat yatırma (banka/kart)", "KYC hesap verebilirlik sağlar", "7/24 müşteri desteği"],
+        "cons": ["Anahtarların onlarda", "Hacklenebilir/dondurulabilir", "Hesap kapatılabilir"]
+      },
+      "dex": {
+        "sublabel": "Merkeziyetsiz Borsa",
+        "pros": ["Anahtarlar sende", "KYC gerekmez", "Dondurulamaz", "DeFi tokenlarına erişim"],
+        "cons": ["Yeni başlayanlar için karmaşık", "Fiat girişi yok", "Hata olursa destek yok"]
+      }
+    },
+    "topics": {
+      "long": {
+        "title": "Long Fırsatı Bulmak",
+        "beginner": {
+          "illustrations": ["Boğa Bayrağı Formasyonu", "Destekten Sekme — 3 Temas Kuralı"],
+          "steps": [
+            "Yükselen trendi belirle: fiyat daha yüksek tepeler ve daha yüksek dipler yapıyor. Onaylanmış bir düşüş trendinde asla long açma.",
+            "Önemli bir destek seviyesine geri çekilmeyi bekle. Fiyatın daha önce döndüğü yatay bir bölge ara.",
+            "Destekte yükseliş yönlü dönüş mumu ara: çekiç, yutan boğa ya da uzun alt fitilli pin bar.",
+            "RSI'ın 40'ın üzerinde ve yukarı dönüyor olmasıyla teyit et. RSI 30'un altındaysa daha da iyi: aşırı satımdan sekme yaklaşıyor.",
+            "Fiyat önceki mumun tepesinin üzerinde kapattığında gir — bu dönüşü teyit eder ve sahte kırılımlardan korur.",
+            "Stop-loss'u destek bölgesinin hemen altına koy. Pozisyonu, stop-loss hesabının en fazla %1–2'sine denk gelecek şekilde boyutlandır.",
+            "Girmeden önce bir sonraki direnç seviyesini ya da en az 2:1 kazanç/risk oranını hedefle."
+          ],
+          "mistakes": [
+            "Dönüş mumu teyit olmadan almak — tahmin ediyorsun, trade yapmıyorsun",
+            "Kırılacağını düşünerek dirençte girmek — gerçek kırılımı bekle",
+            "Üst zaman dilimindeki trendi görmezden gelmek — long'lar en iyi yükselen trendde çalışır",
+            "Stopları çok dar koymak — küçük fitiller seni hareketten önce stop eder"
+          ],
+          "tips": ["Kırılımda hacim patlaması = yüksek kararlılık", "Desteğe daha fazla temas = daha güçlü seviye", "1H'de işlem yapmadan önce 4H'ye bak"]
+        },
+        "advanced": {
+          "illustrations": ["Fibonacci Düzeltmesi — Altın Bölge", "Kesişim: RSI + MACD + Fiyat Hareketi"],
+          "steps": [
+            "Fibonacci düzeltmesini son önemli dipten tepeye çiz. %61.8 seviyesi 'Altın Bölge'dir — en yüksek olasılıklı long.",
+            "Kesişim ara: Fib %61.8'in yatay bir destek bölgesiyle çakışması. Girmek için iki neden = çok daha yüksek güven.",
+            "RSI ekle — Fib seviyesinde RSI 40 civarında ya da 30'un altındaysa bu üçlü kesişimdir. Çok yüksek olasılıklı kurulum.",
+            "MACD'ye bak — Fib seviyesinde yükseliş kesişimi momentumun döndüğünü teyit eder. Histogramın kırmızıdan yeşile dönmesi sinyaldir.",
+            "Tasfiye ısı haritasını kontrol et — girişinin altındaki büyük likidite kümeleri genellikle önce süpürülür. Süpürmeyi bekle, sonra gir.",
+            "Kademeli gir: pozisyonun %50'sini Fib %61.8'de aç, kalan %50'yi teyit mumu kapanışında ekle.",
+            "Fib %0 seviyesini (önceki tepe) TP1 olarak kullan ve TP1 gelince kazancı koşturmak için takip eden stop koy."
+          ],
+          "mistakes": [
+            "Her Fib seviyesinde işlem yapmak — yalnızca %50 ve %61.8 anlamlı avantaj sağlar",
+            "MACD/RSI kesişimini beklememek — teyitsiz Fib tek başına zayıftır",
+            "Makro trendi görmezden gelmek — Fib long'ları yalnızca makro yükselen trendlerde çalışır",
+            "Stop-loss'u başabaşa çok erken çekmek — normal konsolidasyonda stop olursun"
+          ],
+          "tips": ["Fib + destek + aşırı satım RSI = üçlü kesişim, en yüksek olasılık", "BTC'nin haftalık grafikteki Fib seviyeleri tarihsel olarak dikkat çekici şekilde çalıştı", "Kârı kilitlemek için yükselişte %38.2 ve %23.6'da kademeli çık"]
+        }
+      },
+      "short": {
+        "title": "Short Fırsatı Bulmak",
+        "beginner": {
+          "illustrations": ["Ayı Bayrağı — Short Devamı", "Dirençten Ret"],
+          "steps": [
+            "Düşüş trendini ya da zayıflayan bir yükselişi belirle — fiyat daha düşük tepeler yapıyor. Boğa piyasasında rastgele asla short açma.",
+            "Fiyatın önemli bir dirence kadar sekmesini bekle. Fiyat o seviyeye ne kadar uzun süre saygı gösterdiyse o kadar iyi.",
+            "Düşüş yönlü dönüş mumu ara: kayan yıldız, yutan ayı ya da üst fitilli doji.",
+            "RSI'ın 60'ın altında ve aşağı dönüyor olduğunu kontrol et. RSI 70'in üzerindeyse daha da iyi — aşırı alımdan momentum dönüşü.",
+            "Mevcut mum önceki mumun dibinin altında kapattığında gir — sadece fitil değil, reddi teyit eder.",
+            "Stop-loss'u direnç bölgesinin ya da mumun tepesinin hemen üstüne koy. Dar tut.",
+            "Bir sonraki önemli desteği, önceki dibi ya da 2:1 R:R'yi hedefle."
+          ],
+          "mistakes": [
+            "Güçlü boğa trendinde short açmak — 'çok yükseldi' bir kurulum değildir",
+            "Fonlama oranına bakmamak — yüksek pozitif fonlama short'ları destekler, negatif fonlama tehlikelidir",
+            "Short'larda aşırı kaldıraç — kriptoda short'lar sert biçimde sıkıştırılır",
+            "Teyit mumu olmadan short açmak — fitiller seni yanıltabilir"
+          ],
+          "tips": ["Fonlama oranına bak — %0.1 üzeri = kalabalık long'lar, short için harika ortam", "Dirence doğru sekme sırasında hacim azalmalı", "Kripto short'ları long'lardan daha dar stop ister — sıkışmalar acımasızdır"]
+        },
+        "advanced": {
+          "illustrations": ["İkili Tepe — Klasik Dönüş Formasyonu", "RSI Negatif Uyumsuzluk"],
+          "steps": [
+            "İkili tepe: fiyat yaklaşık aynı seviyede, arasında bir dip olan iki tepe yapar. İkinci tepenin daha yükseğe çıkamaması bir uyarıdır.",
+            "'Boyun çizgisi' iki tepe arasındaki diptir. Boyun çizgisinin altına kırılım short giriş tetikleyicisidir.",
+            "Ölçülen hareket hedefi: boyun çizgisinden tepelere olan mesafe, boyun çizgisi kırılımından aşağı doğru yansıtılır.",
+            "RSI negatif uyumsuzluğuyla teyit et — fiyat eşit/daha yüksek tepe yaparken RSI daha düşük tepe yapıyorsa momentum zayıflıyordur. Çok güçlü sinyal.",
+            "MACD histogramı ikinci tepede küçülüyor olmalı — fiyat kırılmadan önce bile momentum tükenmesini teyit eder.",
+            "Boyun çizgisinin altındaki kümeler için tasfiye ısı haritasına bak — bunlar hedeflerin olur.",
+            "Stop-loss ikinci tepenin üstünde. Fiyat iki tepenin de üzerinde yeni zirve yaparsa formasyon geçersizdir — çık."
+          ],
+          "mistakes": [
+            "Boyun çizgisi kırılmadan ikinci tepede short açmak — formasyon henüz teyit edilmedi",
+            "RSI uyumsuzluğunu görmezden gelmek — en güçlü short sinyali dirençteki fiyat değil, uyumsuzluktur",
+            "Stopları çok geniş koymak — ikili tepe yeni zirvelerde geçersizleşir, stopunu oraya koy",
+            "Aşağıdaki destekleri hesaba katmamak — girmeden önce en yakın desteğin nerede olduğunu bil"
+          ],
+          "tips": ["Üst zaman dilimlerinde (günlük/haftalık) ikili tepe = kurumsal seviyede kurulum", "RSI'daki negatif uyumsuzluk kriptoda kazanma oranı en yüksek sinyallerden biridir", "Hacim genellikle ikinci tepede düşer — dağıtımı teyit eder"]
+        }
+      },
+      "heatmap": {
+        "title": "Tasfiye Isı Haritası",
+        "beginner": {
+          "illustrations": ["Likidite Seviyelerini Okumak", "Likidite Süpürmesi → Dönüş"],
+          "steps": [
+            "coinhintz'te Tasfiye Isı Haritası'nı aç. Daha parlak = o fiyatta bekleyen daha fazla likidite (stop-loss ve tasfiye emirleri).",
+            "Kırmızı/turuncu bölgeler 'Aşırı' likiditedir — piyasa yapıcılar bu seviyeleri bilir ve emirleri toplamak için fiyatı oraya iter.",
+            "Mevcut fiyatın ÜSTÜNDE büyük küme = yükseliş mıknatısı. Fiyat muhtemelen o stopları temizlemek için yukarı çekilir.",
+            "Mevcut fiyatın ALTINDA büyük küme = düşüş mıknatısı. Fiyat dönmeden önce o stopları süpürmek için aşağı itilebilir.",
+            "Süpürme formasyonu: fiyat bir fitille likidite bölgesinin İÇİNE iner, tüm stopları tetikler, sonra sertçe döner — asıl işlem budur.",
+            "Bölgenin İÇİNE giren fitilin bölgenin tekrar ÜSTÜNDE/ALTINDA kapanmasını bekle — süpürmenin gerçekleştiğinin teyidi budur.",
+            "Destek/dirençle birleştir: tam olarak bir destek seviyesinin ÜZERİNDE duran ısı haritası kümesi = son derece yüksek olasılıklı bölge."
+          ],
+          "mistakes": [
+            "Her likidite kümesinin dönüş yaratacağını varsaymak — trend güçlüyse yaratmaz",
+            "Fitil kapanmadan likiditeye doğru harekete karşı işlem açmak — tahmin ediyorsun",
+            "Genel trendi görmezden gelmek — güçlü trendde likidite süpürmeleri trendi sürdürür",
+            "İnce likidite bölgelerinde işlem yapmak — yalnızca yüksek likiditeli kümeler önemlidir"
+          ],
+          "tips": ["Süpürme mumu çoğunlukla pin bar olarak kapanır — giriş sinyalin olarak kullan", "Üst zaman dilimi ısı haritaları daha kurumsal likidite bölgelerini gösterir", "Süpürmeden sonra fiyat hızlı hareket eder — girmeye hazır ol"]
+        },
+        "advanced": {
+          "illustrations": ["Çok Seviyeli Isı Haritası Analizi", "Süpürme → Dönüş Formasyonu"],
+          "steps": [
+            "Analizini katmanla: fiyatın üstündeki ve altındaki tüm aşırı likidite kümelerini belirle. Bunlar hem fiyat hedeflerin HEM DE olası dönüş bölgelerin olur.",
+            "'Likidite çağlayanı': bir süpürme bir kümeyi tetiklediğinde alttaki bir sonraki kümeye zincirleme reaksiyon başlatabilir — %10-20'lik hareketler böyle başlar.",
+            "Isı haritasını Açık Pozisyon (OI) ile karşılaştır: artan OI + altta büyük küme = süpürme çok olası. Biri stopları avlamak için pozisyon kuruyor.",
+            "Fonlama oranı analizi: fonlama aşırı pozitif + ısı haritası altta devasa küme gösteriyorsa = aşağı süpürmeden sonra short squeeze kurulumu.",
+            "Bölgeleri fiyat oraya ulaşmadan ÖNCE işaretle. Asla kovalama — fitilde dolmak için süpürme bölgesinin İÇİNE limit emir koy.",
+            "Risk: her süpürme dönmez. Kesişim kullan — ısı haritası kümesi + Fibonacci seviyesi + aşırı satım RSI = çok yüksek olasılıklı dönüş.",
+            "Süpürme bölgesine gelindiğinde fitilin dibinin altına dar bir stop koy. Fiyat dönmeden devam ederse hemen çık."
+          ],
+          "mistakes": [
+            "Likidite bölgelerinde piyasa emri kullanmak — fitilde dolmak için limit emir kullan",
+            "Her süpürmenin kusursuz dönüş olmasını beklemek — bazen bir sonraki bölgeye çağlayan olur",
+            "Isı haritasıyla birlikte Açık Pozisyonu kontrol etmemek — OI bağlamı kritiktir",
+            "Süpürmeden sonra 'daha fazla teyit' beklediğin için girişi kaçırmak"
+          ],
+          "tips": ["Süpürmeyi kaçırmamak için önemli ısı haritası seviyelerine alarm kur", "Küme ne kadar büyükse süpürme sonrası dönüş o kadar sert olur", "Tutunan tarihsel ısı haritası seviyeleri ileride destek/dirence dönüşür"]
+        }
+      },
+      "account": {
+        "title": "Hesap Açmak",
+        "beginner": {
+          "illustrations": ["Borsanı Seçmek", "Hesap Kurulumu — 6 Adım"],
+          "steps": [
+            "Güvenilir bir borsa seç. ABD'deki yeni başlayanlar için en iyisi Coinbase. En çok coin Binance'te. Kraken dünya çapında güvenilir. Bilinmeyen borsaları asla kullanma — fonların bir gecede yok olabilir.",
+            "Borsanın resmi web sitesine git ve Kayıt Ol'a tıkla. Gerçek e-postanı kullan ve benzersiz, güçlü bir şifre oluştur (16+ karakter). Başka sitelerdeki şifreleri asla tekrar kullanma.",
+            "E-postanı doğrula. Borsa birkaç dakika içinde onay bağlantısı gönderir. Gelmezse spam klasörüne bak. Hesabını etkinleştirmek için bağlantıya tıkla.",
+            "KYC'yi (Müşterini Tanı) tamamla. Resmi bir kimlik (pasaport veya ehliyet) yükle ve selfie çek. 2–10 dakika sürer ve yasal olarak zorunludur.",
+            "2FA'yı hemen etkinleştir. Google Authenticator veya Authy indir, borsanın güvenlik ayarlarındaki QR kodunu tara. Asla atlama — şifren sızarsa seni korur.",
+            "İlk yatırımını yap. Banka havalesi en ucuzu (%0–0.1 ücret). Kartla yatırma en hızlısı ama %1.5–3 maliyetli. Küçük başla — öğrenmek için $50–$100 yeterli.",
+            "İlk kriptonu al. Bitcoin (BTC) veya Ethereum (ETH) ile başla. 'Al' butonunu kullan ve ilk alımın için Spot işlemi seç (Vadeli veya Kaldıraç değil)."
+          ],
+          "mistakes": [
+            "Sahte borsa uygulamaları indirmek — her zaman önce resmi siteye, sonra resmi uygulama mağazası bağlantısına git",
+            "2FA kurulumunu atlamak — 2FA olmadan sızan bir şifre tüm hesabını kaybetmen demek",
+            "Hayat birikimini hemen yatırmak — kaybetmeyi göze alabileceğin bir miktarla başla",
+            "2FA için SMS kullanmak — SIM-swap saldırıları SMS'i aşabilir; bunun yerine doğrulama uygulaması kullan"
+          ],
+          "tips": [
+            "2FA yedek kodlarını kâğıda yaz ve güvenle sakla — telefonunu kaybedersen gerekecek",
+            "Birebir aynı görünen kimlik avı sitelerinden kaçınmak için resmi borsa adresini yer imlerine ekle",
+            "ABD'de yaşayanlar: Coinbase veya Kraken. Dünyanın geri kalanı: Binance veya OKX"
+          ]
+        },
+        "advanced": {
+          "illustrations": ["CEX vs DEX — Hangisi?", "Güvenlik Katmanları — Kriptonu Koru"],
+          "steps": [
+            "Saklama riskini anla: CEX'te özel anahtarlarını borsa tutar. 'Anahtarlar senin değilse, coinler de senin değil.' FTX müşteri fonlarından $8B tutuyordu ve 72 saatte çöktü. Çözüm donanım cüzdanları.",
+            "DeFi ve gizlilik için DEX kullan. MetaMask + Uniswap (Ethereum) veya Phantom + Jupiter (Solana). Önce CEX'ten alırsın, sonra DEX'te swap yapmadan önce kendi saklamandaki cüzdana aktarırsın.",
+            "Seed ifadeni koru: cüzdanının ana anahtarı olan 12 veya 24 kelime. Metale yaz (kâğıda değil — yangın riski). Kopyaları iki ayrı fiziksel yerde sakla. Asla internette yazma.",
+            "Borsada çekim beyaz listesini etkinleştir — yalnızca önceden onaylanmış cüzdan adresleri fonlarını alabilir. Bir hacker hesabına girse bile bilinmeyen bir adrese çekim yapamaz.",
+            "Mümkünse kripto için ayrı bir cihaz kullan. Fabrika ayarlarına döndürülmüş ve yalnızca trading için kullanılan ucuz bir Chromebook, 50 uygulamalı bir telefondan çok daha güvenlidir.",
+            "Varlıklarını borsalara dağıt — asla her şeyi tek platformda tutma. Borsa iflasları ve hackler gerçekten yaşanır. Kripto FDIC sigortalı değildir.",
+            "Vergileri ilk günden takip et. Çoğu ülke kriptoyu mülk olarak görür — her işlem, satış veya swap vergilendirilebilir bir olaydır. Cüzdanlarını erkenden bağlarsan Koinly veya CoinTracking gibi araçlar bunu otomatikleştirir."
+          ],
+          "mistakes": [
+            "Seed ifadelerini dijital saklamak (fotoğraf, bulut notları, e-posta) — tek bir veri ihlali her şeyi kalıcı olarak kaybettirir",
+            "'Garantili getiri' platformlarına güvenmek — %15 APY üzerindeki her şey neredeyse her zaman sürdürülemez ya da Ponzi'dir",
+            "Yanlış ağa göndermek — BSC üzerinden yalnızca ETH kabul eden adrese gönderilen ETH kalıcı olarak kaybolur; zinciri her zaman doğrula",
+            "Büyük varlıkları uzun süre borsada tutmak — borsalar işlem içindir, donanım cüzdanları saklamak için"
+          ],
+          "tips": [
+            "Ledger Nano X (~$150) borsa hacklerine, kimlik avına ve kötü amaçlı yazılımlara karşı korur — $2,000 üzerinde buna değer",
+            "Yalnızca kripto için ayrı bir e-posta adresi oluştur — asla paylaşma, başka hiçbir şey için kullanma",
+            "Soğuk saklama kuralı: kaybetsen uykunu kaçırmayacak miktar borsada kalabilir; gerisi donanım cüzdanına"
+          ]
+        }
+      },
+      "indicators": {
+        "title": "RSI ve MACD",
+        "beginner": {
+          "illustrations": ["RSI Aşırı Alım ve Aşırı Satım", "MACD Kesişim Sinyalleri"],
+          "steps": [
+            "RSI (Göreceli Güç Endeksi) momentumu 0–100 ölçeğinde ölçer. 70 üzeri = aşırı alım. 30 altı = aşırı satım.",
+            "Aşırı alım (RSI >70): piyasa yorulmuş olabilir. Long'larda kâr almayı ya da short girişleri aramayı düşün.",
+            "Aşırı satım (RSI <30): piyasa dip yapıyor olabilir. Long kurulumları ara — ama önce dönüş mumunu bekle.",
+            "RSI 50 nötr bölgedir. RSI sürekli 50 üzerinde = yükseliş momentumu. 50 altında = düşüş momentumu.",
+            "MACD, 12 ve 26 periyotluk EMA'lar arasındaki farkı gösterir. MACD çizgisi sinyal çizgisini yukarı kestiğinde → yükseliş.",
+            "MACD sinyal çizgisini aşağı kestiğinde → düşüş momentumu. Histogram çubukları gücü gösterir — daha büyük = daha güçlü.",
+            "RSI veya MACD'yi asla tek başına kullanma. Bunlar teyit araçlarıdır — her zaman fiyat hareketi ve önemli seviyelerle birleştir."
+          ],
+          "mistakes": [
+            "Sırf RSI aşırı satımda diye almak — düşüş trendinde uzun süre aşırı satımda kalabilir",
+            "RSI'ı düşük zaman dilimlerinde (1m, 5m) kullanmak — çok fazla gürültü, 1H ve üstünde kal",
+            "Fiyat hareketini görmezden gelip yalnızca indikatör kullanmak — indikatörler gecikir, fiyat önden gider",
+            "MACD histogramını kaçırmak — küçülen histogram kesişimi gerçekleşmeden önce haber verir"
+          ],
+          "tips": ["RSI'ın 50'yi kesmesi bir trend sinyalidir — RSI 50'nin üzerine çıktığında yükseliş trendi muhtemelen teyit edilmiştir", "4H ve günlük RSI sinyalleri düşük zaman dilimlerinden çok daha güvenilirdir", "Güçlü boğa piyasasında RSI haftalarca 70'in üzerinde kalabilir — sırf aşırı alım var diye short açma"]
+        },
+        "advanced": {
+          "illustrations": ["RSI Negatif ve Pozitif Uyumsuzluk", "Üçlü Kesişim Kurulumu"],
+          "steps": [
+            "RSI Negatif Uyumsuzluk: fiyat DAHA YÜKSEK tepe yapar ama RSI DAHA DÜŞÜK tepe yapar. Momentum zayıflıyor — dönüş yaklaşıyor. Kriptodaki en güvenilir sinyallerden biri.",
+            "RSI Pozitif Uyumsuzluk: fiyat DAHA DÜŞÜK dip yapar ama RSI DAHA YÜKSEK dip yapar. Satış baskısı tükeniyor — yukarı dönüş olası.",
+            "Gizli uyumsuzluk: fiyat daha yüksek dip yapar (yükselen trend), RSI daha düşük dip yapar = long'lar için trend devam sinyali. Klasik uyumsuzluktan daha güvenilir.",
+            "MACD sıfır çizgisi kesişimi: MACD çizgisinin sıfırın altından üstüne geçmesi = güçlü yükseliş sinyali. Bu sadece kesişim değil, momentum rejimi değişimidir.",
+            "Üçlü kesişim: RSI uyumsuzluğu + MACD kesişimi + fiyat önemli destek/dirençte = mevcut en yüksek olasılıklı kurulum.",
+            "Çoklu zaman diliminde RSI: 4H'de aşırı satım RSI + 1H'de yukarı dönen RSI = 4H güveniyle 1H'de giriş zamanlaması.",
+            "MACD histogram tepe/dip: gerçek kesişimden önce zirve yapıp küçülmeye başlayan histogram = pozisyonuna hazırlanman için erken uyarı."
+          ],
+          "mistakes": [
+            "Yalnızca bir iki mumla uyumsuzluk ilan etmek — net tanımlı tepe/diplere ihtiyacın var",
+            "Çok düşük zaman dilimlerinde uyumsuzluk işlemi yapmak — uyumsuzluk sinyalleri yalnızca 1H ve üzerinde güvenilirdir",
+            "Fiyat hareketi tetikleyicisi olmadan RSI uyumsuzluğuyla girmek — dönüş mumunu da bekle",
+            "MACD sıfır çizgisini görmezden gelmek — negatif bölgedeki kesişim pozitif bölgedekinden daha zayıftır"
+          ],
+          "tips": ["Haftalık grafikteki RSI uyumsuzluğu tarihsel olarak her büyük BTC tepe ve dibinden önce geldi", "Günlükte MACD sıfır çizgisi kesişimi = sadece sekme değil, yüksek kararlılıklı trend değişimi", "En iyi işlemlerde RSI uyumsuzluğu + MACD kurulumu + ısı haritası kesişimi hep birlikte hizalanır"]
+        }
+      }
+    }
+  }
+}

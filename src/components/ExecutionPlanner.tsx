@@ -12,9 +12,16 @@ const FACTOR_PRESETS = [
   "Support Level", "Resistance Level", "EMA 20", "EMA 50", "EMA 200",
   "Order Block", "Fair Value Gap", "Liquidity Level", "VWAP", "POC",
 ];
+// Display-only translation keys (executionPlanner2.factors.*) for the
+// presets above; the stored factor name stays the English preset.
+const FACTOR_KEYS: Record<string, string> = {
+  "Support Level": "support", "Resistance Level": "resistance",
+  "Order Block": "orderBlock", "Fair Value Gap": "fairValueGap", "Liquidity Level": "liquidity",
+};
 
 export function ExecutionPlanner() {
   const { t } = useTranslation();
+  const factorLabel = (name: string) => FACTOR_KEYS[name] ? t(`executionPlanner2.factors.${FACTOR_KEYS[name]}`) : name;
   const [model, setModel]         = useState<Model>("duplet");
   const [direction, setDirection] = useState<"long" | "short">("long");
   const [stopLoss, setStopLoss]   = useState("");
@@ -151,7 +158,7 @@ export function ExecutionPlanner() {
                   <div className="ep-conv-factor" key={i}>
                     <select className="ep-input ep-input--select" value={f.name}
                       onChange={e => updateFactor(i, "name", e.target.value)}>
-                      {FACTOR_PRESETS.map(p => <option key={p}>{p}</option>)}
+                      {FACTOR_PRESETS.map(p => <option key={p} value={p}>{factorLabel(p)}</option>)}
                     </select>
                     <input className="ep-input" type="number" placeholder={t("executionPlanner.priceLevel")} value={f.price}
                       onChange={e => updateFactor(i, "price", e.target.value)} />
@@ -184,7 +191,7 @@ export function ExecutionPlanner() {
                   <div className="ep-conv-bars">
                     {validF.map((f, i) => (
                       <div className="ep-conv-bar-row" key={i}>
-                        <span className="ep-conv-bar-name">{f.name}</span>
+                        <span className="ep-conv-bar-name">{factorLabel(f.name)}</span>
                         <div className="ep-conv-bar-track">
                           <div className="ep-conv-bar-fill" style={{ width: `${(f.strength / 5) * 100}%` }} />
                         </div>

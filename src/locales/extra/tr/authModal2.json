@@ -1,0 +1,32 @@
+{
+  "authModal2": {
+    "sendCodeFailed": "Yeni kod gönderilemedi: {{error}}",
+    "enterCode": "E-postadaki kodu girin.",
+    "codeWrong": "Bu kod yanlış veya süresi dolmuş. En son e-postayı kontrol edin ya da yeni bir kod gönderin.",
+    "emailConfirmed": "E-posta onaylandı. Devam etmek için giriş yapın.",
+    "notConfirmed": "Henüz onaylanmadı. E-postadaki kodu girin veya önce içindeki bağlantıyı açın.",
+    "newCodeSent": "Yeni kod gönderildi. Gelen kutunuzu (ve spam klasörünü) kontrol edin.",
+    "passkey": "Geçiş anahtarıyla giriş yap",
+    "checking": "Kontrol ediliyor…",
+    "emailAvailable": "E-posta kullanılabilir",
+    "signsInWith": "Bu e-posta {{provider}} ile giriş yapıyor.",
+    "emailHasAccount": "Bu e-postanın zaten bir hesabı var.",
+    "signIn": "Giriş yap",
+    "accountExists": "Bu e-postayla bir hesap zaten mevcut.",
+    "or": "veya",
+    "verifyTitle": "E-postanızı kontrol edin",
+    "verifySubBefore": "Doğrulama kodunu şu adrese gönderdik:",
+    "verifySubAfter": ". Hesabınızı onaylamak için aşağıya girin.",
+    "codeLabel": "Doğrulama kodu",
+    "codePlaceholder": "Kod",
+    "confirming": "Onaylanıyor…",
+    "confirmEmail": "E-postayı onayla",
+    "didntGetIt": "Gelmedi mi?",
+    "resendIn": "{{seconds}} sn sonra yeniden gönder",
+    "resend": "Kodu yeniden gönder",
+    "differentEmail": "Farklı bir e-posta kullan",
+    "confirmedWithLink": "E-postadaki bağlantıyla onayladınız mı?",
+    "continue": "Devam",
+    "close": "Kapat"
+  }
+}

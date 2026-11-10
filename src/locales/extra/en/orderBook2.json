@@ -1,0 +1,15 @@
+{
+  "orderBook2": {
+    "close": "Close",
+    "hide": "Hide order book",
+    "recentTrades": "Recent trades",
+    "expand": "Expand",
+    "precision": "Precision",
+    "exchange": "Exchange",
+    "priceUsd": "Price (USD)",
+    "amountCoin": "Amount ({{coin}})",
+    "totalUsd": "Total (USD)",
+    "spread": "Spread",
+    "time": "Time"
+  }
+}

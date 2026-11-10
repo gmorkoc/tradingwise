@@ -18,9 +18,9 @@ const LIST_COLLAPSED_COUNT = 5;
 
 type Tab = "trending" | "gainers" | "losers";
 const TABS: { key: Tab; labelKey: string; fallback: string }[] = [
-  { key: "trending", labelKey: "topMovers.tabTrending", fallback: "Trending" },
-  { key: "gainers",  labelKey: "topMovers.tabGainers",  fallback: "Gainers" },
-  { key: "losers",   labelKey: "topMovers.tabLosers",   fallback: "Losers" },
+  { key: "trending", labelKey: "topMovers2.tabTrending", fallback: "Trending" },
+  { key: "gainers",  labelKey: "topMovers2.tabGainers",  fallback: "Gainers" },
+  { key: "losers",   labelKey: "topMovers2.tabLosers",   fallback: "Losers" },
 ];
 
 // CoinGecko's own "most-searched" ranking — real data (same endpoint
@@ -101,7 +101,7 @@ export function TopMoversCarousel({ onSelectCoin }: Props) {
             </button>
           ))}
         </div>
-        <span className="aiqw-live-badge"><span className="aiqw-live-dot" />LIVE</span>
+        <span className="aiqw-live-badge"><span className="aiqw-live-dot" />{t("topMovers2.live")}</span>
       </div>
       {loading ? (
         <div className="tmc-loading">{t("topMovers.loading")}</div>
@@ -157,8 +157,8 @@ export function TopMoversCarousel({ onSelectCoin }: Props) {
                   type="button"
                   className="tmc-list-view"
                   onClick={() => onSelectCoin?.(m.symbol)}
-                  aria-label={t("topMovers.viewChart", "View chart")}
-                  title={t("topMovers.viewChart", "View chart")}
+                  aria-label={t("topMovers2.viewChart", "View chart")}
+                  title={t("topMovers2.viewChart", "View chart")}
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
@@ -172,7 +172,7 @@ export function TopMoversCarousel({ onSelectCoin }: Props) {
       )}
       {!loading && movers.length > LIST_COLLAPSED_COUNT && (
         <button type="button" className="tmc-list-showmore" onClick={() => setShowAll(v => !v)}>
-          {showAll ? t("topMovers.showLess", "Show less") : t("topMovers.showMore", "Show more")}
+          {showAll ? t("topMovers2.showLess", "Show less") : t("topMovers2.showMore", "Show more")}
         </button>
       )}
     </div>

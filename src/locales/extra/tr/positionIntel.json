@@ -1,0 +1,17 @@
+{
+  "positionIntel": {
+    "groups": { "whaleAccount": "Akıllı Para", "whalePosition": "Balinalar", "retail": "Perakende" },
+    "longs": "Longlar",
+    "shorts": "Shortlar",
+    "title": "Pozisyon Zekâsı",
+    "info": "Akıllı Para (en iyi hesaplar), Balinalar (büyüklüğe göre en büyük pozisyonlar) ve Perakende (tüm hesaplar) için long/short dağılımı; OKX ve Gate.io ortalaması. 5 dakikalık veri, her dakika yenilenir.",
+    "aboutAria": "Pozisyon Zekâsı hakkında",
+    "lockedTitle": "Akıllı Paranın nasıl konumlandığını görün",
+    "lockedSub": "OKX ve Gate.io genelinde Akıllı Para, Balinalar ve Perakende trader'ların long/short dağılımı.",
+    "unlock": "Kilidi aç",
+    "proRequired": "Pro plan gerekli",
+    "freeRequired": "Başlamak için ücretsiz hesap gerekli",
+    "empty": "{{coin}} için pozisyon verisi mevcut değil.",
+    "foot": "OKX + Gate.io · 5dk veri, her dakika yenilenir · Balina büyüklükleri Gate.io'dan"
+  }
+}

@@ -55,14 +55,14 @@ const STATUS_CONFIG: Record<string, { tKey: string; color: string }> = {
 
 type Tab = "overview" | "profile" | "security" | "blocked" | "notifications" | "activity" | "danger";
 
-const NAV_ITEMS: { id: Tab; label: string; danger?: boolean }[] = [
-  { id: "overview",      label: "Overview" },
-  { id: "profile",       label: "Profile Info" },
-  { id: "security",      label: "Security" },
-  { id: "blocked",       label: "Blocked Users" },
-  { id: "notifications", label: "Notifications" },
-  { id: "activity",      label: "Activity" },
-  { id: "danger",        label: "Danger Zone", danger: true },
+const NAV_ITEMS: { id: Tab; tKey: string; danger?: boolean }[] = [
+  { id: "overview",      tKey: "profile2.nav.overview" },
+  { id: "profile",       tKey: "profile2.nav.profileInfo" },
+  { id: "security",      tKey: "profile2.nav.security" },
+  { id: "blocked",       tKey: "profile2.nav.blocked" },
+  { id: "notifications", tKey: "profile2.nav.notifications" },
+  { id: "activity",      tKey: "profile2.nav.activity" },
+  { id: "danger",        tKey: "profile2.nav.danger", danger: true },
 ];
 
 function getInitials(name: string): string {
@@ -516,7 +516,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
     setDeleteLoading(true); setDeleteError("");
     try {
       const token = session?.access_token;
-      if (!token) throw new Error("Not authenticated");
+      if (!token) throw new Error(t("profile2.notAuthenticated"));
       // The native app's WebView doesn't run from the coinhintz.io origin,
       // so a bare relative path resolves to nothing on-device — same fix
       // as coinglass.ts's BN_BASE.
@@ -527,7 +527,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
       });
       if (!res.ok) {
         const text = await res.text();
-        let msg = "Failed to delete account";
+        let msg = t("profile2.deleteFailed");
         try { msg = JSON.parse(text).error ?? msg; } catch {}
         throw new Error(msg);
       }
@@ -586,7 +586,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
               {avatarError && <p className="pp-msg pp-msg--error pp-avatar-error">{avatarError}</p>}
             </div>
           </div>
-          <button className="pp-close" onClick={onClose} aria-label="Close">✕</button>
+          <button className="pp-close" onClick={onClose} aria-label={t("profile2.close")}>✕</button>
         </div>
 
         {/* ── Body ───────────────────────────────────────── */}
@@ -600,7 +600,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
                 className={`pp-nav-item${tab === item.id ? " pp-nav-item--active" : ""}${item.danger ? " pp-nav-item--danger" : ""}`}
                 onClick={() => setTab(item.id)}
               >
-                {item.label}
+                {t(item.tKey)}
               </button>
             ))}
           </nav>
@@ -611,16 +611,16 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
             {/* ── Overview ─────────────────────────────── */}
             {tab === "overview" && (
               <div className="pp-pane">
-                <h3 className="pp-pane-title">Plan & Usage</h3>
+                <h3 className="pp-pane-title">{t("profile2.planUsage")}</h3>
 
                 <div className="pp-stat-row">
                   <div className="pp-stat">
-                    <span className="pp-stat-label">Current Plan</span>
+                    <span className="pp-stat-label">{t("profile.subscription.currentPlan")}</span>
                     <span className="pp-stat-value" style={{ color: tierConf.color }}>{tierLabel}</span>
                   </div>
                   {statusConf && (
                     <div className="pp-stat">
-                      <span className="pp-stat-label">Status</span>
+                      <span className="pp-stat-label">{t("profile.subscription.status")}</span>
                       <span className="pp-stat-value" style={{ color: statusConf.color }}>
                         {statusConf.tKey ? t(statusConf.tKey) : subStatus}
                       </span>
@@ -628,7 +628,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
                   )}
                   {isPaid && renewsAt && (
                     <div className="pp-stat">
-                      <span className="pp-stat-label">{subStatus === "canceled" ? "Access until" : "Next billing"}</span>
+                      <span className="pp-stat-label">{subStatus === "canceled" ? t("profile.subscription.accessUntil") : t("profile.subscription.nextBilling")}</span>
                       <span className="pp-stat-value">{formatDate(renewsAt)}</span>
                     </div>
                   )}
@@ -636,7 +636,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
 
                 <div className="pp-divider" />
 
-                <h3 className="pp-pane-title">AI Usage</h3>
+                <h3 className="pp-pane-title">{t("profile.sections.aiUsage")}</h3>
                 {tier === "elite" ? (
                   <div className="pp-ai-unlimited">
                     <span>✦</span>
@@ -703,7 +703,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
             {/* ── Profile Info ──────────────────────────── */}
             {tab === "profile" && (
               <div className="pp-pane">
-                <h3 className="pp-pane-title">Profile Info</h3>
+                <h3 className="pp-pane-title">{t("profile.sections.profileInfo")}</h3>
 
                 <div className="pp-field-grid">
                   <div className="pp-field">
@@ -751,7 +751,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
             {/* ── Security ──────────────────────────────── */}
             {tab === "security" && (
               <div className="pp-pane">
-                <h3 className="pp-pane-title">Change Password</h3>
+                <h3 className="pp-pane-title">{t("profile.security.changePassword")}</h3>
                 <p className="pp-pane-sub">{t("profile.security.sub")}</p>
 
                 <div className="pp-field-grid">
@@ -761,7 +761,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
                       <input type={showNew ? "text" : "password"} value={newPw}
                         onChange={(e) => setNewPw(e.target.value)}
                         placeholder={t("profile.security.minChars")} autoComplete="new-password" />
-                      <button className="pp-pw-eye" onClick={() => setShowNew(v => !v)}>{showNew ? "🙈" : "👁"}</button>
+                      <button className="pp-pw-eye" onClick={() => setShowNew(v => !v)} aria-label={showNew ? t("profile2.hidePassword") : t("profile2.showPassword")}>{showNew ? "🙈" : "👁"}</button>
                     </div>
                   </div>
                   <div className="pp-field">
@@ -770,7 +770,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
                       <input type={showConfirm ? "text" : "password"} value={confirmPw}
                         onChange={(e) => setConfirmPw(e.target.value)}
                         placeholder={t("profile.security.repeatPassword")} autoComplete="new-password" />
-                      <button className="pp-pw-eye" onClick={() => setShowConfirm(v => !v)}>{showConfirm ? "🙈" : "👁"}</button>
+                      <button className="pp-pw-eye" onClick={() => setShowConfirm(v => !v)} aria-label={showConfirm ? t("profile2.hidePassword") : t("profile2.showPassword")}>{showConfirm ? "🙈" : "👁"}</button>
                     </div>
                   </div>
                 </div>
@@ -798,15 +798,15 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
             {/* ── Blocked users (Live Chat) ─────────────── */}
             {tab === "blocked" && (
               <div className="pp-pane">
-                <h3 className="pp-pane-title">{t("profile.blocked.title", "Blocked Users")}</h3>
+                <h3 className="pp-pane-title">{t("profile2.blocked.title", "Blocked Users")}</h3>
                 <p className="pp-pane-sub">
-                  {t("profile.blocked.sub", "Blocked accounts can't appear in your Live Chat feed and can't be tagged by you.")}
+                  {t("profile2.blocked.sub", "Blocked accounts can't appear in your Live Chat feed and can't be tagged by you.")}
                 </p>
 
                 {blockedLoading ? (
                   <p className="pp-msg">{t("common.loading")}</p>
                 ) : blockedUsers.length === 0 ? (
-                  <p className="pp-pane-sub">{t("profile.blocked.empty", "You haven't blocked anyone.")}</p>
+                  <p className="pp-pane-sub">{t("profile2.blocked.empty", "You haven't blocked anyone.")}</p>
                 ) : (
                   <div className="pp-blocked-list">
                     {blockedUsers.map((b) => (
@@ -884,8 +884,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
 
                 <div className="pp-notif-row">
                   <div>
-                    <p className="pp-notif-label">{t("profile.notifications.whaleActivity.label", "Whale Activity")}</p>
-                    <p className="pp-notif-desc">{t("profile.notifications.whaleActivity.desc", "A banner when a large BTC transfer moves on-chain, while you're in the app.")}</p>
+                    <p className="pp-notif-label">{t("profile2.whaleActivity.label", "Whale Activity")}</p>
+                    <p className="pp-notif-desc">{t("profile2.whaleActivity.desc", "A banner when a large BTC transfer moves on-chain, while you're in the app.")}</p>
                   </div>
                   <button type="button" role="switch" aria-checked={whaleEnabled}
                     className={`pp-switch${whaleEnabled ? " pp-switch--on" : ""}`}
@@ -896,8 +896,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
 
                 <div className="pp-notif-row">
                   <div>
-                    <p className="pp-notif-label">{t("profile.notifications.strategyAlerts.label", "Strategy Alerts")}</p>
-                    <p className="pp-notif-desc">{t("profile.notifications.strategyAlerts.desc", "A push whenever one of your deployed strategies fires.")}</p>
+                    <p className="pp-notif-label">{t("profile2.strategyAlerts.label", "Strategy Alerts")}</p>
+                    <p className="pp-notif-desc">{t("profile2.strategyAlerts.desc", "A push whenever one of your deployed strategies fires.")}</p>
                   </div>
                   <button type="button" role="switch" aria-checked={notifPrefValue("notify_strategy_alerts")}
                     className={`pp-switch${notifPrefValue("notify_strategy_alerts") ? " pp-switch--on" : ""}`}
@@ -1043,15 +1043,15 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
             {/* ── Danger Zone ───────────────────────────── */}
             {tab === "danger" && (
               <div className="pp-pane">
-                <h3 className="pp-pane-title pp-pane-title--danger">Danger Zone</h3>
+                <h3 className="pp-pane-title pp-pane-title--danger">{t("profile.sections.dangerZone")}</h3>
                 <p className="pp-pane-sub">{t("profile.deleteAccount.sub")}</p>
 
                 <div className="pp-danger-card">
                   {deleteStep === "idle" ? (
                     <div className="pp-danger-row">
                       <div>
-                        <p className="pp-danger-label">Delete Account</p>
-                        <p className="pp-danger-desc">Permanently remove your account and all data.</p>
+                        <p className="pp-danger-label">{t("profile2.deleteAccount")}</p>
+                        <p className="pp-danger-desc">{t("profile2.deleteDesc")}</p>
                       </div>
                       <button className="pp-btn pp-btn--danger"
                         onClick={() => { setDeleteStep("confirm"); setDeleteInput(""); setDeleteError(""); }}>

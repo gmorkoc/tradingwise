@@ -1,0 +1,666 @@
+{
+  "priceChart": {
+    "rangeInCandles": "{{range}} in candele da {{iv}}",
+    "goTo": {
+      "notLoaded": "I dati del grafico non sono ancora stati caricati.",
+      "tooOldLong": "Questo intervallo arriva solo fino al {{date}}. Scegli una data successiva o passa a un intervallo più ampio (es. 1D o 1W) per andare più indietro.",
+      "tooOld": "Questo intervallo arriva solo fino al {{date}}."
+    },
+    "trial": {
+      "days_one": "{{count}} giorno",
+      "days_other": "{{count}} giorni",
+      "underHour": "meno di un'ora",
+      "bannerLong": "Prova gratuita di ProVision · ancora {{left}}",
+      "bannerShort": "Prova gratuita · ancora {{left}}",
+      "everyCoinPrice": "Tutte le monete e i timeframe · {{price}}/anno",
+      "thenPrice": "poi {{price}}/anno",
+      "keepIt": "Tienilo",
+      "enjoyingPv": "Ti piace ProVision?",
+      "enjoyingIt": "Ti piace?",
+      "keepItArrow": "Tienilo ›",
+      "left": "ancora {{left}}",
+      "leftThen": "ancora {{left}} · poi {{price}}/anno"
+    },
+    "pvErr": {
+      "notEnough": "Candele insufficienti su questo intervallo per ProVision",
+      "signinExpired": "La sessione è scaduta: accedi di nuovo",
+      "reconnecting": "Riconnessione…",
+      "tooMany": "Troppe richieste — nuovo tentativo",
+      "server": "Errore del server {{status}} — nuovo tentativo",
+      "unreachable": "Impossibile raggiungere ProVision — nuovo tentativo"
+    },
+    "zone": {
+      "tooSmall": "Disegna un'area più grande: servono almeno 2 candele nella zona.",
+      "limit": "Limite giornaliero di analisi IA raggiunto.",
+      "failed": "Analisi della zona non riuscita",
+      "drag": "Trascina sul grafico",
+      "cancel": "Annulla",
+      "explainTip": "Disegna un'area libera sul grafico e ottieni una spiegazione con l'IA",
+      "explain": "Spiega zona",
+      "clearTip": "Cancella la zona disegnata",
+      "clear": "Cancella zona"
+    },
+    "promo": {
+      "preview": "Anteprima ProVision",
+      "strongBuy": "ACQUISTO FORTE",
+      "sell": "Vendi",
+      "buy": "Compra",
+      "ghostSub": "Guardalo sul grafico reale · 3 giorni gratis · nessuna carta",
+      "notNow": "Non ora",
+      "freeTrial": "Prova gratuita di ProVision",
+      "floatSub": "Segnali Pro · 3 giorni gratis · nessuna carta",
+      "mobileSub": "3 giorni gratis · nessuna carta",
+      "tryFree": "Prova gratis"
+    },
+    "intro": {
+      "preparing": "Preparazione di ProVision",
+      "s1": "Analisi del trend",
+      "s2": "Lettura del momentum",
+      "s3": "Controllo del flusso ordini",
+      "s4": "Allineamento dei timeframe",
+      "s5": "Calibrazione dei segnali"
+    },
+    "strength": {
+      "aria": "Forza del trend: rialzista {{pct}}%",
+      "bull": "Rialzo {{pct}}%",
+      "bear": "Ribasso {{pct}}%",
+      "sideways": "Laterale",
+      "spike": "Picco",
+      "eventPaused": "{{name}} · in pausa",
+      "eventIn": "{{name}} tra {{time}}",
+      "thin": "Scarsa liquidità · segnali off",
+      "signals": "Segnali: {{src}}"
+    },
+    "live": "LIVE",
+    "pv": {
+      "ringAria": "Signal Check {{score}}. Apri i dettagli",
+      "verdictAgree": "{{word}} · {{agree}} indicatori su {{total}} concordano",
+      "ringSub": "ProVision Signal Check · tocca per i dettagli",
+      "minimise": "Riduci nella barra in basso",
+      "title": "ProVision Signal Check",
+      "meterTip": "Forza rialzista {{n}}/100 — {{state}}",
+      "buyersControl": "comandano i compratori",
+      "sellersControl": "comandano i venditori",
+      "balanced": "equilibrio, nessun lato prevale",
+      "even": "alla pari",
+      "mini": "Precisione {{rate}}% · {{total}} segnali",
+      "pill": "{{word}} · {{agree}} su {{total}}",
+      "live": "live",
+      "howTo": "Come usare ProVision",
+      "alertSource": "<s>Segnali dal grafico {{src}}.</s> I movimenti su questo grafico breve sono troppo piccoli per coprire le commissioni, quindi BUY/SELL, la zona, Signal Check e lo storico arrivano da {{src}}: usa questo grafico per affinare l'ingresso.",
+      "alertShort": "<s>I timeframe brevi sono rumorosi.</s> Qui i movimenti sono troppo piccoli per coprire le commissioni: usa 15m o superiori per i segnali.",
+      "eventLive": "<s>{{name}} adesso ({{title}}, {{at}}).</s> Probabili movimenti ampi e rapidi: i segnali sono in pausa fino alle {{resume}}.",
+      "eventSoon": "<s>{{name}} tra {{time}}</s> ({{title}}, {{at}}). Aspettati volatilità: i segnali si fermano da 30 min prima fino a 1 h dopo.",
+      "forecast": "Previsione {{f}}.",
+      "forecastPrev": "Previsione {{f}}, precedente {{p}}.",
+      "alertThin": "<s>Segnali disattivati — mercato poco liquido.</s> Solo circa ${{vol}}M scambiati nelle ultime 24 h, troppo poco per segnali affidabili. I colori del trend e i controlli qui sotto continuano ad aggiornarsi.",
+      "alertSpikeUp_one": "<s>Balzo improvviso</s>, spesso dovuto a notizie. I segnali contrari sono in pausa per {{count}} altra candela; aspettati oscillazioni ampie.",
+      "alertSpikeUp_other": "<s>Balzo improvviso</s>, spesso dovuto a notizie. I segnali contrari sono in pausa per altre {{count}} candele; aspettati oscillazioni ampie.",
+      "alertSpikeDown_one": "<s>Crollo improvviso</s>, spesso dovuto a notizie. I segnali contrari sono in pausa per {{count}} altra candela; aspettati oscillazioni ampie.",
+      "alertSpikeDown_other": "<s>Crollo improvviso</s>, spesso dovuto a notizie. I segnali contrari sono in pausa per altre {{count}} candele; aspettati oscillazioni ampie.",
+      "alertRange": "<s>Mercato laterale</s>, nessun trend chiaro (Choppiness {{chop}}, ADX {{adx}}).",
+      "rangeBox": "Range {{lo}} – {{hi}}.",
+      "rangeModeOn": "Modalità range attiva: R·BUY vicino al minimo, R·SELL vicino al massimo, finché il prezzo non rompe.",
+      "rangeWatch": "Attendi una chiusura fuori dal range: i segnali di range funzionano da 1h in su.",
+      "stochastic": "Stocastico",
+      "bullishLc": "rialzisti",
+      "bearishLc": "ribassisti",
+      "mixedLc": "misto",
+      "holdingOut": "{{list}} ancora contrari",
+      "connecting": "connessione…",
+      "flowCap": "Flusso ordini · ultime 20 candele",
+      "flowTipReal": "Volume reale di acquisti vs vendite a mercato, ultime 20 candele",
+      "flowTipEst": "Stimato dal colore delle candele, ultime 20 candele",
+      "timeframes": "Timeframe",
+      "nOfBullish": "{{n}} su {{total}} rialzisti",
+      "nOfBearish": "{{n}} su {{total}} ribassisti",
+      "sheetTitle": "{{name}} · Signal Check",
+      "rowDesc": {
+        "0": "Prezzo vs medie a 20 e 200",
+        "1": "Chi spinge, e quanto forte",
+        "2": "Prezzo vs la nuvola",
+        "3": "Momentum, ultime 14 candele",
+        "4": "Dove si trova il prezzo nel suo range",
+        "5": "Cambio di momentum",
+        "6": "Acquisti vs vendite a mercato"
+      }
+    },
+    "stats": {
+      "title": "Statistiche {{coin}}",
+      "change": "Variazione {{iv}}",
+      "high": "Massimo {{iv}}",
+      "low": "Minimo {{iv}}"
+    },
+    "custom": "Personalizzato",
+    "customSub": "Scegli una data o un intervallo personalizzato",
+    "ai": {
+      "f1": "Sentiment dell'intervallo e contesto del trend",
+      "f2": "Riconoscimento dei pattern a candele",
+      "f3": "Punteggio di fiducia rialzista / ribassista",
+      "f4": "Previsioni e prospettive sulla prossima mossa",
+      "upgradeNow": "Aggiorna ora",
+      "ctaSub": "Bias del trend + pattern a candele per {{coin}} {{iv}}",
+      "analyze": "Analizza",
+      "hide": "Nascondi Lettura grafico IA",
+      "trend": "Trend",
+      "pattern": "Pattern"
+    },
+    "km": {
+      "signalDetail": "Dettaglio del segnale",
+      "loading": "Caricamento segnali {{name}}",
+      "chanceBull": "probabilità rialzista",
+      "chanceBear": "probabilità ribassista",
+      "toolsAgree": "{{n}} strumenti su {{total}} concordano",
+      "gaugeAria": "Rialzista {{bull}}%, ribassista {{bear}}%",
+      "seeFull": "Vedi analisi completa ›",
+      "fullAnalysis": "Analisi completa",
+      "analysis": "Analisi",
+      "pvSignal": "Segnale ProVision",
+      "consensus": "Consenso",
+      "partOfPv": "Signal Check fa parte di ProVision: trend, 7 indicatori e uno storico con punteggio.",
+      "tryPv": "Prova ProVision ›",
+      "turnOnPv": "Attiva ProVision ›"
+    },
+    "tr": {
+      "title": "Storico",
+      "src_one": "{{chart}} · {{count}} segnale",
+      "src_other": "{{chart}} · {{count}} segnali",
+      "srcChart": "grafico {{src}}",
+      "thisChart": "questo grafico",
+      "paidOff": "In profitto · {{per}} per operazione",
+      "lostMoney": "In perdita · {{per}} per operazione",
+      "hitRate": "Precisione",
+      "wonLost": "Vinte / perse",
+      "nOpen": "{{n}} aperte",
+      "avgWin": "Guadagno medio",
+      "avgLoss": "Perdita media",
+      "winLoss": "Guadagno : perdita",
+      "winLossTip": "Guadagno medio rispetto alla perdita media",
+      "recentAria": "Segnali recenti e i loro risultati",
+      "lastN": "Ultimi {{n}}",
+      "stillOpen": "ancora aperta",
+      "open": "aperta",
+      "howTitle": "Come viene misurato",
+      "howShort": "Ogni segnale viene operato dalla sua chiusura con uno stop sulla linea di invalidazione, prendendo profitto dopo un tipico movimento di una candela (o uscendo dopo 20 candele), al netto di commissioni dello 0,1%.",
+      "howLong": "Ogni segnale viene operato dalla sua chiusura con uno stop sulla linea di invalidazione che poi segue il miglior prezzo a 3 movimenti tipici di candela di distanza, uscendo quando il trend gira o dopo 60 candele, al netto di commissioni dello 0,1%. Vincono meno operazioni, ma quelle vincenti corrono.",
+      "howRules": "I segnali richiedono che 5 controlli su 7 concordino e che il trend più ampio sia allineato; intraday devono anche reggere 3 candele con ADX ≥ 20, le fasi laterali e le operazioni contro i picchi ⚡ vengono saltate, e i mercati poco liquidi non ne hanno. Risultati passati solo su questo grafico: non sono una promessa.",
+      "rangeTitle": "Segnali di range (R·BUY / R·SELL)",
+      "perTrade": "Per operazione",
+      "rangeNote": "Con il mercato laterale: compra un rimbalzo sul minimo, vendi un rifiuto sul massimo. Stop appena fuori dal box, target a metà range, commissioni dello 0,1%."
+    },
+    "cns": {
+      "mixed": "Misto",
+      "lean": {
+        "bull": "Tendenza rialzista",
+        "bear": "Tendenza ribassista",
+        "neutral": "Misto"
+      },
+      "reading": "Lettura…",
+      "turnOn": "Attiva",
+      "signals": "Segnali",
+      "buySetup": "Setup di acquisto",
+      "sellSetup": "Setup di vendita",
+      "noSetup": "Nessun setup",
+      "bullPattern": "Pattern rialzista",
+      "bearPattern": "Pattern ribassista",
+      "noPattern": "Nessun pattern chiaro",
+      "tapToRun": "Tocca per avviare",
+      "strongBuyZone": "Zona di acquisto forte",
+      "buyZone": "Zona di acquisto",
+      "sellZone": "Zona di vendita",
+      "strongSellZone": "Zona di vendita forte",
+      "events": "Eventi",
+      "agent": "Agente",
+      "askWhy": "Chiedi perché ›",
+      "agentPrompt": "Cosa dicono gli strumenti di coinhintz su {{coin}} sul grafico {{tf}} in questo momento, e perché?"
+    },
+    "ago": {
+      "m": "{{n}} min fa",
+      "h": "{{n}} h fa",
+      "d": "{{n}} g fa"
+    },
+    "whatsNext": "Cosa succederà a {{name}}?",
+    "seeEveryTool": "Scopri cosa dicono tutti gli strumenti di coinhintz",
+    "tapToSee": "Tocca per vedere ›",
+    "savePng": "Salva grafico come PNG",
+    "c": {
+      "selectInterval": "Seleziona intervallo",
+      "interval": "Intervallo",
+      "switchToFull": "Torna al grafico",
+      "switchToCompact": "Previsione",
+      "fullscreen": "Schermo intero",
+      "fullChart": "Grafico completo",
+      "bearish": "Ribassista",
+      "bullish": "Rialzista",
+      "none": "Nessuna",
+      "technicals": "Analisi tecnica",
+      "divergence": "Divergenza",
+      "div": "Div",
+      "keyStats": "Statistiche chiave",
+      "tradingVolume24h": "Volume di scambi 24h",
+      "overview": "Panoramica",
+      "circulatingSupply": "Offerta circolante",
+      "about": "Informazioni",
+      "noLink": "Nessun link",
+      "agentTake": "Agent Ready",
+      "agentThinking": "Lettura del grafico…",
+      "agentUnavailable": "Impossibile ottenere un parere: riprova più tardi",
+      "stats": "Statistiche",
+      "low": "Minimo",
+      "high": "Massimo",
+      "volUsd": "Vol. (USD)",
+      "volCoin": "Vol. ({{coin}})",
+      "style": "Stile",
+      "allTimeHigh": "Massimo storico",
+      "totalSupply": "Offerta totale",
+      "openInterest": "Open interest",
+      "marketCap": "Capitalizzazione di mercato",
+      "fdv": "Capitalizzazione completamente diluita",
+      "category": "Categoria",
+      "bid": "Denaro",
+      "ask": "Lettera",
+      "signal": "Segnale",
+      "toolbox": "Strumenti di disegno",
+      "upgrade": "Aggiorna",
+      "vol24h": "Vol. 24h",
+      "lastUpdated": "Aggiornato",
+      "astroTitle": "Suggerimenti astrologici",
+      "website": "Sito web",
+      "sourceCode": "Codice sorgente",
+      "explorers": "Explorer",
+      "whitepaper": "Whitepaper",
+      "community": "Community",
+      "signalZoneDivSentence": "Segnale {{signal}} in {{zone}}, con divergenza {{div}}.",
+      "signalZoneSentence": "Segnale {{signal}} in {{zone}}.",
+      "zoneDivSentence": "In {{zone}}, con divergenza {{div}}.",
+      "signalDivSentence": "Segnale {{signal}} con divergenza {{div}}.",
+      "zoneSentence": "In {{zone}}.",
+      "signalSentence": "Segnale {{signal}}.",
+      "divergenceSentence": "Rilevata divergenza {{div}}."
+    },
+    "pill": {
+      "trialEnded": "La tua prova di <b>ProVision</b> è terminata",
+      "renew": "Rinnova",
+      "lockedOn": "<b>ProVision</b> bloccato su {{coin}}",
+      "unlock": "Sblocca",
+      "analyze": "Analizza questo grafico con <b>ProVision</b>"
+    },
+    "dismiss": "Chiudi",
+    "under1m": "meno di 1 min",
+    "vol": {
+      "label": "Volume",
+      "buyersPct": "Compratori {{pct}}%",
+      "sellersPct": "Venditori {{pct}}%",
+      "detailReal": "Acquisti vs vendite reali a mercato nelle ultime 20 candele: acquisti {{buy}}, vendite {{sell}}. Il 55% o più da un lato conta come rialzista o ribassista.",
+      "detailEst": "Acquisti vs vendite stimati (dal colore delle candele) nelle ultime 20 candele: acquisti {{buy}}, vendite {{sell}}. Il 55% o più da un lato conta come rialzista o ribassista."
+    },
+    "notice": {
+      "eventNow": "{{name}} adesso — segnali in pausa",
+      "eventIn": "{{name}} tra {{time}} — aspettati volatilità",
+      "sideways": "Mercato laterale — nessun trend chiaro",
+      "signalsFrom": "Segnali dal grafico {{src}}",
+      "shortTf": "Timeframe breve — rumoroso",
+      "thin": "Mercato poco liquido — movimenti irregolari"
+    },
+    "ts": {
+      "paperTrade": "Paper trading su {{coin}}",
+      "paperTradeSub": "Esercitati con $100k virtuali, zero rischi",
+      "indicatorsOn": "{{n}} attivi · {{list}}",
+      "noneOn": "Nessuno attivo",
+      "aiSub": "Bias del trend + pattern a candele",
+      "depth": "Profilo di profondità",
+      "depthSub": "Profondità del book accanto all'asse dei prezzi",
+      "gridSub": "Linee della griglia di sfondo sul grafico",
+      "reset": "Ripristina grafico",
+      "resetSub": "Torna a zoom e impostazioni predefiniti",
+      "predictSub": "Semplice linea di prezzo live, senza indicatori",
+      "drawSub": "Trendline, Fibonacci, zone, pennello e altro",
+      "saveImage": "Salva immagine",
+      "saveSub": "Screenshot del grafico attuale",
+      "fullscreenSub": "Espandi il grafico a tutto schermo",
+      "dateRangeSub": "Periodo predefinito o intervallo personalizzato",
+      "default": "Predefinito",
+      "priceScale": "Scala dei prezzi",
+      "priceScaleSub": "Percentuale, log, adattamento automatico",
+      "auto": "auto",
+      "priceAlert": "Avviso di prezzo",
+      "priceAlertSub": "Ricevi una notifica quando {{coin}} raggiunge un prezzo",
+      "exitFsSub": "Torna alla pagina Trading"
+    },
+    "changeCoin": "Cambia moneta",
+    "allStats": "Tutte le statistiche",
+    "vol24h": "Vol. 24h",
+    "coinPrice": "Prezzo di {{name}}",
+    "share": "Condividi",
+    "shareTitle": "Grafico del prezzo di {{name}} ({{coin}})",
+    "loadingPrice": "Caricamento prezzo",
+    "tradeCoin": "Fai trading su {{coin}}",
+    "pvToggleOn": "ProVision attivo — clicca per tornare al grafico normale",
+    "pvToggleOff": "ProVision: candele di trend, segnali di acquisto/vendita e Signal Check live",
+    "metric": {
+      "label": "Metrica",
+      "price": "Prezzo",
+      "mcap": "Cap. di mercato"
+    },
+    "tabs": {
+      "chart": "Grafico",
+      "orderbook": "Book ordini",
+      "trades": "Operazioni"
+    },
+    "ohlc": {
+      "o": "A",
+      "h": "Max",
+      "l": "Min",
+      "c": "C"
+    },
+    "switchCoin": "Cambia moneta",
+    "tvTitle": "{{name}} / Dollaro USA · {{iv}} · CRYPTO",
+    "vsUsd": "{{name}} / Dollaro USA",
+    "sellCaps": "VENDI",
+    "buyCaps": "COMPRA",
+    "menu": "Menu",
+    "advMenu": {
+      "pvOn": "ProVision: attivo",
+      "pvOff": "ProVision: disattivo",
+      "reset": "Ripristina grafico",
+      "close": "Chiudi"
+    },
+    "switchTo": "Passa a {{symbol}}",
+    "moreCoins": "Altre monete",
+    "resetView": "Ripristina vista del grafico",
+    "fsHint": "Alcune funzioni sono disponibili solo a schermo intero",
+    "pvbar": {
+      "lockedOn": "ProVision è bloccato su {{coin}}",
+      "trialEnded": "La tua prova di ProVision è terminata",
+      "tryFree": "Prova ProVision gratis per 3 giorni",
+      "usedCoins": "Hai usato le {{n}} monete di oggi. Passa a illimitato.",
+      "notIncluded": "Il tuo account al momento non include ProVision.",
+      "usedCoinsList": "Hai usato le {{n}} monete di oggi ({{list}}). Passa a illimitato.",
+      "start": "Inizia",
+      "keepFor": "Mantieni tutte le monete e i timeframe a {{price}}/anno.",
+      "noCard": "Tutte le monete e i timeframe. Nessuna carta richiesta.",
+      "try": "Prova ProVision",
+      "unlock": "Sblocca ProVision"
+    },
+    "dateRange": "Intervallo di date",
+    "exitFullscreen": "Esci da schermo intero",
+    "marketData": "Dati di mercato",
+    "unlockStatus": "Sblocca stato",
+    "unlockDivergence": "Sblocca divergenza",
+    "coinChart": "Grafico {{coin}}",
+    "more": "Altro",
+    "aiChartRead": "Lettura grafico IA",
+    "aiRead": "Lettura IA",
+    "hideDepth": "Nascondi profilo di profondità",
+    "showDepth": "Mostra profilo di profondità",
+    "depth": "Profondità",
+    "tools": "Strumenti",
+    "chartStyle": "Stile del grafico",
+    "chartStyleIs": "Stile del grafico: {{style}}",
+    "style": {
+      "candle": "Candele",
+      "hollow": "Candele vuote",
+      "line": "Linea",
+      "heikinAshi": "Heikin Ashi"
+    },
+    "allIndicators": "Tutti gli indicatori",
+    "allIndicatorsOn": "Tutti gli indicatori · {{n}} attivi",
+    "hideGrid": "Nascondi griglia",
+    "showGrid": "Mostra griglia",
+    "grid": "Griglia",
+    "age": {
+      "new": "Nuova",
+      "years": "{{n}} anni",
+      "months": "{{n}} mesi"
+    },
+    "ivDesc": {
+      "1sec": "Ultimi 30 minuti",
+      "1min": "Ultime 6 ore",
+      "5min": "Ultime 24 ore",
+      "15min": "Ultime 48 ore",
+      "1h": "Circa 7 giorni",
+      "4h": "Circa 4 settimane",
+      "6h": "Circa 15 giorni",
+      "1day": "Ultimi 90 giorni",
+      "1week": "Ultime 52 settimane",
+      "1month": "Ultimi 24 mesi",
+      "all": "Storico completo"
+    },
+    "askAgentPrompt": "Puoi analizzare questo grafico di {{coin}}?",
+    "ind": {
+      "fib": "Livelli di Fibonacci",
+      "sr": "Supporto / Resistenza",
+      "dayhl": "Max/Min 24H",
+      "zones": "Zone di acquisto/vendita",
+      "desc": {
+        "bb": "Media a 20 periodi con bande a ±2 deviazioni standard: compressioni e breakout.",
+        "ema20": "Media esponenziale veloce: trend di breve periodo e supporto sui ritracciamenti.",
+        "ema50": "Media esponenziale di medio periodo: il trend seguito dalla maggior parte degli swing trader.",
+        "ema200": "Media esponenziale di lungo periodo: lo spartiacque tra mercato rialzista e ribassista.",
+        "ma20": "Media semplice a 20 periodi delle chiusure.",
+        "ma50": "Media semplice a 50 periodi: trend di medio periodo.",
+        "ma200": "Media semplice a 200 periodi: la classica linea di trend di lungo periodo.",
+        "cme": "Gap di prezzo lasciati sui futures Bitcoin del CME nei weekend: spesso vengono colmati.",
+        "fib": "Livelli di ritracciamento di Fibonacci dall'ultimo massimo e minimo.",
+        "sr": "Livelli chiave di supporto e resistenza rilevati dallo storico dei prezzi.",
+        "dayhl": "Massimo e minimo delle ultime 24 ore come linee sul grafico.",
+        "zones": "Aree evidenziate in cui compratori o venditori sono già intervenuti.",
+        "rsi": "Relative Strength Index nel suo pannello: sopra 70 ipercomprato, sotto 30 ipervenduto.",
+        "macd": "Linea MACD, signal e istogramma nel loro pannello."
+      }
+    },
+    "placeholder": {
+      "bannerTitle": "Analisi dell'azione del prezzo…",
+      "bannerBody": "Elaborazione delle candele recenti per valutare momentum e forza del trend.",
+      "patternName": "Ricerca di pattern…",
+      "patternSummary": "Analisi delle candele recenti alla ricerca di un setup riconoscibile.",
+      "patternNarrative": "Eseguiamo i soliti controlli sui pattern: un attimo di pazienza.",
+      "patternNext": "Resta in attesa, l'analisi vera sta arrivando."
+    },
+    "ivLabel": {
+      "1sec": "1s (ultimi 30 min)",
+      "1min": "1m (ultime 6 ore)",
+      "5min": "5m (ultime 24 ore)",
+      "15min": "15m (ultime 48 ore)",
+      "1h": "1H (~7 giorni)",
+      "4h": "4H (~4 settimane)",
+      "6h": "6H (~15 giorni)",
+      "1day": "24H (90 giorni)",
+      "1week": "1W (52 settimane)",
+      "1month": "1M (24 mesi)",
+      "all": "TUTTO (storico completo)"
+    },
+    "banner": {
+      "noData": {
+        "title": "Dati insufficienti",
+        "body": "Lo storico delle candele non basta per analizzare questo intervallo."
+      },
+      "upperBand": {
+        "title": "Pressione sulla banda superiore su {{iv}}",
+        "body": "Il prezzo sale del {{pct}}% e preme contro la banda superiore di Bollinger. Il momentum è forte, ma il mercato potrebbe essere in ipercomprato: un raffreddamento di breve o una fase laterale sono frequenti prima del prossimo rialzo."
+      },
+      "lowerBand": {
+        "title": "Test della banda inferiore su {{iv}}",
+        "body": "Il prezzo è sceso del {{absPct}}% e si comprime vicino alla banda inferiore di Bollinger. I venditori hanno dominato, ma questa zona attira spesso compratori: attendi un rimbalzo di sollievo o una rottura confermata sotto il supporto."
+      },
+      "strongBuying": {
+        "title": "Forte pressione in acquisto su {{iv}}",
+        "body": "{{green}} delle ultime 5 candele hanno chiuso in verde, con il prezzo in rialzo del {{pct}}% complessivo. I compratori hanno chiaramente il controllo. Il trend potrebbe proseguire, ma attenzione a un ritracciamento verso la banda centrale con le prese di profitto."
+      },
+      "sustainedSelling": {
+        "title": "Vendite persistenti su {{iv}}",
+        "body": "{{red}} delle ultime 5 candele hanno chiuso in rosso, con il prezzo in calo del {{absPct}}% complessivo. Dominano i venditori. È possibile un rimbalzo di breve da ipervenduto, ma la via di minor resistenza resta al ribasso finché i compratori non recuperano momentum."
+      },
+      "consolidation": {
+        "title": "Consolidamento stretto su {{iv}}",
+        "body": "Il prezzo si è mosso solo del {{pct}}% in questo periodo e si comprime vicino alla banda centrale. Il mercato è indeciso: si sta preparando un breakout direzionale. Osserva il volume e le prossime 2–3 candele."
+      },
+      "upwardBias": {
+        "title": "Bias rialzista su {{iv}}",
+        "body": "Il prezzo sale del {{pct}}% con {{green}} delle ultime 5 candele in verde. Il trend è rialzista ma senza momentum esplosivo: probabile una salita lenta e costante, salvo cambi del sentiment macro."
+      },
+      "downwardBias": {
+        "title": "Bias ribassista su {{iv}}",
+        "body": "Il prezzo scende del {{absPct}}% con {{red}} delle ultime 5 candele in rosso. La pressione ribassista c'è ma non è estrema: attendi una stabilizzazione vicino alla banda inferiore o a un supporto chiave prima di parlare di inversione."
+      }
+    },
+    "counterTrendBearish": "Segnale controtrend: il movimento complessivo resta ribassista. {{next}} Aspetta che il trend dominante cambi prima di considerarlo un ingresso long principale.",
+    "counterTrendBullish": "Segnale controtrend: il movimento complessivo resta rialzista. {{next}} Consideralo un campanello d'allarme più che un segnale short principale.",
+    "patterns": {
+      "threeWhiteSoldiers": {
+        "name": "Tre soldati bianchi",
+        "summary": "Tre candele rialziste consecutive, ognuna con chiusura più alta e corpo pieno.",
+        "narrative": "I market maker sono in piena accumulazione: comprano ogni ribasso e non lasciano spazio ai venditori. Ogni candela apre vicino alla chiusura precedente ed estende i guadagni senza ritracciamenti significativi, segno di convinzione istituzionale.",
+        "nextMove": "Il momentum favorisce nettamente la prosecuzione al rialzo. Cerca una rottura del massimo attuale come conferma. Un ritracciamento sul corpo della candela centrale è una possibile zona di rientro prima del prossimo rialzo."
+      },
+      "threeBlackCrows": {
+        "name": "Tre corvi neri",
+        "summary": "Tre candele ribassiste consecutive, ognuna con chiusura più bassa e corpo pieno.",
+        "narrative": "I venditori istituzionali distribuiscono in modo sistematico. Ogni rimbalzo viene venduto: i market maker impediscono qualsiasi recupero significativo, segno che sono posizionati short o stanno scaricando grandi quantità sui compratori retail.",
+        "nextMove": "Aspettati ulteriori ribassi. Ogni rimbalzo verso l'apertura della candela precedente è un possibile ingresso short. Il movimento è probabilmente esteso nel breve, quindi attendi un breve rimbalzo prima della prossima discesa."
+      },
+      "morningStar": {
+        "name": "Stella del mattino",
+        "summary": "Inversione di minimo a tre candele: rossa grande → piccola indecisa → verde grande.",
+        "narrative": "I market maker hanno orchestrato una classica caccia agli stop e poi hanno invertito. La grande candela rossa ha fatto uscire i long deboli, la piccola candela centrale mostra venditori che perdono convinzione sui minimi e la forte candela verde conferma che le istituzioni sono entrate assorbendo tutta l'offerta.",
+        "nextMove": "Bias rialzista. Una chiusura sopra il massimo della stella del mattino è il trigger per gli ingressi long. Il minimo precedente della candela rossa ora fa da supporto chiave: se il prezzo lo ritesta e regge, è l'ingresso più probabile con rischio contenuto."
+      },
+      "eveningStar": {
+        "name": "Stella della sera",
+        "summary": "Inversione di massimo a tre candele: verde grande → piccola indecisa → rossa grande.",
+        "narrative": "I market maker hanno distribuito sui massimi. La candela rialzista ha attirato i compratori retail, la piccola candela centrale ha rivelato l'esaurimento dei compratori e la candela ribassista conferma che le istituzioni hanno scaricato sulla folla. I long retail ora sono intrappolati.",
+        "nextMove": "Bias ribassista. Una rottura sotto il minimo della stella della sera è il trigger per gli ingressi short. Il massimo precedente della candela verde ora fa da resistenza: ogni rally fallito verso quel livello è un segnale di distribuzione."
+      },
+      "bullishEngulfing": {
+        "name": "Engulfing rialzista",
+        "summary": "Una grande candela verde ingloba completamente il corpo della candela rossa precedente.",
+        "narrative": "I compratori istituzionali sono entrati con forza. La candela verde che ingloba tutta la rossa precedente indica che i market maker hanno assorbito tutta l'offerta e spinto il prezzo oltre l'apertura. Chi ha venduto sulla candela precedente ora è intrappolato short.",
+        "nextMove": "Rialzista. I loro stop-loss sono sopra il massimo della candela engulfing: quando scattano alimentano il rialzo. Punta alla prossima zona di resistenza o al massimo precedente. Resta long finché il prezzo rimane sopra il punto medio della candela engulfing."
+      },
+      "bearishEngulfing": {
+        "name": "Engulfing ribassista",
+        "summary": "Una grande candela rossa ingloba completamente il corpo della candela verde precedente.",
+        "narrative": "I venditori istituzionali sono comparsi all'improvviso travolgendo i compratori. La candela rossa che ingloba tutta la verde precedente indica che i market maker hanno distribuito ai compratori retail che inseguivano il rialzo. Quei compratori ora sono in perdita.",
+        "nextMove": "Ribassista. I loro stop-loss sotto il minimo della candela engulfing accelereranno la discesa quando scattano. Punta alla prossima zona di supporto o al minimo precedente. Evita i long finché il prezzo non recupera il punto medio della candela engulfing."
+      },
+      "piercingLine": {
+        "name": "Piercing line",
+        "summary": "La candela verde apre sotto il minimo della rossa ma chiude sopra il suo punto medio.",
+        "narrative": "I market maker sono scesi sotto il supporto per far scattare gli stop-loss — una classica presa di liquidità — e poi hanno invertito bruscamente mentre le istituzioni assorbivano il crollo. Chi ha inseguito la rottura ora è in perdita.",
+        "nextMove": "Rialzista. La prossima mossa probabile è un ritorno verso la parte alta della candela rossa. Se il prezzo resta sopra il punto medio della piercing line su ogni ritracciamento, l'inversione è intatta. Una rottura sopra l'apertura della candela rossa conferma il pattern."
+      },
+      "darkCloudCover": {
+        "name": "Dark cloud cover",
+        "summary": "La candela rossa apre sopra il massimo della verde ma chiude sotto il suo punto medio.",
+        "narrative": "I market maker hanno sfruttato il gap al rialzo per scaricare offerta sui compratori retail che inseguivano il breakout. Il rifiuto profondo nel corpo della candela verde precedente mostra che le istituzioni hanno venduto aggressivamente sulla forza: una distribuzione da manuale.",
+        "nextMove": "Ribassista. La prossima mossa probabile è un ritorno verso la parte bassa della candela verde. Se il prezzo non recupera l'apertura della candela dark cloud su un rimbalzo, la distribuzione è confermata. Una rottura del minimo della candela verde apre a ulteriori ribassi."
+      },
+      "bullishHarami": {
+        "name": "Harami rialzista",
+        "summary": "Piccola candela verde completamente dentro il corpo della grande candela rossa precedente.",
+        "narrative": "Lo slancio ribassista si sta fermando: gli orsi non riescono più a spingere il prezzo più in basso. I market maker potrebbero assorbire offerta in silenzio nel range della candela rossa precedente, costruendo una base senza attirare l'attenzione.",
+        "nextMove": "Attendi la direzione del breakout. Una chiusura sopra il massimo dell'harami (apertura della candela rossa precedente) indica che i compratori prendono il controllo. Una chiusura sotto il minimo dell'harami (chiusura della candela rossa precedente) significa che il trend continua: attendi una di queste conferme prima di agire."
+      },
+      "bearishHarami": {
+        "name": "Harami ribassista",
+        "summary": "Piccola candela rossa completamente dentro il corpo della grande candela verde precedente.",
+        "narrative": "Lo slancio rialzista perde forza: i tori non riescono più a estendere il movimento. I market maker potrebbero distribuire in silenzio sulla forza nel range della candela verde precedente, senza provocare un panico che li costringerebbe a chiudere a prezzi peggiori.",
+        "nextMove": "Attendi la direzione del breakout. Una chiusura sotto il minimo dell'harami (apertura della candela verde precedente) indica che i venditori prendono il controllo. Una chiusura sopra il massimo dell'harami (chiusura della candela verde precedente) significa che il trend riprende: attendi la conferma."
+      },
+      "gravestoneDoji": {
+        "name": "Doji gravestone",
+        "summary": "Il prezzo è salito con forza e poi è tornato all'apertura: compratori respinti sui massimi.",
+        "narrative": "I market maker hanno spinto il prezzo in alto per raccogliere la liquidità dei buy-stop di chi opera i breakout, poi hanno venduto aggressivamente. La lunga ombra superiore è un chiaro rifiuto dell'offerta: le istituzioni hanno usato il FOMO retail come liquidità di uscita.",
+        "nextMove": "Bias ribassista. Una chiusura sotto il minimo del gravestone sulla candela successiva è un forte segnale di vendita. Il massimo di questa candela è ora una resistenza chiave: i retest falliti di quel massimo sono opportunità short."
+      },
+      "dragonflyDoji": {
+        "name": "Doji dragonfly",
+        "summary": "Il prezzo è sceso bruscamente ma i compratori hanno recuperato l'apertura: venditori respinti sui minimi.",
+        "narrative": "I market maker sono scesi sotto il supporto per cacciare gli stop-loss e accumulare a buon prezzo, poi hanno invertito subito. La lunga ombra inferiore mostra che tutte le vendite sono state assorbite dai compratori istituzionali: una classica accumulazione dopo la caccia agli stop.",
+        "nextMove": "Bias rialzista. Una chiusura sopra il massimo del dragonfly sulla candela successiva è un forte segnale di acquisto. Il minimo di questa candela ora fa da supporto chiave: tenere sopra quel livello su ogni ritracciamento è un ingresso long con rischio contenuto."
+      },
+      "doji": {
+        "name": "Doji",
+        "summary": "Apertura e chiusura quasi identiche: il mercato è in perfetto equilibrio.",
+        "narrative": "Né i compratori né i venditori hanno il sopravvento. I market maker assorbono ordini su entrambi i lati senza ancora scegliere una direzione. Questo stallo di solito precede un movimento brusco quando uno dei due lati capitola.",
+        "nextMove": "Attendi il breakout. Una chiusura sopra il massimo del doji è un trigger rialzista; sotto il minimo è ribassista. Più è grande il corpo della candela successiva, in qualsiasi direzione, più convinzione c'è dietro il movimento: il volume conferma."
+      },
+      "bullishMarubozu": {
+        "name": "Marubozu rialzista",
+        "summary": "Nessuna ombra: i compratori hanno controllato l'intera candela senza esitazioni.",
+        "narrative": "Pura pressione d'acquisto istituzionale. I market maker hanno aperto e spinto il prezzo in alto senza concedere ritracciamenti significativi: semplicemente non c'erano venditori disposti a entrare. Questa aggressività a senso unico indica una forte domanda a questo livello di prezzo.",
+        "nextMove": "Fortemente rialzista. L'apertura di questa candela ora fa da supporto importante: un ritracciamento su quel livello è un ingresso long ad alta probabilità. Aspettati una prosecuzione verso la prossima resistenza importante, con poco consolidamento."
+      },
+      "bearishMarubozu": {
+        "name": "Marubozu ribassista",
+        "summary": "Nessuna ombra: i venditori hanno controllato l'intera candela senza esitazioni.",
+        "narrative": "Pura pressione di vendita istituzionale. I market maker hanno spinto il prezzo in basso dall'apertura alla chiusura senza pause: i compratori non hanno avuto modo di reagire. Questa aggressività implacabile indica una forte offerta a questo livello di prezzo.",
+        "nextMove": "Fortemente ribassista. L'apertura di questa candela ora fa da resistenza importante: un rimbalzo su quel livello è un ingresso short ad alta probabilità. Aspettati una prosecuzione verso il prossimo supporto importante."
+      },
+      "hammer": {
+        "name": "Martello",
+        "summary": "La lunga ombra inferiore mostra che i venditori hanno fallito: i compratori hanno assorbito tutta l'offerta.",
+        "narrative": "I market maker hanno provocato una spazzata degli stop-loss sotto il supporto. La lunga ombra rivela che i venditori hanno spinto forte, ma le istituzioni hanno assorbito tutto e recuperato l'apertura. Questo scossone elimina le mani deboli prima di un'inversione.",
+        "nextMove": "Rialzista se la candela successiva chiude sopra il massimo del martello. Il minimo dell'ombra è ora un supporto critico: è lì che le istituzioni hanno scelto di comprare. Un retest che regge quella zona è un ingresso ad alta probabilità."
+      },
+      "hangingMan": {
+        "name": "Impiccato",
+        "summary": "Forma a martello dopo un trend rialzista: i venditori iniziano a reagire.",
+        "narrative": "Nonostante il recupero visivo, è un segnale di distribuzione sui massimi. I market maker hanno lasciato scendere bruscamente il prezzo, rivelando che i venditori si attivano a questi livelli elevati. Il recupero nasconde una pressione di vendita crescente.",
+        "nextMove": "Ribassista se la candela successiva chiude sotto il minimo dell'impiccato. Il massimo di questa candela è ora una resistenza: attendi un retest fallito di quel livello, che confermerebbe la distribuzione in corso."
+      },
+      "shootingStar": {
+        "name": "Stella cadente",
+        "summary": "La lunga ombra superiore mostra che i compratori hanno fallito: i venditori hanno assorbito ogni tentativo di rialzo.",
+        "narrative": "I market maker hanno sfruttato il picco al rialzo per scaricare sui trader retail che inseguivano il breakout. La lunga ombra è la prova di vendite istituzionali sulla forza: chi ha comprato sul massimo è subito in perdita.",
+        "nextMove": "Ribassista se la candela successiva chiude sotto il minimo della stella cadente. Il massimo dell'ombra è ora una resistenza forte: gli ingressi short su un retest fallito di quel livello offrono un buon rapporto rischio/rendimento."
+      },
+      "invertedHammer": {
+        "name": "Martello invertito",
+        "summary": "Lunga ombra superiore dopo un trend ribassista: i compratori hanno tentato di salire dai minimi.",
+        "narrative": "I market maker potrebbero testare la resistenza dal basso. I compratori hanno spinto il prezzo in modo significativo prima che i venditori riprendessero il controllo, segno di un dominio ribassista in indebolimento. È un primo segnale di domanda dopo una discesa.",
+        "nextMove": "Rialzista se la candela successiva chiude sopra il massimo del martello invertito: conferma che i compratori stanno prendendo il controllo. Attendi quella candela di conferma prima di agire; senza di essa il pattern non ha seguito."
+      },
+      "insideBar": {
+        "name": "Inside bar (consolidamento)",
+        "summary": "La candela attuale è interamente nel range della precedente: si comprime in vista di un breakout.",
+        "narrative": "I market maker assorbono ordini in silenzio in un range stretto, accumulando energia per un movimento direzionale. Le istituzioni prediligono questa compressione prima di impegnarsi in un trend: tiene i retail nell'incertezza mentre si posizionano.",
+        "nextMove": "La rottura sopra il massimo della candela precedente è rialzista; sotto il minimo è ribassista. Più è grande il corpo della candela di breakout rispetto all'inside bar, maggiore la convinzione. Opera il breakout, non l'inside bar in sé."
+      },
+      "sustainedBullish": {
+        "name": "Momentum rialzista persistente",
+        "summary": "Cinque candele verdi consecutive: i compratori hanno dominato senza sosta.",
+        "narrative": "Le istituzioni accumulano in modo sistematico. Ogni potenziale ritracciamento viene comprato subito: i market maker non lasciano trazione ai venditori, segno che vogliono il prezzo più alto prima che i retail partecipino davvero.",
+        "nextMove": "Il momentum favorisce la prosecuzione, ma 5 candele verdi di fila portano spesso a una pausa o a un piccolo ritracciamento di breve. Attendi un consolidamento di 1-2 candele e una chiusura di nuovo sopra il massimo precedente per il prossimo ingresso. La prima candela rossa non è un'inversione: è un reset."
+      },
+      "sustainedBearish": {
+        "name": "Momentum ribassista persistente",
+        "summary": "Cinque candele rosse consecutive: i venditori hanno dominato senza sosta.",
+        "narrative": "Le istituzioni distribuiscono in modo sistematico. Ogni tentativo di rimbalzo viene venduto: i market maker impediscono qualsiasi recupero significativo, segno che sono posizionati short o stanno scaricando gradualmente.",
+        "nextMove": "Il momentum favorisce la prosecuzione al ribasso, ma 5 candele rosse di fila producono spesso un rimbalzo di breve. Chi è short dovrebbe gestire il rischio e spostare gli stop. La prima candela verde non è un'inversione: è una pausa prima della prossima discesa."
+      },
+      "noPatternBullish": {
+        "name": "Nessun pattern definito — trend intatto",
+        "summary": "Nessuna formazione di candele classica nelle ultime candele, ma il trend generale resta rialzista.",
+        "narrative": "Al momento non c'è un setup a tre candele da manuale, ma la struttura del prezzo favorisce ancora i compratori. L'assenza di un pattern definito non significa assenza di direzione: qui parla il trend di fondo.",
+        "nextMove": "Resta allineato al trend invece di aspettare un pattern specifico. Un ritracciamento sul supporto è un'area ragionevole da osservare per la prosecuzione."
+      },
+      "noPatternBearish": {
+        "name": "Nessun pattern definito — trend intatto",
+        "summary": "Nessuna formazione di candele classica nelle ultime candele, ma il trend generale resta ribassista.",
+        "narrative": "Al momento non c'è un setup a tre candele da manuale, ma la struttura del prezzo favorisce ancora i venditori. L'assenza di un pattern definito non significa assenza di direzione: qui parla il trend di fondo.",
+        "nextMove": "Resta allineato al trend invece di aspettare un pattern specifico. Un rimbalzo verso la resistenza è un'area ragionevole da osservare per la prosecuzione al ribasso."
+      },
+      "noClearPattern": {
+        "name": "Nessun pattern chiaro",
+        "summary": "Nessuna formazione di candele classica rilevata e il trend generale è piatto in questo momento.",
+        "narrative": "Al momento l'azione del prezzo non mostra né un pattern da manuale né un bias direzionale chiaro: di solito significa che il mercato sta consolidando prima della prossima vera mossa.",
+        "nextMove": "Attendi un pattern riconoscibile o una rottura decisa di questo range prima di sbilanciarti in una direzione."
+      }
+    },
+    "canvas": {
+      "bullDiv": "Div. rialzista",
+      "bearDiv": "Div. ribassista"
+    }
+  }
+}

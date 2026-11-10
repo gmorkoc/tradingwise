@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { createChart, IChartApi, ISeriesApi, CandlestickData, ColorType, CandlestickSeries } from "lightweight-charts";
 import { COINS, coinglass, fetchCoinMarketCaps, fetchCoin24hTickers, fetchCoinChanges24h, fetchFundingRate, CandleDataPoint, CoinSnapshot } from "../services/coinglass";
 import { getAltPricePrediction, AltPricePrediction } from "../services/openai";
@@ -47,6 +48,17 @@ const SECTOR_COLORS: Record<string, string> = {
   "Media": "#c084fc", "AI / Data": "#a78bfa", "DEX": "#22d3ee",
 };
 
+// Translation key for each (English) sector name above — the English name
+// itself still goes to the AI prompt; only the on-screen label is translated.
+const SECTOR_KEY: Record<string, string> = {
+  "Store of Value": "storeOfValue", "Layer 1": "layer1", "Layer 2": "layer2",
+  "Payments": "payments", "Interoperability": "interoperability", "PoW": "pow",
+  "Storage": "storage", "Modular": "modular", "Bitcoin L2": "bitcoinL2",
+  "Privacy": "privacy", "Oracle": "oracle", "DeFi": "defi", "Media": "media",
+  "AI / Data": "aiData", "DEX": "dex", "AI": "ai", "BTC Ecosystem": "btcEcosystem",
+  "RWA": "rwa", "Meme": "meme", "Gaming": "gaming", "Other": "other",
+};
+
 const TF_INTERVAL: Record<Timeframe, string> = {
   "1W": "4hour", "1M": "1day", "3M": "1day", "6M": "1day", "1Y": "1week", "ALL": "all",
 };
@@ -67,6 +79,8 @@ function fmtPrice(p: number) {
 }
 
 export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
+  const { t } = useTranslation();
+  const sectorLabel = (s: string) => SECTOR_KEY[s] ? t(`altAnalysis2.sectors.${SECTOR_KEY[s]}`) : s;
   const { tier } = useAuth();
   const { used, limit } = useAIQuota();
   const isPaid = tier === "elite";
@@ -412,7 +426,7 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
       marketCap / 1e9, tf, techSummary,
     );
     if (res.success && res.result) setAnalysis(res.result);
-    else setAiError(res.error ?? "Prediction failed");
+    else setAiError(res.error ?? t("altAnalysis2.predictionFailed"));
     setAiLoading(false);
   };
 
@@ -443,15 +457,15 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
               <BottomSheet
                 open={showDropdown}
                 onClose={() => { setShowDropdown(false); setQuery(""); }}
-                title={<>Select coin</>}
+                title={<>{t("altAnalysis2.selectCoin")}</>}
                 className="alt-coin-sheet"
-                ariaLabel="Select coin"
+                ariaLabel={t("altAnalysis2.selectCoin")}
                 headerExtra={
                   <div className="alt-sheet-search">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
                     <input
                       className="alt-sheet-search-input"
-                      placeholder="Search coin…"
+                      placeholder={t("altAnalysis2.searchCoin")}
                       value={query}
                       onChange={e => setQuery(e.target.value)}
                     />
@@ -470,11 +484,11 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
                       >
                         <span className="alt-dd-symbol" style={{ color: col }}>{c.symbol}</span>
                         <span className="alt-dd-name">{c.name}</span>
-                        <span className="alt-dd-sector" style={{ color: col }}>{SECTOR_MAP[c.symbol] ?? "Other"}</span>
+                        <span className="alt-dd-sector" style={{ color: col }}>{sectorLabel(SECTOR_MAP[c.symbol] ?? "Other")}</span>
                       </button>
                     );
                   })}
-                  {filtered.length === 0 && <div className="alt-dd-empty">No coins found</div>}
+                  {filtered.length === 0 && <div className="alt-dd-empty">{t("altAnalysis2.noCoins")}</div>}
                 </div>
               </BottomSheet>
             )}
@@ -484,7 +498,7 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
                   <input
                     className="alt-search-input"
-                    placeholder="Search coin…"
+                    placeholder={t("altAnalysis2.searchCoin")}
                     value={query}
                     autoFocus
                     onChange={e => setQuery(e.target.value)}
@@ -496,11 +510,11 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
                     <span className="alt-dd-symbol" style={{ color: SECTOR_COLORS[SECTOR_MAP[c.symbol] ?? ""] ?? "#818cf8" }}>{c.symbol}</span>
                     <span className="alt-dd-name">{c.name}</span>
                     <span className="alt-dd-sector" style={{ color: SECTOR_COLORS[SECTOR_MAP[c.symbol] ?? ""] ?? "#818cf8" }}>
-                      {SECTOR_MAP[c.symbol] ?? "Other"}
+                      {sectorLabel(SECTOR_MAP[c.symbol] ?? "Other")}
                     </span>
                   </button>
                 ))}
-                {filtered.length === 0 && <div className="alt-dd-empty">No coins found</div>}
+                {filtered.length === 0 && <div className="alt-dd-empty">{t("altAnalysis2.noCoins")}</div>}
               </div>
             )}
           </div>
@@ -510,7 +524,7 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
             <h1 className="alt-hero-symbol" style={{ color: sectorColor }}>{coin.symbol}</h1>
             <span className="alt-hero-name">{coin.name}</span>
             <span className="alt-sector-pill" style={{ background: `${sectorColor}20`, color: sectorColor, borderColor: `${sectorColor}50` }}>
-              {sector}
+              {sectorLabel(sector)}
             </span>
           </div>
         </div>
@@ -525,13 +539,13 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
           </div>
           <div className="alt-hero-stats">
             <div className="alt-hero-stat">
-              <span className="alt-hero-stat-label">Market Cap</span>
+              <span className="alt-hero-stat-label">{t("altAnalysis2.marketCap")}</span>
               <span className="alt-hero-stat-val">{marketCap ? fmt(marketCap) : "—"}</span>
             </div>
             <div className="alt-hero-stat-divider" />
             <div className="alt-hero-stat">
-              <span className="alt-hero-stat-label">Sector Rank</span>
-              <span className="alt-hero-stat-val">{sector}</span>
+              <span className="alt-hero-stat-label">{t("altAnalysis2.sectorRank")}</span>
+              <span className="alt-hero-stat-val">{sectorLabel(sector)}</span>
             </div>
           </div>
         </div>
@@ -542,13 +556,13 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
 
         {/* section header */}
         <div className="alt-ai-header" style={{ borderBottomColor: `${sectorColor}30`, background: `linear-gradient(90deg, color-mix(in srgb, ${sectorColor} 10%, transparent), transparent)` }}>
-          <span className="alt-ai-badge">AI</span>
+          <span className="alt-ai-badge">{t("altAnalysis2.aiBadge")}</span>
           <div className="alt-ai-header-text">
-            <span className="alt-ai-title">Long-Term Analysis</span>
-            <span className="alt-ai-subtitle">{coin.name} · {{ "1W": "1 Week", "1M": "1 Month", "3M": "3 Month", "6M": "6 Month", "1Y": "12 Month", "ALL": "Long Term" }[tf]} Price Prediction</span>
+            <span className="alt-ai-title">{t("altAnalysis2.longTermTitle")}</span>
+            <span className="alt-ai-subtitle">{coin.name} · {t(`altAnalysis2.prediction_${tf}`)}</span>
           </div>
           <div className="alt-ai-header-right">
-            <span className="aiqw-live-badge"><span className="aiqw-live-dot" />LIVE</span>
+            <span className="aiqw-live-badge"><span className="aiqw-live-dot" />{t("altAnalysis2.live")}</span>
           </div>
         </div>
 
@@ -564,13 +578,13 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
                 {loadingChart && <span className="alt-loading-dot" />}
               </div>
               <div className="alt-tf-row">
-                {(["1W", "1M", "3M", "6M", "1Y", "ALL"] as Timeframe[]).map(t => (
+                {(["1W", "1M", "3M", "6M", "1Y", "ALL"] as Timeframe[]).map(x => (
                   <button
-                    key={t}
-                    className={`alt-tf-btn${tf === t ? " active" : ""}`}
-                    style={tf === t ? { background: sectorColor, borderColor: sectorColor, color: "#fff" } : {}}
-                    onClick={() => setTf(t)}
-                  >{t}</button>
+                    key={x}
+                    className={`alt-tf-btn${tf === x ? " active" : ""}`}
+                    style={tf === x ? { background: sectorColor, borderColor: sectorColor, color: "#fff" } : {}}
+                    onClick={() => setTf(x)}
+                  >{x === "ALL" ? t("altAnalysis2.tfAll") : x}</button>
                 ))}
               </div>
             </div>
@@ -591,18 +605,18 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
 
           {/* 20% signals panel */}
           <div className="alt-signal-panel">
-            <div className="alt-signal-panel-title">Signals used</div>
+            <div className="alt-signal-panel-title">{t("altAnalysis2.signalsUsed")}</div>
             <div className="alt-signal-list">
               {([
-                { n: 1, tag: "RSI (14)",       desc: "Overbought >70 / oversold <30",          color: "#f59e0b", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 12 Q5 4 8 12 Q11 20 14 12 Q17 4 20 12"/><line x1="2" y1="7" x2="22" y2="7" strokeDasharray="2 2" strokeWidth="1"/><line x1="2" y1="17" x2="22" y2="17" strokeDasharray="2 2" strokeWidth="1"/></svg> },
-                { n: 2, tag: "MACD",            desc: "12/26/9 EMA crossover momentum",         color: "#818cf8", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 18 Q7 6 12 10 Q17 14 22 4"/><path d="M2 14 Q7 10 12 12 Q17 14 22 10" strokeDasharray="3 2"/></svg> },
-                { n: 3, tag: "MA20 / MA50",     desc: "Short & mid-term averages",              color: "#38bdf8", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 16 Q6 8 12 11 Q18 14 22 7"/><path d="M2 19 Q6 14 12 15 Q18 16 22 12" strokeDasharray="3 2"/></svg> },
-                { n: 4, tag: "Price Structure", desc: "Higher highs/lows, range pos",           color: "#34d399", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="3" x2="8" y2="6"/><rect x="6" y="6" width="4" height="6" rx="0.5"/><line x1="8" y1="12" x2="8" y2="15"/><line x1="16" y1="6" x2="16" y2="8"/><rect x="14" y="8" width="4" height="7" rx="0.5"/><line x1="16" y1="15" x2="16" y2="18"/></svg> },
-                { n: 5, tag: "Momentum",        desc: "5-candle streak + momentum",             color: "#fb923c", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> },
-                { n: 6, tag: "Volume",          desc: "Rising/falling confirmation",            color: "#a78bfa", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="14" width="4" height="7" rx="0.5"/><rect x="10" y="9" width="4" height="12" rx="0.5"/><rect x="17" y="5" width="4" height="16" rx="0.5"/></svg> },
-                { n: 7, tag: "BTC Macro",       desc: "Bitcoin MA/RSI context",                color: "#f97316", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M9 8h4.5a2 2 0 0 1 0 4H9v4h5a2 2 0 0 0 0-4"/><line x1="9" y1="8" x2="9" y2="16"/><line x1="10.5" y1="6" x2="10.5" y2="8"/><line x1="13.5" y1="6" x2="13.5" y2="8"/><line x1="10.5" y1="16" x2="10.5" y2="18"/><line x1="13.5" y1="16" x2="13.5" y2="18"/></svg> },
-                { n: 8, tag: "Funding Rate",    desc: "8h Binance perp signal",                color: "#f43f5e", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="5" y1="19" x2="19" y2="5"/><circle cx="7" cy="7" r="2"/><circle cx="17" cy="17" r="2"/></svg> },
-                { n: 9, tag: "4Y Cycle",        desc: "Halving phase weighting",               color: "#2dd4bf", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><line x1="12" y1="7" x2="12" y2="12"/><line x1="12" y1="12" x2="15" y2="14"/></svg> },
+                { n: 1, tag: "RSI (14)",       desc: t("altAnalysis2.sig.rsiDesc"),        color: "#f59e0b", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 12 Q5 4 8 12 Q11 20 14 12 Q17 4 20 12"/><line x1="2" y1="7" x2="22" y2="7" strokeDasharray="2 2" strokeWidth="1"/><line x1="2" y1="17" x2="22" y2="17" strokeDasharray="2 2" strokeWidth="1"/></svg> },
+                { n: 2, tag: "MACD",            desc: t("altAnalysis2.sig.macdDesc"),       color: "#818cf8", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 18 Q7 6 12 10 Q17 14 22 4"/><path d="M2 14 Q7 10 12 12 Q17 14 22 10" strokeDasharray="3 2"/></svg> },
+                { n: 3, tag: "MA20 / MA50",     desc: t("altAnalysis2.sig.maDesc"),            color: "#38bdf8", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 16 Q6 8 12 11 Q18 14 22 7"/><path d="M2 19 Q6 14 12 15 Q18 16 22 12" strokeDasharray="3 2"/></svg> },
+                { n: 4, tag: t("altAnalysis2.sig.structure"), desc: t("altAnalysis2.sig.structureDesc"),         color: "#34d399", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="3" x2="8" y2="6"/><rect x="6" y="6" width="4" height="6" rx="0.5"/><line x1="8" y1="12" x2="8" y2="15"/><line x1="16" y1="6" x2="16" y2="8"/><rect x="14" y="8" width="4" height="7" rx="0.5"/><line x1="16" y1="15" x2="16" y2="18"/></svg> },
+                { n: 5, tag: t("altAnalysis2.sig.momentum"), desc: t("altAnalysis2.sig.momentumDesc"),           color: "#fb923c", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> },
+                { n: 6, tag: t("altAnalysis2.sig.volume"), desc: t("altAnalysis2.sig.volumeDesc"),          color: "#a78bfa", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="14" width="4" height="7" rx="0.5"/><rect x="10" y="9" width="4" height="12" rx="0.5"/><rect x="17" y="5" width="4" height="16" rx="0.5"/></svg> },
+                { n: 7, tag: t("altAnalysis2.sig.btcMacro"), desc: t("altAnalysis2.sig.btcMacroDesc"),              color: "#f97316", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M9 8h4.5a2 2 0 0 1 0 4H9v4h5a2 2 0 0 0 0-4"/><line x1="9" y1="8" x2="9" y2="16"/><line x1="10.5" y1="6" x2="10.5" y2="8"/><line x1="13.5" y1="6" x2="13.5" y2="8"/><line x1="10.5" y1="16" x2="10.5" y2="18"/><line x1="13.5" y1="16" x2="13.5" y2="18"/></svg> },
+                { n: 8, tag: t("altAnalysis2.sig.funding"), desc: t("altAnalysis2.sig.fundingDesc"),              color: "#f43f5e", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="5" y1="19" x2="19" y2="5"/><circle cx="7" cy="7" r="2"/><circle cx="17" cy="17" r="2"/></svg> },
+                { n: 9, tag: t("altAnalysis2.sig.cycle"), desc: t("altAnalysis2.sig.cycleDesc"),             color: "#2dd4bf", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><line x1="12" y1="7" x2="12" y2="12"/><line x1="12" y1="12" x2="15" y2="14"/></svg> },
               ] as { n: number; tag: string; desc: string; color: string; icon: React.ReactNode }[]).map(({ n, tag, desc, color, icon }) => (
                 <div key={tag} className="alt-signal-row">
                   <span className="alt-signal-num">{n}</span>
@@ -624,16 +638,16 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
             used={used} limit={limit}
             onOpenUpgrade={onOpenUpgrade} onOpenAuth={onOpenAuth}
             planId="elite"
-            featureTitle="Long-Term AI Analysis"
-            featureDesc="AI-generated investment thesis, catalysts, risks & outlook for any altcoin."
+            featureTitle={t("altAnalysis2.wallTitle")}
+            featureDesc={t("altAnalysis2.wallDesc")}
           />
         ) : !analysis ? (
           <div className="alt-ai-generate">
             <div className="alt-ai-generate-icon" style={{ color: sectorColor, borderColor: `${sectorColor}40`, background: `${sectorColor}12` }}>
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
             </div>
-            <p className="alt-ai-generate-hint">Get a bold price prediction for <strong>{coin.name}</strong></p>
-            <p className="alt-ai-generate-sub">Target price · Direction · Entry zone · Stop loss · Key levels</p>
+            <p className="alt-ai-generate-hint">{t("altAnalysis2.generateHint")} <strong>{coin.name}</strong></p>
+            <p className="alt-ai-generate-sub">{t("altAnalysis2.generateSub")}</p>
             {aiError && <p className="alt-ai-error">{aiError}</p>}
             <button
               className="alt-ai-generate-btn"
@@ -641,7 +655,7 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
               onClick={handleGenerate}
               disabled={aiLoading || !price}
             >
-              {aiLoading ? "Analyzing…" : `Analyze ${coin.symbol}`}
+              {aiLoading ? t("altAnalysis2.analyzing") : t("altAnalysis2.analyzeCoin", { symbol: coin.symbol })}
             </button>
           </div>
         ) : (
@@ -655,9 +669,9 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
                 </span>
                 <div>
                   <div className={`alt-pred-label ${analysis.direction === "bullish" ? "alt-pos" : analysis.direction === "bearish" ? "alt-neg" : "alt-neutral"}`}>
-                    {analysis.direction.toUpperCase()}
+                    {t(`altAnalysis2.dir_${analysis.direction}`, { defaultValue: analysis.direction }).toUpperCase()}
                   </div>
-                  <div className="alt-pred-horizon">{{ "1W": "1 Week", "1M": "1 Month", "3M": "3 Months", "6M": "6 Months", "1Y": "12 Months", "ALL": "Long Term" }[tf]} Target</div>
+                  <div className="alt-pred-horizon">{t(`altAnalysis2.target_${tf}`)}</div>
                 </div>
               </div>
 
@@ -669,9 +683,9 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
               </div>
 
               <div className="alt-pred-confidence">
-                <span className="alt-pred-conf-label">Confidence</span>
+                <span className="alt-pred-conf-label">{t("altAnalysis2.confidence")}</span>
                 <span className={`alt-pred-conf-badge alt-pred-conf--${analysis.confidence}`}>
-                  {analysis.confidence.toUpperCase()}
+                  {t(`altAnalysis2.conf_${analysis.confidence}`, { defaultValue: analysis.confidence }).toUpperCase()}
                 </span>
               </div>
             </div>
@@ -683,26 +697,26 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
             <div className="alt-pred-grid">
               <div className="alt-pred-levels">
                 <div className="alt-pred-level-row">
-                  <span className="alt-pred-level-label">Entry Zone</span>
+                  <span className="alt-pred-level-label">{t("altAnalysis2.entryZone")}</span>
                   <span className="alt-pred-level-val">{analysis.entryZone}</span>
                 </div>
                 <div className="alt-pred-level-row">
-                  <span className="alt-pred-level-label">Stop Loss</span>
+                  <span className="alt-pred-level-label">{t("altAnalysis2.stopLoss")}</span>
                   <span className="alt-pred-level-val alt-neg">{analysis.stopLoss}</span>
                 </div>
                 <div className="alt-pred-level-divider" />
                 <div className="alt-pred-level-row">
-                  <span className="alt-pred-level-label">Support</span>
+                  <span className="alt-pred-level-label">{t("altAnalysis2.support")}</span>
                   <span className="alt-pred-level-val alt-pos">{analysis.supports.join(" / ")}</span>
                 </div>
                 <div className="alt-pred-level-row">
-                  <span className="alt-pred-level-label">Resistance</span>
+                  <span className="alt-pred-level-label">{t("altAnalysis2.resistance")}</span>
                   <span className="alt-pred-level-val alt-neg">{analysis.resistances.join(" / ")}</span>
                 </div>
               </div>
 
               <div className="alt-pred-reasons">
-                <div className="alt-pred-reasons-title">Why</div>
+                <div className="alt-pred-reasons-title">{t("altAnalysis2.why")}</div>
                 <ul className="alt-ai-list">
                   {analysis.reasons.map((r, i) => (
                     <li key={i}>
@@ -720,18 +734,18 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
             <div className="alt-reasoning">
               <div className="alt-reasoning-label">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-                Why this prediction
+                {t("altAnalysis2.whyThisPrediction")}
               </div>
               <p className="alt-reasoning-text">{analysis.reasoning}</p>
             </div>
 
             <button className="alt-regenerate-btn" onClick={handleGenerate} disabled={aiLoading}>
-              {aiLoading ? "Analyzing…" : "↺ Regenerate"}
+              {aiLoading ? t("altAnalysis2.analyzing") : t("altAnalysis2.regenerate")}
             </button>
 
             {/* ── DYOR disclaimer ── */}
             <p className="alt-disclaimer">
-              ⚠ This is AI-generated analysis based on technical indicators — not financial advice. Always do your own research (DYOR) before making any investment decisions.
+              {t("altAnalysis2.disclaimer")}
             </p>
           </div>
         )}
@@ -740,13 +754,13 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
       {/* ── Winners & Losers ── */}
       <div className="alt-wl-section">
         <div className="alt-wl-header">
-          <span className="alt-wl-title">24h Winners &amp; Losers</span>
+          <span className="alt-wl-title">{t("altAnalysis2.wlTitle")}</span>
           {sortedByChange.length > 0 && (
-            <span className="alt-wl-sub">Top movers across {sortedByChange.length} alts</span>
+            <span className="alt-wl-sub">{t("altAnalysis2.wlSub", { count: sortedByChange.length })}</span>
           )}
         </div>
         {sortedByChange.length === 0 ? (
-          <div className="alt-wl-loading">Loading market data…</div>
+          <div className="alt-wl-loading">{t("altAnalysis2.loadingMarket")}</div>
         ) : (
           <div className="alt-wl-columns">
 
@@ -754,7 +768,7 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
             <div className="alt-wl-col">
               <div className="alt-wl-col-header alt-wl-col-header--win">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
-                Winners
+                {t("altAnalysis2.winners")}
               </div>
               {winners.map((c, i) => {
                 const color = SECTOR_COLORS[SECTOR_MAP[c.symbol] ?? ""] ?? "#818cf8";
@@ -775,7 +789,7 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
             <div className="alt-wl-col">
               <div className="alt-wl-col-header alt-wl-col-header--lose">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-                Losers
+                {t("altAnalysis2.losers")}
               </div>
               {losers.map((c, i) => {
                 const color = SECTOR_COLORS[SECTOR_MAP[c.symbol] ?? ""] ?? "#818cf8";

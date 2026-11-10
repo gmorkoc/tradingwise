@@ -1,0 +1,8 @@
+{
+  "marketHeatmap2": {
+    "colorScale": "-%8 ile +%8 arası renk ölçeği",
+    "price": "Fiyat",
+    "marketCap": "Piyasa Değeri",
+    "volume24h": "Hacim (24s)"
+  }
+}

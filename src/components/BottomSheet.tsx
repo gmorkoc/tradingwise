@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import ReactDOM from "react-dom";
+import { useTranslation } from "react-i18next";
 import "../styles/BottomSheet.css";
 
 // The app's one bottom sheet. Same look and behavior as MobileSymbolSheet:
@@ -29,6 +30,7 @@ interface Props {
 }
 
 export function BottomSheet({ open, onClose, title, children, className, bodyClassName, ariaLabel, desktopModal, headerExtra, floating, startFull }: Props) {
+  const { t } = useTranslation();
   const sheetRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ startY: number } | null>(null);
@@ -79,7 +81,7 @@ export function BottomSheet({ open, onClose, title, children, className, bodyCla
             <span className="bs-handle" aria-hidden="true" />
             <div className="bs-header-row">
               <div className="bs-title">{title}</div>
-              <button type="button" className="bs-close" onClick={onClose} aria-label="Close">
+              <button type="button" className="bs-close" onClick={onClose} aria-label={t("bottomSheet.close")}>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18" />
                   <line x1="6" y1="6" x2="18" y2="18" />

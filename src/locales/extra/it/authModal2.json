@@ -1,0 +1,32 @@
+{
+  "authModal2": {
+    "sendCodeFailed": "Impossibile inviare un nuovo codice: {{error}}",
+    "enterCode": "Inserisci il codice ricevuto via email.",
+    "codeWrong": "Il codice è errato o scaduto. Controlla l'ultima email o invia un nuovo codice.",
+    "emailConfirmed": "Email confermata. Accedi per continuare.",
+    "notConfirmed": "Non ancora confermata. Inserisci il codice dell'email o apri prima il link che contiene.",
+    "newCodeSent": "Nuovo codice inviato. Controlla la posta in arrivo (e lo spam).",
+    "passkey": "Accedi con una passkey",
+    "checking": "Verifica in corso…",
+    "emailAvailable": "Email disponibile",
+    "signsInWith": "Questa email accede con {{provider}}.",
+    "emailHasAccount": "Questa email ha già un account.",
+    "signIn": "Accedi",
+    "accountExists": "Esiste già un account con questa email.",
+    "or": "o",
+    "verifyTitle": "Controlla la tua email",
+    "verifySubBefore": "Abbiamo inviato un codice di verifica a",
+    "verifySubAfter": ". Inseriscilo qui sotto per confermare il tuo account.",
+    "codeLabel": "Codice di verifica",
+    "codePlaceholder": "Codice",
+    "confirming": "Conferma in corso…",
+    "confirmEmail": "Conferma email",
+    "didntGetIt": "Non l'hai ricevuto?",
+    "resendIn": "Invia di nuovo tra {{seconds}} s",
+    "resend": "Invia di nuovo il codice",
+    "differentEmail": "Usa un'altra email",
+    "confirmedWithLink": "Hai confermato con il link nell'email?",
+    "continue": "Continua",
+    "close": "Chiudi"
+  }
+}

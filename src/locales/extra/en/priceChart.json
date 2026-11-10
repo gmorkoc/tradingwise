@@ -1,0 +1,666 @@
+{
+  "priceChart": {
+    "rangeInCandles": "{{range}} in {{iv}} candles",
+    "goTo": {
+      "notLoaded": "Chart data hasn't loaded yet.",
+      "tooOldLong": "This interval only goes back to {{date}}. Pick a later date, or switch to a bigger interval (e.g. 1D or 1W) to go further back.",
+      "tooOld": "This interval only goes back to {{date}}."
+    },
+    "trial": {
+      "days_one": "{{count}} day",
+      "days_other": "{{count}} days",
+      "underHour": "under an hour",
+      "bannerLong": "ProVision free trial · {{left}} left",
+      "bannerShort": "Free trial · {{left}} left",
+      "everyCoinPrice": "Every coin & timeframe · {{price}}/year",
+      "thenPrice": "then {{price}}/year",
+      "keepIt": "Keep it",
+      "enjoyingPv": "Enjoying ProVision?",
+      "enjoyingIt": "Enjoying it?",
+      "keepItArrow": "Keep it ›",
+      "left": "{{left}} left",
+      "leftThen": "{{left}} left · then {{price}}/year"
+    },
+    "pvErr": {
+      "notEnough": "Not enough candles on this interval for ProVision",
+      "signinExpired": "Your sign-in expired — please sign in again",
+      "reconnecting": "Reconnecting…",
+      "tooMany": "Too many requests — retrying",
+      "server": "Server error {{status}} — retrying",
+      "unreachable": "Couldn't reach ProVision — retrying"
+    },
+    "zone": {
+      "tooSmall": "Draw a larger area — need at least 2 candles inside the zone.",
+      "limit": "Daily AI analysis limit reached.",
+      "failed": "Failed to analyse zone",
+      "drag": "Drag on the chart",
+      "cancel": "Cancel",
+      "explainTip": "Draw a free area on the chart and get an AI explanation of it",
+      "explain": "Explain Zone",
+      "clearTip": "Clear the drawn zone",
+      "clear": "Clear zone"
+    },
+    "promo": {
+      "preview": "ProVision preview",
+      "strongBuy": "STRONG BUY",
+      "sell": "Sell",
+      "buy": "Buy",
+      "ghostSub": "See this on the real chart · 3 days free · no card",
+      "notNow": "Not now",
+      "freeTrial": "ProVision free trial",
+      "floatSub": "Pro signals · 3 days free · no card",
+      "mobileSub": "3 days free · no card",
+      "tryFree": "Try free"
+    },
+    "intro": {
+      "preparing": "Preparing ProVision",
+      "s1": "Scanning trend",
+      "s2": "Reading momentum",
+      "s3": "Checking order flow",
+      "s4": "Aligning timeframes",
+      "s5": "Calibrating signals"
+    },
+    "strength": {
+      "aria": "Trend strength: bull {{pct}}%",
+      "bull": "Bull {{pct}}%",
+      "bear": "Bear {{pct}}%",
+      "sideways": "Sideways",
+      "spike": "Spike",
+      "eventPaused": "{{name}} · paused",
+      "eventIn": "{{name}} in {{time}}",
+      "thin": "Thin · signals off",
+      "signals": "Signals: {{src}}"
+    },
+    "live": "LIVE",
+    "pv": {
+      "ringAria": "Signal Check {{score}}. Open details",
+      "verdictAgree": "{{word}} · {{agree}} of {{total}} indicators agree",
+      "ringSub": "ProVision Signal Check · tap for details",
+      "minimise": "Minimise to the bottom bar",
+      "title": "ProVision Signal Check",
+      "meterTip": "Bull strength {{n}}/100 — {{state}}",
+      "buyersControl": "buyers in control",
+      "sellersControl": "sellers in control",
+      "balanced": "balanced, no clear side",
+      "even": "evenly matched",
+      "mini": "Hit rate {{rate}}% · {{total}} signals",
+      "pill": "{{word}} · {{agree}} of {{total}}",
+      "live": "live",
+      "howTo": "How to use ProVision",
+      "alertSource": "<s>Signals from the {{src}} chart.</s> Moves on this short chart are too small to beat fees, so BUY/SELL, the zone, Signal check and track record come from {{src}} — use this chart to time your entry.",
+      "alertShort": "<s>Short timeframes are noisy.</s> Moves here are too small to beat fees — use 15m and above for signals.",
+      "eventLive": "<s>{{name}} now ({{title}}, {{at}}).</s> Big, fast moves are likely — signals are paused until {{resume}}.",
+      "eventSoon": "<s>{{name}} in {{time}}</s> ({{title}}, {{at}}). Expect volatility around it — signals pause from 30 min before until 1 h after.",
+      "forecast": "Forecast {{f}}.",
+      "forecastPrev": "Forecast {{f}}, previous {{p}}.",
+      "alertThin": "<s>Signals off — thin market.</s> Only about ${{vol}}M traded in the last 24h, too little for reliable signals. Trend colors and the checks below still update.",
+      "alertSpikeUp_one": "<s>Sudden jump</s> — often news-driven. Signals against it are paused for {{count}} more candle; expect wide swings.",
+      "alertSpikeUp_other": "<s>Sudden jump</s> — often news-driven. Signals against it are paused for {{count}} more candles; expect wide swings.",
+      "alertSpikeDown_one": "<s>Sudden drop</s> — often news-driven. Signals against it are paused for {{count}} more candle; expect wide swings.",
+      "alertSpikeDown_other": "<s>Sudden drop</s> — often news-driven. Signals against it are paused for {{count}} more candles; expect wide swings.",
+      "alertRange": "<s>Sideways market</s> — no clear trend (Choppiness {{chop}}, ADX {{adx}}).",
+      "rangeBox": "Range {{lo}} – {{hi}}.",
+      "rangeModeOn": "Range mode is on: R·BUY near the floor, R·SELL near the ceiling, until price breaks out.",
+      "rangeWatch": "Watch for a close outside the range — range signals run on 1h and above.",
+      "stochastic": "Stochastic",
+      "bullishLc": "bullish",
+      "bearishLc": "bearish",
+      "mixedLc": "mixed",
+      "holdingOut": "{{list}} holding out",
+      "connecting": "connecting…",
+      "flowCap": "Order flow · last 20 candles",
+      "flowTipReal": "Real market-buy vs market-sell volume, last 20 candles",
+      "flowTipEst": "Estimated from candle colour, last 20 candles",
+      "timeframes": "Timeframes",
+      "nOfBullish": "{{n}} of {{total}} bullish",
+      "nOfBearish": "{{n}} of {{total}} bearish",
+      "sheetTitle": "{{name}} · Signal Check",
+      "rowDesc": {
+        "0": "Price vs 20 & 200 averages",
+        "1": "Who's pushing, and how hard",
+        "2": "Price vs the cloud",
+        "3": "Momentum, last 14 candles",
+        "4": "Where price sits in its range",
+        "5": "Momentum shift",
+        "6": "Market buys vs sells"
+      }
+    },
+    "stats": {
+      "title": "{{coin}} stats",
+      "change": "{{iv}} Change",
+      "high": "{{iv}} High",
+      "low": "{{iv}} Low"
+    },
+    "custom": "Custom",
+    "customSub": "Pick a date or a custom range",
+    "ai": {
+      "f1": "Interval sentiment & trend context",
+      "f2": "Candlestick pattern recognition",
+      "f3": "Bullish / bearish confidence score",
+      "f4": "Next-move predictions & outlook",
+      "upgradeNow": "Upgrade Now",
+      "ctaSub": "Trend bias + candlestick pattern for {{coin}} {{iv}}",
+      "analyze": "Analyze",
+      "hide": "Hide AI Chart Read",
+      "trend": "Trend",
+      "pattern": "Pattern"
+    },
+    "km": {
+      "signalDetail": "Signal detail",
+      "loading": "Loading {{name}} signals",
+      "chanceBull": "chance bullish",
+      "chanceBear": "chance bearish",
+      "toolsAgree": "{{n}} of {{total}} tools agree",
+      "gaugeAria": "Bullish {{bull}}%, bearish {{bear}}%",
+      "seeFull": "See full analysis ›",
+      "fullAnalysis": "Full analysis",
+      "analysis": "Analysis",
+      "pvSignal": "ProVision Signal",
+      "consensus": "Consensus",
+      "partOfPv": "Signal Check is part of ProVision: trend, 7 indicators and a scored track record.",
+      "tryPv": "Try ProVision ›",
+      "turnOnPv": "Turn on ProVision ›"
+    },
+    "tr": {
+      "title": "Track record",
+      "src_one": "{{chart}} · {{count}} signal",
+      "src_other": "{{chart}} · {{count}} signals",
+      "srcChart": "{{src}} chart",
+      "thisChart": "this chart",
+      "paidOff": "Paid off · {{per}} per trade",
+      "lostMoney": "Lost money · {{per}} per trade",
+      "hitRate": "Hit rate",
+      "wonLost": "Won / lost",
+      "nOpen": "{{n}} open",
+      "avgWin": "Avg win",
+      "avgLoss": "Avg loss",
+      "winLoss": "Win : loss",
+      "winLossTip": "Average win size vs average loss size",
+      "recentAria": "Recent signals and their results",
+      "lastN": "Last {{n}}",
+      "stillOpen": "still open",
+      "open": "open",
+      "howTitle": "How this is measured",
+      "howShort": "Each signal is traded from its close with a stop at its invalidation line, taking profit after a typical one-candle move (or exiting after 20 candles), minus 0.1% fees.",
+      "howLong": "Each signal is traded from its close with a stop at its invalidation line that then trails 3 typical candle-moves behind the best price — exiting when the trend turns, or after 60 candles — minus 0.1% fees. Fewer trades win, but winners run.",
+      "howRules": "Signals need 5 of 7 checks to agree and the bigger trend to match; intraday they must also hold 3 candles with ADX ≥ 20, sideways stretches and fades of ⚡ spikes are skipped, and thin markets get none. Past results on this chart only — not a promise.",
+      "rangeTitle": "Range signals (R·BUY / R·SELL)",
+      "perTrade": "Per trade",
+      "rangeNote": "While the market is sideways: buy a bounce off the floor, sell a rejection at the ceiling. Stop just outside the box, target the middle of the range, 0.1% fees."
+    },
+    "cns": {
+      "mixed": "Mixed",
+      "lean": {
+        "bull": "Lean bullish",
+        "bear": "Lean bearish",
+        "neutral": "Mixed"
+      },
+      "reading": "Reading…",
+      "turnOn": "Turn on",
+      "signals": "Signals",
+      "buySetup": "Buy setup",
+      "sellSetup": "Sell setup",
+      "noSetup": "No setup",
+      "bullPattern": "Bullish pattern",
+      "bearPattern": "Bearish pattern",
+      "noPattern": "No clear pattern",
+      "tapToRun": "Tap to run",
+      "strongBuyZone": "Strong buy zone",
+      "buyZone": "Buy zone",
+      "sellZone": "Sell zone",
+      "strongSellZone": "Strong sell zone",
+      "events": "Events",
+      "agent": "Agent",
+      "askWhy": "Ask why ›",
+      "agentPrompt": "What do coinhintz's tools say about {{coin}} on the {{tf}} chart right now, and why?"
+    },
+    "ago": {
+      "m": "{{n}}m ago",
+      "h": "{{n}}h ago",
+      "d": "{{n}}d ago"
+    },
+    "whatsNext": "What's next for {{name}}?",
+    "seeEveryTool": "See what every coinhintz tool says",
+    "tapToSee": "Tap to see ›",
+    "savePng": "Save chart as PNG",
+    "c": {
+      "selectInterval": "Select Interval",
+      "interval": "Interval",
+      "switchToFull": "Back to chart",
+      "switchToCompact": "Predict",
+      "fullscreen": "Fullscreen",
+      "fullChart": "Full Chart",
+      "bearish": "Bearish",
+      "bullish": "Bullish",
+      "none": "None",
+      "technicals": "Technicals",
+      "divergence": "Divergence",
+      "div": "Div",
+      "keyStats": "Key stats",
+      "tradingVolume24h": "Trading volume 24h",
+      "overview": "Overview",
+      "circulatingSupply": "Circulating supply",
+      "about": "About",
+      "noLink": "No link",
+      "agentTake": "Agent Ready",
+      "agentThinking": "Reading the chart…",
+      "agentUnavailable": "Couldn't get a take — try again later",
+      "stats": "Stats",
+      "low": "Low",
+      "high": "High",
+      "volUsd": "Vol (USD)",
+      "volCoin": "Vol ({{coin}})",
+      "style": "Style",
+      "allTimeHigh": "All time high",
+      "totalSupply": "Total supply",
+      "openInterest": "Open interest",
+      "marketCap": "Market capitalization",
+      "fdv": "Fully diluted market cap",
+      "category": "Category",
+      "bid": "Bid",
+      "ask": "Ask",
+      "signal": "Signal",
+      "toolbox": "Drawing tools",
+      "upgrade": "Upgrade",
+      "vol24h": "24hr vol",
+      "lastUpdated": "Updated",
+      "astroTitle": "Astro Suggestions",
+      "website": "Website",
+      "sourceCode": "Source Code",
+      "explorers": "Explorers",
+      "whitepaper": "Whitepaper",
+      "community": "Community",
+      "signalZoneDivSentence": "{{signal}} signal in a {{zone}}, with a {{div}} divergence.",
+      "signalZoneSentence": "{{signal}} signal in a {{zone}}.",
+      "zoneDivSentence": "In a {{zone}}, with a {{div}} divergence.",
+      "signalDivSentence": "{{signal}} signal with a {{div}} divergence.",
+      "zoneSentence": "In a {{zone}}.",
+      "signalSentence": "{{signal}} signal.",
+      "divergenceSentence": "{{div}} divergence detected."
+    },
+    "pill": {
+      "trialEnded": "Your <b>ProVision</b> trial ended",
+      "renew": "Renew",
+      "lockedOn": "<b>ProVision</b> locked on {{coin}}",
+      "unlock": "Unlock",
+      "analyze": "Analyze this chart with <b>ProVision</b>"
+    },
+    "dismiss": "Dismiss",
+    "under1m": "under 1m",
+    "vol": {
+      "label": "Volume",
+      "buyersPct": "Buyers {{pct}}%",
+      "sellersPct": "Sellers {{pct}}%",
+      "detailReal": "Real market buys vs market sells over the last 20 candles: buy {{buy}}, sell {{sell}}. 55%+ on one side counts as bullish or bearish.",
+      "detailEst": "Estimated buying vs selling (from candle colour) over the last 20 candles: buy {{buy}}, sell {{sell}}. 55%+ on one side counts as bullish or bearish."
+    },
+    "notice": {
+      "eventNow": "{{name}} now — signals paused",
+      "eventIn": "{{name}} in {{time}} — expect volatility",
+      "sideways": "Sideways market — no clear trend",
+      "signalsFrom": "Signals from the {{src}} chart",
+      "shortTf": "Short timeframe — noisy",
+      "thin": "Thin market — moves can be erratic"
+    },
+    "ts": {
+      "paperTrade": "Paper trade {{coin}}",
+      "paperTradeSub": "Practice with $100k virtual cash, zero risk",
+      "indicatorsOn": "{{n}} on · {{list}}",
+      "noneOn": "None on",
+      "aiSub": "Trend bias + candlestick pattern",
+      "depth": "Depth profile",
+      "depthSub": "Order book depth beside the price axis",
+      "gridSub": "Background grid lines on the chart",
+      "reset": "Reset chart",
+      "resetSub": "Back to the default zoom and settings",
+      "predictSub": "Simple live price line, no indicators",
+      "drawSub": "Trend lines, Fibonacci, zones, brush & more",
+      "saveImage": "Save image",
+      "saveSub": "Screenshot of the current chart",
+      "fullscreenSub": "Expand the chart to the whole screen",
+      "dateRangeSub": "Preset span or a custom range",
+      "default": "Default",
+      "priceScale": "Price scale",
+      "priceScaleSub": "Percent, log, auto-fit",
+      "auto": "auto",
+      "priceAlert": "Price alert",
+      "priceAlertSub": "Get notified when {{coin}} hits a price",
+      "exitFsSub": "Back to the Trade page"
+    },
+    "changeCoin": "Change coin",
+    "allStats": "All stats",
+    "vol24h": "24h Vol",
+    "coinPrice": "{{name}} price",
+    "share": "Share",
+    "shareTitle": "{{name}} ({{coin}}) price chart",
+    "loadingPrice": "Loading price",
+    "tradeCoin": "Trade {{coin}}",
+    "pvToggleOn": "ProVision on — click to go back to the normal chart",
+    "pvToggleOff": "ProVision: trend candles, buy/sell signals and a live signal check",
+    "metric": {
+      "label": "Metric",
+      "price": "Price",
+      "mcap": "Market cap"
+    },
+    "tabs": {
+      "chart": "Chart",
+      "orderbook": "Order Book",
+      "trades": "Trades"
+    },
+    "ohlc": {
+      "o": "O",
+      "h": "H",
+      "l": "L",
+      "c": "C"
+    },
+    "switchCoin": "Switch coin",
+    "tvTitle": "{{name}} / U.S. Dollar · {{iv}} · CRYPTO",
+    "vsUsd": "{{name}} / U.S. Dollar",
+    "sellCaps": "SELL",
+    "buyCaps": "BUY",
+    "menu": "Menu",
+    "advMenu": {
+      "pvOn": "ProVision: On",
+      "pvOff": "ProVision: Off",
+      "reset": "Reset Chart",
+      "close": "Close"
+    },
+    "switchTo": "Switch to {{symbol}}",
+    "moreCoins": "More coins",
+    "resetView": "Reset chart view",
+    "fsHint": "Some features only work in full screen",
+    "pvbar": {
+      "lockedOn": "ProVision is locked on {{coin}}",
+      "trialEnded": "Your ProVision trial has ended",
+      "tryFree": "Try ProVision free for 3 days",
+      "usedCoins": "You've used today's {{n}} coins. Go unlimited.",
+      "notIncluded": "Your account doesn't include ProVision right now.",
+      "usedCoinsList": "You've used today's {{n}} coins ({{list}}). Go unlimited.",
+      "start": "Start",
+      "keepFor": "Keep every coin and timeframe for {{price}}/year.",
+      "noCard": "Every coin and timeframe. No card needed.",
+      "try": "Try ProVision",
+      "unlock": "Unlock ProVision"
+    },
+    "dateRange": "Date range",
+    "exitFullscreen": "Exit fullscreen",
+    "marketData": "Market data",
+    "unlockStatus": "Unlock Status",
+    "unlockDivergence": "Unlock Divergence",
+    "coinChart": "{{coin}} chart",
+    "more": "More",
+    "aiChartRead": "AI Chart Read",
+    "aiRead": "AI Read",
+    "hideDepth": "Hide depth profile",
+    "showDepth": "Show depth profile",
+    "depth": "Depth",
+    "tools": "Tools",
+    "chartStyle": "Chart style",
+    "chartStyleIs": "Chart style: {{style}}",
+    "style": {
+      "candle": "Candle",
+      "hollow": "Hollow Candle",
+      "line": "Line",
+      "heikinAshi": "Heikin Ashi"
+    },
+    "allIndicators": "All indicators",
+    "allIndicatorsOn": "All indicators · {{n}} on",
+    "hideGrid": "Hide grid",
+    "showGrid": "Show grid",
+    "grid": "Grid",
+    "age": {
+      "new": "New",
+      "years": "{{n}}Y old",
+      "months": "{{n}}M old"
+    },
+    "ivDesc": {
+      "1sec": "Last 30 minutes",
+      "1min": "Last 6 hours",
+      "5min": "Last 24 hours",
+      "15min": "Last 48 hours",
+      "1h": "About 7 days",
+      "4h": "About 4 weeks",
+      "6h": "About 15 days",
+      "1day": "Last 90 days",
+      "1week": "Last 52 weeks",
+      "1month": "Last 24 months",
+      "all": "Full history"
+    },
+    "askAgentPrompt":"Can you analyze this {{coin}} chart?",
+    "ind": {
+      "fib": "Fibonacci Levels",
+      "sr": "Support / Resistance",
+      "dayhl": "24H High/Low",
+      "zones": "Buy/Sell Zones",
+      "desc": {
+        "bb": "20-period average with ±2 standard-deviation bands — squeezes and breakouts.",
+        "ema20": "Fast exponential average — short-term trend and pullback support.",
+        "ema50": "Medium-term exponential average — the trend most swing traders watch.",
+        "ema200": "Long-term exponential average — bull vs bear market line.",
+        "ma20": "Simple 20-period average of closes.",
+        "ma50": "Simple 50-period average — medium-term trend.",
+        "ma200": "Simple 200-period average — the classic long-term trend line.",
+        "cme": "Price gaps left on CME Bitcoin futures over weekends — often get filled.",
+        "fib": "Fibonacci retracement levels from the recent swing high and low.",
+        "sr": "Key support and resistance levels detected from price history.",
+        "dayhl": "Today's 24-hour high and low as lines on the chart.",
+        "zones": "Highlighted areas where buyers or sellers have stepped in before.",
+        "rsi": "Relative Strength Index in its own panel — over 70 overbought, under 30 oversold.",
+        "macd": "MACD line, signal and histogram in their own panel."
+      }
+    },
+    "placeholder": {
+      "bannerTitle": "Analyzing price action…",
+      "bannerBody": "Crunching recent candles to size up momentum and trend strength.",
+      "patternName": "Scanning for patterns…",
+      "patternSummary": "Looking at recent candles for a recognizable setup.",
+      "patternNarrative": "Running the same pattern checks we always do — give it a moment.",
+      "patternNext": "Hang tight, real analysis is on its way."
+    },
+    "ivLabel": {
+      "1sec": "1s (last 30 min)",
+      "1min": "1m (last 6 hours)",
+      "5min": "5m (last 24 hours)",
+      "15min": "15m (last 48 hours)",
+      "1h": "1H (~7 days)",
+      "4h": "4H (~4 weeks)",
+      "6h": "6H (~15 days)",
+      "1day": "24H (90 days)",
+      "1week": "1W (52 weeks)",
+      "1month": "1M (24 months)",
+      "all": "ALL (full history)"
+    },
+    "banner": {
+      "noData": {
+        "title": "Not enough data",
+        "body": "Insufficient candle history to analyse this interval."
+      },
+      "upperBand": {
+        "title": "Pushing the Upper Band on {{iv}}",
+        "body": "Price is up {{pct}}% and pressing against the upper Bollinger Band. Momentum is strong, but the market may be overextended — a short-term cooldown or sideways consolidation is common before the next leg higher."
+      },
+      "lowerBand": {
+        "title": "Testing the Lower Band on {{iv}}",
+        "body": "Price has fallen {{absPct}}% and is compressing near the lower Bollinger Band. Sellers have been dominant, but this zone often attracts buyers — watch for a relief bounce or a confirmed breakdown below support."
+      },
+      "strongBuying": {
+        "title": "Strong Buying Pressure on {{iv}}",
+        "body": "{{green}} of the last 5 candles closed green with price up {{pct}}% overall. Buyers are clearly in control. The trend could extend, but watch for a pullback to the mid-band as profit-taking kicks in."
+      },
+      "sustainedSelling": {
+        "title": "Sustained Selling on {{iv}}",
+        "body": "{{red}} of the last 5 candles closed red with price down {{absPct}}% overall. Sellers are dominating. A short-term oversold bounce is possible, but the path of least resistance remains lower until buyers reclaim momentum."
+      },
+      "consolidation": {
+        "title": "Tight Consolidation on {{iv}}",
+        "body": "Price has moved just {{pct}}% over this window and is coiling near the middle band. The market is in indecision — a directional breakout is building. Watch volume and the next 2–3 candles for a clue."
+      },
+      "upwardBias": {
+        "title": "Upward Bias on {{iv}}",
+        "body": "Price is up {{pct}}% with {{green}} of the last 5 candles green. The trend leans bullish but lacks explosive momentum — likely a steady grind higher unless macro sentiment shifts."
+      },
+      "downwardBias": {
+        "title": "Downward Bias on {{iv}}",
+        "body": "Price is down {{absPct}}% with {{red}} of the last 5 candles red. Bearish pressure is present but not extreme — watch for stabilisation near the lower band or a key support level before calling a reversal."
+      }
+    },
+    "counterTrendBearish": "Counter-trend signal — the overall move is still bearish. {{next}} Wait for the dominant trend to shift before treating this as a primary long entry.",
+    "counterTrendBullish": "Counter-trend signal — the overall move is still bullish. {{next}} Treat this as a caution flag rather than a primary short signal.",
+    "patterns": {
+      "threeWhiteSoldiers": {
+        "name": "Three White Soldiers",
+        "summary": "Three consecutive bullish candles, each closing higher with strong bodies.",
+        "narrative": "Market makers are in full accumulation mode — they are buying every dip and not allowing sellers any foothold. Each candle opens near the prior close and extends gains without meaningful pullback, signalling institutional conviction.",
+        "nextMove": "Momentum strongly favours continuation higher. Look for a break above the current high as confirmation. A pullback to the middle candle's body is a potential re-entry zone before the next leg up."
+      },
+      "threeBlackCrows": {
+        "name": "Three Black Crows",
+        "summary": "Three consecutive bearish candles, each closing lower with strong bodies.",
+        "narrative": "Institutional sellers are systematically distributing. Every relief bounce is being sold — market makers are preventing any meaningful recovery, suggesting they are positioned short or offloading large inventory onto retail buyers.",
+        "nextMove": "Expect further downside. Each bounce toward the previous candle's open is a potential short entry. The move is likely over-extended short-term, so watch for a brief relief bounce before the next leg lower."
+      },
+      "morningStar": {
+        "name": "Morning Star",
+        "summary": "Three-candle bottom reversal: large red → small indecisive → large green.",
+        "narrative": "Market makers engineered a classic stop-hunt then reversed. The large red candle shook out weak longs, the small middle candle shows sellers losing conviction at the lows, and the strong green candle confirms institutions stepped in and absorbed all the supply.",
+        "nextMove": "Bullish bias. A close above the morning star high is the trigger for long entries. The prior swing low from the red candle now acts as key support — if price revisits and holds, that is the higher-probability entry with tight risk."
+      },
+      "eveningStar": {
+        "name": "Evening Star",
+        "summary": "Three-candle top reversal: large green → small indecisive → large red.",
+        "narrative": "Market makers distributed inventory at the highs. The bullish candle lured in retail buyers, the small middle candle revealed buyer exhaustion, and the bearish candle confirms institutions unloaded onto the crowd. Retail longs are now trapped.",
+        "nextMove": "Bearish bias. A break below the evening star low is the trigger for short entries. The prior swing high from the green candle now acts as resistance — any failed rally back into that level is a distribution signal."
+      },
+      "bullishEngulfing": {
+        "name": "Bullish Engulfing",
+        "summary": "Large green candle completely engulfs the prior red candle's body.",
+        "narrative": "Institutional buyers stepped in with force. The green candle consuming the entire prior red signals market makers absorbed all seller supply and then pushed price beyond the open. Traders who sold the previous candle are now trapped short.",
+        "nextMove": "Bullish. Their stop-losses sit above the engulfing candle's high — when hit, they add fuel to the rally. Target the next resistance zone or prior swing high. Hold long as long as price stays above the midpoint of the engulfing candle."
+      },
+      "bearishEngulfing": {
+        "name": "Bearish Engulfing",
+        "summary": "Large red candle completely engulfs the prior green candle's body.",
+        "narrative": "Institutional sellers appeared suddenly and overwhelmed buyers. The red candle consuming the entire prior green signals market makers distributed inventory to retail buyers who chased the move up. Those buyers are now underwater.",
+        "nextMove": "Bearish. Their stop-losses below the engulfing candle's low will accelerate the drop when triggered. Target the next support zone or prior swing low. Avoid longs until price reclaims the midpoint of the engulfing candle."
+      },
+      "piercingLine": {
+        "name": "Piercing Line",
+        "summary": "Green candle opens below the red low but closes above the red midpoint.",
+        "narrative": "Market makers swept below support to trigger stop-losses — a classic liquidity grab — then reversed sharply as institutions absorbed the flush. Every seller who chased the breakdown is now losing money.",
+        "nextMove": "Bullish. The next likely move is back toward the top of the red candle. If price holds above the piercing candle's midpoint on any pullback, the reversal is intact. A break above the red candle's open confirms the pattern."
+      },
+      "darkCloudCover": {
+        "name": "Dark Cloud Cover",
+        "summary": "Red candle opens above the green high but closes below the green midpoint.",
+        "narrative": "Market makers used the gap higher to offload supply onto retail buyers chasing the breakout. The rejection deep into the prior green candle's body shows institutions sold aggressively into strength — a textbook distribution move.",
+        "nextMove": "Bearish. The next likely move is back toward the bottom of the green candle. If price fails to reclaim the dark cloud candle's open on a bounce, the distribution is confirmed. A break below the green candle's low opens up further downside."
+      },
+      "bullishHarami": {
+        "name": "Bullish Harami",
+        "summary": "Small green candle completely inside the prior large red candle's body.",
+        "narrative": "Selling momentum is stalling — the bears can no longer push price lower. Market makers may be quietly absorbing supply within the prior red candle's range, building a base without drawing attention.",
+        "nextMove": "Watch for the breakout direction. A close above the harami high (prior red candle's open) signals buyers are taking over. A close below the harami low (prior red candle's close) means the trend continues — wait for one of these confirmations before acting."
+      },
+      "bearishHarami": {
+        "name": "Bearish Harami",
+        "summary": "Small red candle completely inside the prior large green candle's body.",
+        "narrative": "Buying momentum is losing steam — bulls can no longer extend the move. Market makers may be quietly distributing into strength within the prior green candle's range, without triggering a panic that would close their positions at worse prices.",
+        "nextMove": "Watch for the breakout direction. A close below the harami low (prior green candle's open) signals sellers are taking control. A close above the harami high (prior green candle's close) means the trend resumes — wait for confirmation."
+      },
+      "gravestoneDoji": {
+        "name": "Gravestone Doji",
+        "summary": "Price rallied strongly then fell back to the open — buyers rejected at the top.",
+        "narrative": "Market makers drove price higher to collect buy-stop liquidity from breakout traders, then aggressively sold into the move. The long upper wick is a clear supply rejection — institutions used retail FOMO as exit liquidity.",
+        "nextMove": "Bearish bias. A close below the gravestone's low on the next candle is a strong sell signal. The high of this candle is now a key resistance level — failed re-tests of that high are short opportunities."
+      },
+      "dragonflyDoji": {
+        "name": "Dragonfly Doji",
+        "summary": "Price fell sharply but buyers fully reclaimed the open — sellers rejected at the bottom.",
+        "narrative": "Market makers swept below support to hunt stop-losses and collect cheap inventory, then immediately reversed. The long lower wick shows every unit of selling was absorbed by institutional buyers — a classic stop-hunt accumulation move.",
+        "nextMove": "Bullish bias. A close above the dragonfly's high on the next candle is a strong buy signal. The low of this candle now acts as key support — a hold above that level on any pullback is a long entry with tight risk."
+      },
+      "doji": {
+        "name": "Doji",
+        "summary": "Open and close are virtually equal — market is in perfect equilibrium.",
+        "narrative": "Neither buyers nor sellers have the upper hand. Market makers are absorbing orders on both sides without committing to a direction yet. This standoff typically precedes a sharp move once one side capitulates.",
+        "nextMove": "Wait for the breakout. A close above the doji high is a bullish trigger; below the doji low is bearish. The larger the next candle's body in either direction, the more conviction behind the move — volume confirms."
+      },
+      "bullishMarubozu": {
+        "name": "Bullish Marubozu",
+        "summary": "No wicks — buyers controlled the entire candle with zero hesitation.",
+        "narrative": "Pure institutional buying pressure. Market makers opened and drove price higher without allowing any meaningful pullback — there were simply no sellers willing to step in. This one-sided aggression signals strong demand at this price level.",
+        "nextMove": "Strongly bullish. The open of this candle now acts as major support — a pullback to that level is a high-probability long entry. Expect continuation toward the next major resistance level, with minimal consolidation."
+      },
+      "bearishMarubozu": {
+        "name": "Bearish Marubozu",
+        "summary": "No wicks — sellers controlled the entire candle with zero hesitation.",
+        "narrative": "Pure institutional selling pressure. Market makers drove price lower from open to close without pause — buyers had no meaningful window to fight back. This relentless aggression signals strong supply at this price level.",
+        "nextMove": "Strongly bearish. The open of this candle now acts as major resistance — a bounce to that level is a high-probability short entry. Expect continuation toward the next major support level."
+      },
+      "hammer": {
+        "name": "Hammer",
+        "summary": "Long lower wick shows sellers failed — buyers absorbed every unit of supply.",
+        "narrative": "Market makers engineered a stop-loss sweep below support. The long wick reveals that sellers pushed hard but institutions absorbed it all and reclaimed the open. This shakeout move removes weak hands before a reversal.",
+        "nextMove": "Bullish if the next candle closes above the hammer's high. The low of the wick is now critical support — that level represents where institutions chose to buy. A re-test and hold of that zone is a high-probability entry."
+      },
+      "hangingMan": {
+        "name": "Hanging Man",
+        "summary": "Hammer shape after an uptrend — sellers are beginning to push back.",
+        "narrative": "Despite the visual recovery, this is a distribution warning at the top. Market makers allowed price to dip sharply, revealing that sellers are becoming active at these elevated levels. The recovery masks underlying selling pressure building.",
+        "nextMove": "Bearish if the next candle closes below the hanging man's low. The high of this candle is now resistance — watch for a failed re-test of that level, which would confirm distribution is underway."
+      },
+      "shootingStar": {
+        "name": "Shooting Star",
+        "summary": "Long upper wick shows buyers failed — sellers absorbed every rally attempt.",
+        "narrative": "Market makers used the spike higher to offload inventory onto retail traders chasing the breakout. The long wick is evidence of institutional selling into strength — every buyer at the top is immediately losing money.",
+        "nextMove": "Bearish if the next candle closes below the shooting star's low. The high of the wick is now strong resistance — short entries on a failed re-test of that level offer a favourable risk/reward setup."
+      },
+      "invertedHammer": {
+        "name": "Inverted Hammer",
+        "summary": "Long upper wick after a downtrend — buyers tested higher ground from the lows.",
+        "narrative": "Market makers may be testing resistance from below. Buyers pushed price up significantly before sellers regained control, signalling weakening seller dominance. This is a first sign of demand emerging after a decline.",
+        "nextMove": "Bullish if the next candle closes above the inverted hammer's high — that confirms buyers are taking control. Wait for that confirmation candle before acting; without it, the pattern has no follow-through."
+      },
+      "insideBar": {
+        "name": "Inside Bar (Consolidation)",
+        "summary": "Current candle is fully within the prior candle's range — coiling for a breakout.",
+        "narrative": "Market makers are absorbing orders quietly within a tight range, building energy for a directional move. This compression pattern is favoured by institutions before they commit to a trend — it keeps retail guessing while they position.",
+        "nextMove": "The break above the prior candle's high is bullish; below the prior low is bearish. The larger the breakout candle's body relative to the inside bar, the stronger the conviction. Trade the breakout, not the inside bar itself."
+      },
+      "sustainedBullish": {
+        "name": "Sustained Bullish Momentum",
+        "summary": "Five consecutive green candles — buyers have dominated without pause.",
+        "narrative": "Institutions are systematically accumulating. Every potential pullback is being bought immediately — market makers are not allowing sellers any traction, signalling they want price higher before retail fully participates.",
+        "nextMove": "Momentum favours continuation, but 5 straight green candles often lead to a short-term pause or minor pullback. Wait for a 1-2 candle consolidation and a close back above the prior high for the next entry. The first red candle is not a reversal — it is a reset."
+      },
+      "sustainedBearish": {
+        "name": "Sustained Bearish Momentum",
+        "summary": "Five consecutive red candles — sellers have dominated without pause.",
+        "narrative": "Institutions are systematically distributing. Every attempted bounce is being sold — market makers are preventing any meaningful recovery, signalling they are positioned short or unloading inventory progressively.",
+        "nextMove": "Momentum favours continuation lower, but 5 straight red candles often produce a short-term bounce. Shorts should manage risk and trail stops. The first green candle is not a reversal — it is a breather before the next leg down."
+      },
+      "noPatternBullish": {
+        "name": "No Named Pattern — Trend Intact",
+        "summary": "No classic candlestick formation in the last few candles, but the broader trend remains bullish.",
+        "narrative": "There's no textbook three-candle setup right now, but price structure still favors buyers overall. No named pattern doesn't mean no direction — the underlying trend is doing the talking here.",
+        "nextMove": "Stay aligned with the trend rather than waiting for a specific pattern to appear. A pullback to support is a reasonable area to watch for continuation."
+      },
+      "noPatternBearish": {
+        "name": "No Named Pattern — Trend Intact",
+        "summary": "No classic candlestick formation in the last few candles, but the broader trend remains bearish.",
+        "narrative": "There's no textbook three-candle setup right now, but price structure still favors sellers overall. No named pattern doesn't mean no direction — the underlying trend is doing the talking here.",
+        "nextMove": "Stay aligned with the trend rather than waiting for a specific pattern to appear. A bounce into resistance is a reasonable area to watch for continuation lower."
+      },
+      "noClearPattern": {
+        "name": "No Clear Pattern",
+        "summary": "No classic candlestick formation detected, and the broader trend is flat right now.",
+        "narrative": "Price action lacks both a textbook pattern and a clear directional bias at the moment — this usually means the market is consolidating before its next real move.",
+        "nextMove": "Wait for either a recognizable pattern or a decisive break from this range before leaning into a direction."
+      }
+    },
+    "canvas": {
+      "bullDiv": "Bull Div",
+      "bearDiv": "Bear Div"
+    }
+  }
+}

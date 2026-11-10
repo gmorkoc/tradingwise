@@ -1,0 +1,13 @@
+{
+  "pvOverlay": {
+    "invalidation": "INVALIDAZIONE",
+    "deltaVolume": "Δ Volume",
+    "est": "(stima)",
+    "rangeCeiling": "SOFFITTO DEL RANGE",
+    "rangeFloor": "PAVIMENTO DEL RANGE",
+    "strongBuy": "ACQUISTO FORTE",
+    "strongSell": "VENDITA FORTE",
+    "buy": "Acquista",
+    "sell": "Vendi"
+  }
+}

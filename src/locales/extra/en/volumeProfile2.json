@@ -1,0 +1,7 @@
+{
+  "volumeProfile2": {
+    "vahTip": "Value Area High — upper boundary of the 70% volume zone",
+    "pocTip": "Point of Control — price level with the highest traded volume",
+    "valTip": "Value Area Low — lower boundary of the 70% volume zone"
+  }
+}

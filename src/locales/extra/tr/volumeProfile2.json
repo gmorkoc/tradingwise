@@ -1,0 +1,7 @@
+{
+  "volumeProfile2": {
+    "vahTip": "Value Area High — hacmin %70'inin bulunduğu bölgenin üst sınırı",
+    "pocTip": "Point of Control — en yüksek işlem hacmine sahip fiyat seviyesi",
+    "valTip": "Value Area Low — hacmin %70'inin bulunduğu bölgenin alt sınırı"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "tradeManager2": {
+    "aiReviewFailed": "Yapay zekâ incelemesi başarısız oldu",
+    "noResponse": "Yanıt yok",
+    "aiTipFailed": "Yapay zekâ ipucu alınamadı — tekrar dene",
+    "eg": "örn. {{value}}",
+    "price": "Fiyat"
+  }
+}

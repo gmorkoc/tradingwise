@@ -1,0 +1,666 @@
+{
+  "priceChart": {
+    "rangeInCandles": "{{iv}} mumlarla {{range}}",
+    "goTo": {
+      "notLoaded": "Grafik verileri henüz yüklenmedi.",
+      "tooOldLong": "Bu aralık yalnızca {{date}} tarihine kadar gidiyor. Daha geç bir tarih seçin ya da daha geriye gitmek için daha büyük bir aralığa (ör. 1D veya 1W) geçin.",
+      "tooOld": "Bu aralık yalnızca {{date}} tarihine kadar gidiyor."
+    },
+    "trial": {
+      "days_one": "{{count}} gün",
+      "days_other": "{{count}} gün",
+      "underHour": "bir saatten az",
+      "bannerLong": "ProVision ücretsiz deneme · {{left}} kaldı",
+      "bannerShort": "Ücretsiz deneme · {{left}} kaldı",
+      "everyCoinPrice": "Tüm coinler ve zaman dilimleri · {{price}}/yıl",
+      "thenPrice": "sonra {{price}}/yıl",
+      "keepIt": "Devam et",
+      "enjoyingPv": "ProVision'ı beğendin mi?",
+      "enjoyingIt": "Beğendin mi?",
+      "keepItArrow": "Devam et ›",
+      "left": "{{left}} kaldı",
+      "leftThen": "{{left}} kaldı · sonra {{price}}/yıl"
+    },
+    "pvErr": {
+      "notEnough": "Bu aralıkta ProVision için yeterli mum yok",
+      "signinExpired": "Oturumunuzun süresi doldu — lütfen tekrar giriş yapın",
+      "reconnecting": "Yeniden bağlanıyor…",
+      "tooMany": "Çok fazla istek — yeniden deneniyor",
+      "server": "Sunucu hatası {{status}} — yeniden deneniyor",
+      "unreachable": "ProVision'a ulaşılamadı — yeniden deneniyor"
+    },
+    "zone": {
+      "tooSmall": "Daha büyük bir alan çizin — bölgede en az 2 mum olmalı.",
+      "limit": "Günlük YZ analiz sınırına ulaşıldı.",
+      "failed": "Bölge analiz edilemedi",
+      "drag": "Grafik üzerinde sürükleyin",
+      "cancel": "Vazgeç",
+      "explainTip": "Grafikte serbest bir alan çizin ve YZ ile açıklamasını alın",
+      "explain": "Bölgeyi açıkla",
+      "clearTip": "Çizilen bölgeyi temizle",
+      "clear": "Bölgeyi temizle"
+    },
+    "promo": {
+      "preview": "ProVision önizlemesi",
+      "strongBuy": "GÜÇLÜ AL",
+      "sell": "Sat",
+      "buy": "Al",
+      "ghostSub": "Gerçek grafikte gör · 3 gün ücretsiz · kart gerekmez",
+      "notNow": "Şimdi değil",
+      "freeTrial": "ProVision ücretsiz deneme",
+      "floatSub": "Pro sinyaller · 3 gün ücretsiz · kart gerekmez",
+      "mobileSub": "3 gün ücretsiz · kart gerekmez",
+      "tryFree": "Ücretsiz dene"
+    },
+    "intro": {
+      "preparing": "ProVision hazırlanıyor",
+      "s1": "Trend taranıyor",
+      "s2": "Momentum okunuyor",
+      "s3": "Emir akışı kontrol ediliyor",
+      "s4": "Zaman dilimleri hizalanıyor",
+      "s5": "Sinyaller ayarlanıyor"
+    },
+    "strength": {
+      "aria": "Trend gücü: yükseliş {{pct}}%",
+      "bull": "Yükseliş %{{pct}}",
+      "bear": "Düşüş %{{pct}}",
+      "sideways": "Yatay",
+      "spike": "Ani hareket",
+      "eventPaused": "{{name}} · duraklatıldı",
+      "eventIn": "{{name}}: {{time}} sonra",
+      "thin": "Düşük likidite · sinyaller kapalı",
+      "signals": "Sinyaller: {{src}}"
+    },
+    "live": "CANLI",
+    "pv": {
+      "ringAria": "Signal Check {{score}}. Ayrıntıları aç",
+      "verdictAgree": "{{word}} · {{total}} göstergeden {{agree}} tanesi aynı yönde",
+      "ringSub": "ProVision Signal Check · ayrıntılar için dokunun",
+      "minimise": "Alt çubuğa küçült",
+      "title": "ProVision Signal Check",
+      "meterTip": "Yükseliş gücü {{n}}/100 — {{state}}",
+      "buyersControl": "kontrol alıcılarda",
+      "sellersControl": "kontrol satıcılarda",
+      "balanced": "dengeli, net bir taraf yok",
+      "even": "başa baş",
+      "mini": "İsabet %{{rate}} · {{total}} sinyal",
+      "pill": "{{word}} · {{agree}}/{{total}}",
+      "live": "canlı",
+      "howTo": "ProVision nasıl kullanılır",
+      "alertSource": "<s>Sinyaller {{src}} grafiğinden.</s> Bu kısa grafikteki hareketler komisyonları karşılamaya yetmeyecek kadar küçük; bu yüzden AL/SAT, bölge, Signal Check ve geçmiş performans {{src}} grafiğinden gelir — bu grafiği girişini zamanlamak için kullan.",
+      "alertShort": "<s>Kısa zaman dilimleri gürültülüdür.</s> Buradaki hareketler komisyonları karşılamaya yetmez — sinyaller için 15m ve üzerini kullan.",
+      "eventLive": "<s>{{name}} şimdi ({{title}}, {{at}}).</s> Büyük ve hızlı hareketler olası — sinyaller {{resume}} saatine kadar duraklatıldı.",
+      "eventSoon": "<s>{{name}}: {{time}} sonra</s> ({{title}}, {{at}}). Çevresinde volatilite bekleyin — sinyaller 30 dk önceden 1 saat sonrasına kadar duraklar.",
+      "forecast": "Beklenti {{f}}.",
+      "forecastPrev": "Beklenti {{f}}, önceki {{p}}.",
+      "alertThin": "<s>Sinyaller kapalı — düşük likidite.</s> Son 24 saatte yalnızca yaklaşık ${{vol}}M işlem gördü; güvenilir sinyaller için çok az. Trend renkleri ve aşağıdaki kontroller güncellenmeye devam eder.",
+      "alertSpikeUp_one": "<s>Ani yükseliş</s> — genellikle haber kaynaklı. Ters yöndeki sinyaller {{count}} mum daha duraklatıldı; geniş salınımlar bekleyin.",
+      "alertSpikeUp_other": "<s>Ani yükseliş</s> — genellikle haber kaynaklı. Ters yöndeki sinyaller {{count}} mum daha duraklatıldı; geniş salınımlar bekleyin.",
+      "alertSpikeDown_one": "<s>Ani düşüş</s> — genellikle haber kaynaklı. Ters yöndeki sinyaller {{count}} mum daha duraklatıldı; geniş salınımlar bekleyin.",
+      "alertSpikeDown_other": "<s>Ani düşüş</s> — genellikle haber kaynaklı. Ters yöndeki sinyaller {{count}} mum daha duraklatıldı; geniş salınımlar bekleyin.",
+      "alertRange": "<s>Yatay piyasa</s> — net bir trend yok (Choppiness {{chop}}, ADX {{adx}}).",
+      "rangeBox": "Aralık {{lo}} – {{hi}}.",
+      "rangeModeOn": "Aralık modu açık: fiyat kırılana kadar tabana yakın R·BUY, tavana yakın R·SELL.",
+      "rangeWatch": "Aralığın dışında bir kapanış bekleyin — aralık sinyalleri 1h ve üzerinde çalışır.",
+      "stochastic": "Stokastik",
+      "bullishLc": "yükseliş",
+      "bearishLc": "düşüş",
+      "mixedLc": "karışık",
+      "holdingOut": "{{list}} henüz katılmıyor",
+      "connecting": "bağlanıyor…",
+      "flowCap": "Emir akışı · son 20 mum",
+      "flowTipReal": "Gerçek piyasa alış ve satış hacmi, son 20 mum",
+      "flowTipEst": "Mum renklerinden tahmin, son 20 mum",
+      "timeframes": "Zaman dilimleri",
+      "nOfBullish": "{{total}} içinden {{n}} yükseliş",
+      "nOfBearish": "{{total}} içinden {{n}} düşüş",
+      "sheetTitle": "{{name}} · Signal Check",
+      "rowDesc": {
+        "0": "Fiyat ve 20 ile 200 ortalamaları",
+        "1": "Kim, ne kadar güçlü itiyor",
+        "2": "Fiyat ve bulut",
+        "3": "Momentum, son 14 mum",
+        "4": "Fiyatın kendi aralığındaki konumu",
+        "5": "Momentum değişimi",
+        "6": "Piyasa alışları ve satışları"
+      }
+    },
+    "stats": {
+      "title": "{{coin}} istatistikleri",
+      "change": "{{iv}} değişim",
+      "high": "{{iv}} en yüksek",
+      "low": "{{iv}} en düşük"
+    },
+    "custom": "Özel",
+    "customSub": "Bir tarih ya da özel aralık seçin",
+    "ai": {
+      "f1": "Aralık duyarlılığı ve trend bağlamı",
+      "f2": "Mum formasyonu tanıma",
+      "f3": "Yükseliş / düşüş güven puanı",
+      "f4": "Sonraki hareket tahminleri ve görünüm",
+      "upgradeNow": "Hemen yükselt",
+      "ctaSub": "{{coin}} {{iv}} için trend eğilimi + mum formasyonu",
+      "analyze": "Analiz et",
+      "hide": "YZ Grafik Okumasını gizle",
+      "trend": "Trend",
+      "pattern": "Formasyon"
+    },
+    "km": {
+      "signalDetail": "Sinyal ayrıntısı",
+      "loading": "{{name}} sinyalleri yükleniyor",
+      "chanceBull": "yükseliş olasılığı",
+      "chanceBear": "düşüş olasılığı",
+      "toolsAgree": "{{total}} araçtan {{n}} tanesi aynı yönde",
+      "gaugeAria": "Yükseliş %{{bull}}, düşüş %{{bear}}",
+      "seeFull": "Tam analizi gör ›",
+      "fullAnalysis": "Tam analiz",
+      "analysis": "Analiz",
+      "pvSignal": "ProVision Sinyali",
+      "consensus": "Fikir birliği",
+      "partOfPv": "Signal Check, ProVision'ın bir parçasıdır: trend, 7 gösterge ve puanlanmış geçmiş performans.",
+      "tryPv": "ProVision'ı dene ›",
+      "turnOnPv": "ProVision'ı aç ›"
+    },
+    "tr": {
+      "title": "Geçmiş performans",
+      "src_one": "{{chart}} · {{count}} sinyal",
+      "src_other": "{{chart}} · {{count}} sinyal",
+      "srcChart": "{{src}} grafiği",
+      "thisChart": "bu grafik",
+      "paidOff": "Kârlı · işlem başına {{per}}",
+      "lostMoney": "Zararda · işlem başına {{per}}",
+      "hitRate": "İsabet oranı",
+      "wonLost": "Kazanılan / kaybedilen",
+      "nOpen": "{{n}} açık",
+      "avgWin": "Ort. kazanç",
+      "avgLoss": "Ort. kayıp",
+      "winLoss": "Kazanç : kayıp",
+      "winLossTip": "Ortalama kazanç büyüklüğü ve ortalama kayıp büyüklüğü",
+      "recentAria": "Son sinyaller ve sonuçları",
+      "lastN": "Son {{n}}",
+      "stillOpen": "hâlâ açık",
+      "open": "açık",
+      "howTitle": "Nasıl ölçülüyor",
+      "howShort": "Her sinyal kapanışından, geçersiz kılma çizgisinde stop ile işlenir; tipik bir mumluk hareketten sonra kâr alınır (veya 20 mum sonra çıkılır), %0,1 komisyon düşülür.",
+      "howLong": "Her sinyal kapanışından, geçersiz kılma çizgisinde stop ile işlenir; stop ardından en iyi fiyatın 3 tipik mum hareketi gerisinden takip eder — trend döndüğünde veya 60 mum sonra çıkılır, %0,1 komisyon düşülür. Daha az işlem kazanır ama kazananlar uzun koşar.",
+      "howRules": "Sinyaller için 7 kontrolden 5'inin aynı yönde olması ve büyük trendin uyması gerekir; gün içinde ayrıca ADX ≥ 20 ile 3 mum boyunca tutunmaları gerekir, yatay dönemler ve ⚡ ani hareketlere karşı işlemler atlanır, düşük likiditeli piyasalarda sinyal verilmez. Yalnızca bu grafikteki geçmiş sonuçlardır — garanti değildir.",
+      "rangeTitle": "Aralık sinyalleri (R·BUY / R·SELL)",
+      "perTrade": "İşlem başına",
+      "rangeNote": "Piyasa yataydayken: tabandan sekişte al, tavandan reddedilişte sat. Stop kutunun hemen dışında, hedef aralığın ortası, %0,1 komisyon."
+    },
+    "cns": {
+      "mixed": "Karışık",
+      "lean": {
+        "bull": "Yükseliş eğilimli",
+        "bear": "Düşüş eğilimli",
+        "neutral": "Karışık"
+      },
+      "reading": "Okunuyor…",
+      "turnOn": "Aç",
+      "signals": "Sinyaller",
+      "buySetup": "Alım kurulumu",
+      "sellSetup": "Satım kurulumu",
+      "noSetup": "Kurulum yok",
+      "bullPattern": "Yükseliş formasyonu",
+      "bearPattern": "Düşüş formasyonu",
+      "noPattern": "Net formasyon yok",
+      "tapToRun": "Çalıştırmak için dokunun",
+      "strongBuyZone": "Güçlü alım bölgesi",
+      "buyZone": "Alım bölgesi",
+      "sellZone": "Satım bölgesi",
+      "strongSellZone": "Güçlü satım bölgesi",
+      "events": "Olaylar",
+      "agent": "Ajan",
+      "askWhy": "Nedenini sor ›",
+      "agentPrompt": "coinhintz araçları şu anda {{tf}} grafiğinde {{coin}} hakkında ne diyor ve neden?"
+    },
+    "ago": {
+      "m": "{{n}} dk önce",
+      "h": "{{n}} sa önce",
+      "d": "{{n}} g önce"
+    },
+    "whatsNext": "{{name}} için sırada ne var?",
+    "seeEveryTool": "Tüm coinhintz araçlarının ne dediğine bakın",
+    "tapToSee": "Görmek için dokunun ›",
+    "savePng": "Grafiği PNG olarak kaydet",
+    "c": {
+      "selectInterval": "Aralık seç",
+      "interval": "Aralık",
+      "switchToFull": "Grafiğe dön",
+      "switchToCompact": "Tahmin",
+      "fullscreen": "Tam ekran",
+      "fullChart": "Tam grafik",
+      "bearish": "Düşüş",
+      "bullish": "Yükseliş",
+      "none": "Yok",
+      "technicals": "Teknik",
+      "divergence": "Uyumsuzluk",
+      "div": "Uyms.",
+      "keyStats": "Temel istatistikler",
+      "tradingVolume24h": "24s işlem hacmi",
+      "overview": "Genel bakış",
+      "circulatingSupply": "Dolaşımdaki arz",
+      "about": "Hakkında",
+      "noLink": "Bağlantı yok",
+      "agentTake": "Agent Ready",
+      "agentThinking": "Grafik okunuyor…",
+      "agentUnavailable": "Yorum alınamadı — daha sonra tekrar deneyin",
+      "stats": "İstatistikler",
+      "low": "En düşük",
+      "high": "En yüksek",
+      "volUsd": "Hacim (USD)",
+      "volCoin": "Hacim ({{coin}})",
+      "style": "Stil",
+      "allTimeHigh": "Tüm zamanların en yükseği",
+      "totalSupply": "Toplam arz",
+      "openInterest": "Açık pozisyon",
+      "marketCap": "Piyasa değeri",
+      "fdv": "Tamamen seyreltilmiş piyasa değeri",
+      "category": "Kategori",
+      "bid": "Alış",
+      "ask": "Satış",
+      "signal": "Sinyal",
+      "toolbox": "Çizim araçları",
+      "upgrade": "Yükselt",
+      "vol24h": "24s hacim",
+      "lastUpdated": "Güncellendi",
+      "astroTitle": "Astro önerileri",
+      "website": "Web sitesi",
+      "sourceCode": "Kaynak kodu",
+      "explorers": "Gezginler",
+      "whitepaper": "Whitepaper",
+      "community": "Topluluk",
+      "signalZoneDivSentence": "{{zone}} içinde {{signal}} sinyali, {{div}} uyumsuzluğuyla.",
+      "signalZoneSentence": "{{zone}} içinde {{signal}} sinyali.",
+      "zoneDivSentence": "{{zone}} içinde, {{div}} uyumsuzluğuyla.",
+      "signalDivSentence": "{{div}} uyumsuzluğuyla {{signal}} sinyali.",
+      "zoneSentence": "{{zone}} içinde.",
+      "signalSentence": "{{signal}} sinyali.",
+      "divergenceSentence": "{{div}} uyumsuzluğu tespit edildi."
+    },
+    "pill": {
+      "trialEnded": "<b>ProVision</b> denemeniz sona erdi",
+      "renew": "Yenile",
+      "lockedOn": "<b>ProVision</b> {{coin}} için kilitli",
+      "unlock": "Kilidi aç",
+      "analyze": "Bu grafiği <b>ProVision</b> ile analiz et"
+    },
+    "dismiss": "Kapat",
+    "under1m": "1 dk'dan az",
+    "vol": {
+      "label": "Hacim",
+      "buyersPct": "Alıcılar %{{pct}}",
+      "sellersPct": "Satıcılar %{{pct}}",
+      "detailReal": "Son 20 mumdaki gerçek piyasa alışları ve satışları: alış {{buy}}, satış {{sell}}. Bir tarafta %55 ve üzeri yükseliş veya düşüş sayılır.",
+      "detailEst": "Son 20 mumdaki tahmini alış ve satış (mum renklerinden): alış {{buy}}, satış {{sell}}. Bir tarafta %55 ve üzeri yükseliş veya düşüş sayılır."
+    },
+    "notice": {
+      "eventNow": "{{name}} şimdi — sinyaller duraklatıldı",
+      "eventIn": "{{name}}: {{time}} sonra — volatilite bekleyin",
+      "sideways": "Yatay piyasa — net bir trend yok",
+      "signalsFrom": "Sinyaller {{src}} grafiğinden",
+      "shortTf": "Kısa zaman dilimi — gürültülü",
+      "thin": "Düşük likidite — hareketler düzensiz olabilir"
+    },
+    "ts": {
+      "paperTrade": "{{coin}} sanal işlem",
+      "paperTradeSub": "100 bin $ sanal bakiyeyle sıfır riskle pratik yapın",
+      "indicatorsOn": "{{n}} açık · {{list}}",
+      "noneOn": "Hiçbiri açık değil",
+      "aiSub": "Trend eğilimi + mum formasyonu",
+      "depth": "Derinlik profili",
+      "depthSub": "Fiyat ekseninin yanında emir defteri derinliği",
+      "gridSub": "Grafikte arka plan ızgara çizgileri",
+      "reset": "Grafiği sıfırla",
+      "resetSub": "Varsayılan yakınlaştırma ve ayarlara dön",
+      "predictSub": "Basit canlı fiyat çizgisi, gösterge yok",
+      "drawSub": "Trend çizgileri, Fibonacci, bölgeler, fırça ve daha fazlası",
+      "saveImage": "Görüntüyü kaydet",
+      "saveSub": "Mevcut grafiğin ekran görüntüsü",
+      "fullscreenSub": "Grafiği tüm ekrana genişlet",
+      "dateRangeSub": "Hazır süre ya da özel aralık",
+      "default": "Varsayılan",
+      "priceScale": "Fiyat ölçeği",
+      "priceScaleSub": "Yüzde, log, otomatik sığdır",
+      "auto": "oto",
+      "priceAlert": "Fiyat alarmı",
+      "priceAlertSub": "{{coin}} bir fiyata ulaştığında bildirim alın",
+      "exitFsSub": "İşlem sayfasına dön"
+    },
+    "changeCoin": "Coin değiştir",
+    "allStats": "Tüm istatistikler",
+    "vol24h": "24s Hacim",
+    "coinPrice": "{{name}} fiyatı",
+    "share": "Paylaş",
+    "shareTitle": "{{name}} ({{coin}}) fiyat grafiği",
+    "loadingPrice": "Fiyat yükleniyor",
+    "tradeCoin": "{{coin}} işlem yap",
+    "pvToggleOn": "ProVision açık — normal grafiğe dönmek için tıklayın",
+    "pvToggleOff": "ProVision: trend mumları, al/sat sinyalleri ve canlı Signal Check",
+    "metric": {
+      "label": "Metrik",
+      "price": "Fiyat",
+      "mcap": "Piyasa değeri"
+    },
+    "tabs": {
+      "chart": "Grafik",
+      "orderbook": "Emir defteri",
+      "trades": "İşlemler"
+    },
+    "ohlc": {
+      "o": "A",
+      "h": "Y",
+      "l": "D",
+      "c": "K"
+    },
+    "switchCoin": "Coin değiştir",
+    "tvTitle": "{{name}} / ABD Doları · {{iv}} · KRİPTO",
+    "vsUsd": "{{name}} / ABD Doları",
+    "sellCaps": "SAT",
+    "buyCaps": "AL",
+    "menu": "Menü",
+    "advMenu": {
+      "pvOn": "ProVision: Açık",
+      "pvOff": "ProVision: Kapalı",
+      "reset": "Grafiği sıfırla",
+      "close": "Kapat"
+    },
+    "switchTo": "{{symbol}} geç",
+    "moreCoins": "Daha fazla coin",
+    "resetView": "Grafik görünümünü sıfırla",
+    "fsHint": "Bazı özellikler yalnızca tam ekranda çalışır",
+    "pvbar": {
+      "lockedOn": "ProVision {{coin}} için kilitli",
+      "trialEnded": "ProVision denemeniz sona erdi",
+      "tryFree": "ProVision'ı 3 gün ücretsiz deneyin",
+      "usedCoins": "Bugünkü {{n}} coin hakkınızı kullandınız. Sınırsıza geçin.",
+      "notIncluded": "Hesabınız şu anda ProVision içermiyor.",
+      "usedCoinsList": "Bugünkü {{n}} coin hakkınızı kullandınız ({{list}}). Sınırsıza geçin.",
+      "start": "Başla",
+      "keepFor": "Tüm coinleri ve zaman dilimlerini {{price}}/yıl ile koruyun.",
+      "noCard": "Tüm coinler ve zaman dilimleri. Kart gerekmez.",
+      "try": "ProVision'ı dene",
+      "unlock": "ProVision kilidini aç"
+    },
+    "dateRange": "Tarih aralığı",
+    "exitFullscreen": "Tam ekrandan çık",
+    "marketData": "Piyasa verileri",
+    "unlockStatus": "Durumun kilidini aç",
+    "unlockDivergence": "Uyumsuzluğun kilidini aç",
+    "coinChart": "{{coin}} grafiği",
+    "more": "Daha fazla",
+    "aiChartRead": "YZ Grafik Okuması",
+    "aiRead": "YZ Okuma",
+    "hideDepth": "Derinlik profilini gizle",
+    "showDepth": "Derinlik profilini göster",
+    "depth": "Derinlik",
+    "tools": "Araçlar",
+    "chartStyle": "Grafik stili",
+    "chartStyleIs": "Grafik stili: {{style}}",
+    "style": {
+      "candle": "Mum",
+      "hollow": "İçi boş mum",
+      "line": "Çizgi",
+      "heikinAshi": "Heikin Ashi"
+    },
+    "allIndicators": "Tüm göstergeler",
+    "allIndicatorsOn": "Tüm göstergeler · {{n}} açık",
+    "hideGrid": "Izgarayı gizle",
+    "showGrid": "Izgarayı göster",
+    "grid": "Izgara",
+    "age": {
+      "new": "Yeni",
+      "years": "{{n}} yıllık",
+      "months": "{{n}} aylık"
+    },
+    "ivDesc": {
+      "1sec": "Son 30 dakika",
+      "1min": "Son 6 saat",
+      "5min": "Son 24 saat",
+      "15min": "Son 48 saat",
+      "1h": "Yaklaşık 7 gün",
+      "4h": "Yaklaşık 4 hafta",
+      "6h": "Yaklaşık 15 gün",
+      "1day": "Son 90 gün",
+      "1week": "Son 52 hafta",
+      "1month": "Son 24 ay",
+      "all": "Tüm geçmiş"
+    },
+    "askAgentPrompt": "Bu {{coin}} grafiğini analiz edebilir misin?",
+    "ind": {
+      "fib": "Fibonacci seviyeleri",
+      "sr": "Destek / Direnç",
+      "dayhl": "24S En yüksek/En düşük",
+      "zones": "Alım/Satım bölgeleri",
+      "desc": {
+        "bb": "±2 standart sapma bantlı 20 periyotluk ortalama — sıkışmalar ve kırılımlar.",
+        "ema20": "Hızlı üstel ortalama — kısa vadeli trend ve geri çekilme desteği.",
+        "ema50": "Orta vadeli üstel ortalama — swing trader'ların çoğunun izlediği trend.",
+        "ema200": "Uzun vadeli üstel ortalama — boğa ve ayı piyasası arasındaki çizgi.",
+        "ma20": "Kapanışların basit 20 periyotluk ortalaması.",
+        "ma50": "Basit 50 periyotluk ortalama — orta vadeli trend.",
+        "ma200": "Basit 200 periyotluk ortalama — klasik uzun vadeli trend çizgisi.",
+        "cme": "CME Bitcoin vadelilerinde hafta sonları oluşan fiyat boşlukları — çoğu zaman kapanır.",
+        "fib": "Son tepe ve dipten Fibonacci düzeltme seviyeleri.",
+        "sr": "Fiyat geçmişinden tespit edilen önemli destek ve direnç seviyeleri.",
+        "dayhl": "Son 24 saatin en yüksek ve en düşüğü grafikte çizgi olarak.",
+        "zones": "Alıcıların veya satıcıların daha önce devreye girdiği vurgulanmış alanlar.",
+        "rsi": "Kendi panelinde Göreceli Güç Endeksi — 70 üzeri aşırı alım, 30 altı aşırı satım.",
+        "macd": "Kendi panelinde MACD çizgisi, sinyal ve histogram."
+      }
+    },
+    "placeholder": {
+      "bannerTitle": "Fiyat hareketi analiz ediliyor…",
+      "bannerBody": "Momentum ve trend gücünü ölçmek için son mumlar işleniyor.",
+      "patternName": "Formasyonlar taranıyor…",
+      "patternSummary": "Son mumlarda tanınabilir bir kurulum aranıyor.",
+      "patternNarrative": "Her zamanki formasyon kontrolleri çalışıyor — bir dakika.",
+      "patternNext": "Biraz bekleyin, gerçek analiz geliyor."
+    },
+    "ivLabel": {
+      "1sec": "1s (son 30 dk)",
+      "1min": "1m (son 6 saat)",
+      "5min": "5m (son 24 saat)",
+      "15min": "15m (son 48 saat)",
+      "1h": "1H (~7 gün)",
+      "4h": "4H (~4 hafta)",
+      "6h": "6H (~15 gün)",
+      "1day": "24H (90 gün)",
+      "1week": "1W (52 hafta)",
+      "1month": "1M (24 ay)",
+      "all": "TÜMÜ (tüm geçmiş)"
+    },
+    "banner": {
+      "noData": {
+        "title": "Yeterli veri yok",
+        "body": "Bu aralığı analiz etmek için yeterli mum geçmişi yok."
+      },
+      "upperBand": {
+        "title": "{{iv}}: Üst banda baskı",
+        "body": "Fiyat %{{pct}} yükseldi ve üst Bollinger bandına dayanıyor. Momentum güçlü ama piyasa aşırı uzamış olabilir — bir sonraki yükseliş ayağından önce kısa vadeli soğuma veya yatay konsolidasyon yaygındır."
+      },
+      "lowerBand": {
+        "title": "{{iv}}: Alt bant testi",
+        "body": "Fiyat %{{absPct}} düştü ve alt Bollinger bandının yakınında sıkışıyor. Satıcılar baskın oldu ama bu bölge çoğu zaman alıcı çeker — bir rahatlama sekişi ya da desteğin altında onaylı bir kırılım için izleyin."
+      },
+      "strongBuying": {
+        "title": "{{iv}}: Güçlü alım baskısı",
+        "body": "Son 5 mumun {{green}} tanesi yeşil kapandı, fiyat toplamda %{{pct}} yukarıda. Kontrol açıkça alıcılarda. Trend uzayabilir ama kâr realizasyonu başladığında orta banda doğru bir geri çekilmeye dikkat edin."
+      },
+      "sustainedSelling": {
+        "title": "{{iv}}: Süregelen satış",
+        "body": "Son 5 mumun {{red}} tanesi kırmızı kapandı, fiyat toplamda %{{absPct}} aşağıda. Satıcılar baskın. Kısa vadeli bir aşırı satım sekişi mümkün ama alıcılar momentumu geri alana kadar en az dirençli yol aşağı yönlü."
+      },
+      "consolidation": {
+        "title": "{{iv}}: Dar konsolidasyon",
+        "body": "Fiyat bu dönemde yalnızca %{{pct}} hareket etti ve orta bandın yakınında sıkışıyor. Piyasa kararsız — yönlü bir kırılım hazırlanıyor. İpucu için hacmi ve sonraki 2–3 mumu izleyin."
+      },
+      "upwardBias": {
+        "title": "{{iv}}: Yükseliş eğilimi",
+        "body": "Fiyat %{{pct}} yukarıda ve son 5 mumun {{green}} tanesi yeşil. Trend yükseliş yönlü ama patlayıcı bir momentum yok — makro duyarlılık değişmedikçe muhtemelen istikrarlı, yavaş bir yükseliş."
+      },
+      "downwardBias": {
+        "title": "{{iv}}: Düşüş eğilimi",
+        "body": "Fiyat %{{absPct}} aşağıda ve son 5 mumun {{red}} tanesi kırmızı. Düşüş baskısı var ama aşırı değil — dönüş demeden önce alt bant veya önemli bir destek yakınında dengelenme bekleyin."
+      }
+    },
+    "counterTrendBearish": "Trende karşı sinyal — genel hareket hâlâ düşüş yönlü. {{next}} Bunu ana long girişi olarak görmeden önce baskın trendin dönmesini bekleyin.",
+    "counterTrendBullish": "Trende karşı sinyal — genel hareket hâlâ yükseliş yönlü. {{next}} Bunu ana short sinyali yerine bir uyarı işareti olarak değerlendirin.",
+    "patterns": {
+      "threeWhiteSoldiers": {
+        "name": "Üç Beyaz Asker",
+        "summary": "Art arda üç yükseliş mumu; her biri güçlü gövdeyle daha yukarıda kapanıyor.",
+        "narrative": "Piyasa yapıcılar tam birikim modunda — her düşüşü alıyor ve satıcılara hiç alan bırakmıyorlar. Her mum önceki kapanışa yakın açılıyor ve anlamlı bir geri çekilme olmadan kazançları uzatıyor; bu kurumsal kararlılığın işareti.",
+        "nextMove": "Momentum yükselişin devamını güçlü şekilde destekliyor. Onay için mevcut zirvenin kırılmasını bekleyin. Ortadaki mumun gövdesine geri çekilme, bir sonraki yükseliş ayağından önce olası bir yeniden giriş bölgesi."
+      },
+      "threeBlackCrows": {
+        "name": "Üç Kara Karga",
+        "summary": "Art arda üç düşüş mumu; her biri güçlü gövdeyle daha aşağıda kapanıyor.",
+        "narrative": "Kurumsal satıcılar sistematik olarak dağıtım yapıyor. Her rahatlama sekişi satılıyor — piyasa yapıcılar anlamlı bir toparlanmayı engelliyor; bu, short pozisyonda olduklarını ya da büyük stokları bireysel alıcılara boşalttıklarını gösteriyor.",
+        "nextMove": "Daha fazla düşüş bekleyin. Önceki mumun açılışına doğru her sekiş olası bir short girişidir. Hareket kısa vadede muhtemelen aşırı uzamış; bir sonraki düşüş ayağından önce kısa bir rahatlama sekişine dikkat edin."
+      },
+      "morningStar": {
+        "name": "Sabah Yıldızı",
+        "summary": "Üç mumlu dip dönüşü: büyük kırmızı → küçük kararsız → büyük yeşil.",
+        "narrative": "Piyasa yapıcılar klasik bir stop avı yapıp ardından yön değiştirdi. Büyük kırmızı mum zayıf long'ları silkeledi, küçük orta mum diplerde satıcıların inancını yitirdiğini gösteriyor ve güçlü yeşil mum kurumların devreye girip tüm arzı emdiğini doğruluyor.",
+        "nextMove": "Yükseliş eğilimi. Sabah yıldızı zirvesinin üzerinde bir kapanış long girişleri için tetikleyicidir. Kırmızı mumun önceki dibi artık önemli destek — fiyat geri gelip tutunursa, bu dar riskli en yüksek olasılıklı giriştir."
+      },
+      "eveningStar": {
+        "name": "Akşam Yıldızı",
+        "summary": "Üç mumlu tepe dönüşü: büyük yeşil → küçük kararsız → büyük kırmızı.",
+        "narrative": "Piyasa yapıcılar zirvelerde stok dağıttı. Yükseliş mumu bireysel alıcıları çekti, küçük orta mum alıcı yorgunluğunu ortaya koydu ve düşüş mumu kurumların kalabalığa boşalttığını doğruluyor. Bireysel long'lar artık kapana kısıldı.",
+        "nextMove": "Düşüş eğilimi. Akşam yıldızı dibinin altına kırılım short girişleri için tetikleyicidir. Yeşil mumun önceki zirvesi artık direnç — o seviyeye başarısız her yükseliş denemesi bir dağıtım sinyalidir."
+      },
+      "bullishEngulfing": {
+        "name": "Yutan Boğa",
+        "summary": "Büyük yeşil mum, önceki kırmızı mumun gövdesini tamamen yutuyor.",
+        "narrative": "Kurumsal alıcılar güçlü şekilde devreye girdi. Yeşil mumun önceki kırmızıyı tamamen yutması, piyasa yapıcıların tüm satış arzını emip fiyatı açılışın ötesine ittiğini gösteriyor. Önceki mumda satanlar artık short'ta kapana kısıldı.",
+        "nextMove": "Yükseliş. Onların stop-loss'ları yutan mumun zirvesinin üzerinde — tetiklendiğinde rallinin yakıtı olur. Bir sonraki direnç bölgesini veya önceki zirveyi hedefleyin. Fiyat yutan mumun orta noktasının üzerinde kaldıkça long'u koruyun."
+      },
+      "bearishEngulfing": {
+        "name": "Yutan Ayı",
+        "summary": "Büyük kırmızı mum, önceki yeşil mumun gövdesini tamamen yutuyor.",
+        "narrative": "Kurumsal satıcılar aniden ortaya çıkıp alıcıları ezdi. Kırmızı mumun önceki yeşili tamamen yutması, piyasa yapıcıların yükselişi kovalayan bireysel alıcılara stok dağıttığını gösteriyor. O alıcılar artık zararda.",
+        "nextMove": "Düşüş. Yutan mumun dibinin altındaki stop-loss'ları tetiklendiğinde düşüşü hızlandıracak. Bir sonraki destek bölgesini veya önceki dibi hedefleyin. Fiyat yutan mumun orta noktasını geri alana kadar long'lardan kaçının."
+      },
+      "piercingLine": {
+        "name": "Delen Çizgi",
+        "summary": "Yeşil mum kırmızının dibinin altında açılıyor ama kırmızının orta noktasının üzerinde kapanıyor.",
+        "narrative": "Piyasa yapıcılar stop-loss'ları tetiklemek için desteğin altına indi — klasik bir likidite avı — ve kurumlar düşüşü emerken sert şekilde yön değiştirdi. Kırılımı kovalayan her satıcı artık para kaybediyor.",
+        "nextMove": "Yükseliş. Muhtemel sonraki hareket kırmızı mumun üst kısmına doğru. Fiyat her geri çekilmede delen mumun orta noktasının üzerinde kalırsa dönüş sağlam. Kırmızı mumun açılışının üzerine kırılım formasyonu doğrular."
+      },
+      "darkCloudCover": {
+        "name": "Kara Bulut Örtüsü",
+        "summary": "Kırmızı mum yeşilin zirvesinin üzerinde açılıyor ama yeşilin orta noktasının altında kapanıyor.",
+        "narrative": "Piyasa yapıcılar yukarı boşluğu, kırılımı kovalayan bireysel alıcılara arz boşaltmak için kullandı. Önceki yeşil mumun gövdesine derin ret, kurumların güçlenmeye agresif sattığını gösteriyor — ders kitabı niteliğinde bir dağıtım.",
+        "nextMove": "Düşüş. Muhtemel sonraki hareket yeşil mumun alt kısmına doğru. Fiyat bir sekişte kara bulut mumunun açılışını geri alamazsa dağıtım doğrulanır. Yeşil mumun dibinin kırılması daha fazla düşüşün yolunu açar."
+      },
+      "bullishHarami": {
+        "name": "Yükseliş Haramisi",
+        "summary": "Küçük yeşil mum, önceki büyük kırmızı mumun gövdesinin tamamen içinde.",
+        "narrative": "Satış momentumu duruyor — ayılar fiyatı daha aşağı itemiyor. Piyasa yapıcılar önceki kırmızı mumun aralığında sessizce arz emerek dikkat çekmeden bir taban oluşturuyor olabilir.",
+        "nextMove": "Kırılımın yönünü bekleyin. Harami zirvesinin (önceki kırmızı mumun açılışı) üzerinde kapanış alıcıların kontrolü aldığını gösterir. Harami dibinin (önceki kırmızı mumun kapanışı) altında kapanış trendin sürdüğü anlamına gelir — harekete geçmeden önce bu onaylardan birini bekleyin."
+      },
+      "bearishHarami": {
+        "name": "Düşüş Haramisi",
+        "summary": "Küçük kırmızı mum, önceki büyük yeşil mumun gövdesinin tamamen içinde.",
+        "narrative": "Alım momentumu güç kaybediyor — boğalar hareketi daha fazla uzatamıyor. Piyasa yapıcılar, pozisyonlarını daha kötü fiyatlardan kapatmaya zorlayacak bir paniği tetiklemeden, önceki yeşil mumun aralığında güçlenmeye sessizce dağıtım yapıyor olabilir.",
+        "nextMove": "Kırılımın yönünü bekleyin. Harami dibinin (önceki yeşil mumun açılışı) altında kapanış satıcıların kontrolü aldığını gösterir. Harami zirvesinin (önceki yeşil mumun kapanışı) üzerinde kapanış trendin devam ettiği anlamına gelir — onay bekleyin."
+      },
+      "gravestoneDoji": {
+        "name": "Mezar Taşı Doji",
+        "summary": "Fiyat güçlü yükseldi, sonra açılışa geri düştü — alıcılar zirvede reddedildi.",
+        "narrative": "Piyasa yapıcılar kırılım işlemcilerinin buy-stop likiditesini toplamak için fiyatı yukarı sürdü, sonra harekete agresif sattı. Uzun üst fitil net bir arz reddi — kurumlar bireysel FOMO'yu çıkış likiditesi olarak kullandı.",
+        "nextMove": "Düşüş eğilimi. Sonraki mumda mezar taşının dibinin altında kapanış güçlü bir satış sinyalidir. Bu mumun zirvesi artık önemli bir direnç — o zirvenin başarısız yeniden testleri short fırsatıdır."
+      },
+      "dragonflyDoji": {
+        "name": "Yusufçuk Doji",
+        "summary": "Fiyat sert düştü ama alıcılar açılışı tamamen geri aldı — satıcılar dipte reddedildi.",
+        "narrative": "Piyasa yapıcılar stop-loss avlamak ve ucuz stok toplamak için desteğin altına indi, sonra hemen yön değiştirdi. Uzun alt fitil tüm satışın kurumsal alıcılar tarafından emildiğini gösteriyor — klasik bir stop avı birikimi.",
+        "nextMove": "Yükseliş eğilimi. Sonraki mumda yusufçuğun zirvesinin üzerinde kapanış güçlü bir alım sinyalidir. Bu mumun dibi artık önemli destek — her geri çekilmede bu seviyenin üzerinde tutunmak dar riskli bir long girişidir."
+      },
+      "doji": {
+        "name": "Doji",
+        "summary": "Açılış ve kapanış neredeyse eşit — piyasa tam bir denge hâlinde.",
+        "narrative": "Ne alıcılar ne satıcılar üstün. Piyasa yapıcılar henüz bir yöne bağlanmadan iki taraftaki emirleri de emiyor. Bu bekleyiş genellikle taraflardan biri teslim olduğunda sert bir hareketten önce gelir.",
+        "nextMove": "Kırılımı bekleyin. Doji zirvesinin üzerinde kapanış yükseliş tetikleyicisi; doji dibinin altı düşüş. Sonraki mumun gövdesi hangi yönde olursa olsun ne kadar büyükse, hareketin arkasındaki inanç o kadar güçlü — hacim doğrular."
+      },
+      "bullishMarubozu": {
+        "name": "Yükseliş Marubozu",
+        "summary": "Fitil yok — alıcılar mumun tamamını hiç tereddüt etmeden kontrol etti.",
+        "narrative": "Saf kurumsal alım baskısı. Piyasa yapıcılar açılıştan itibaren fiyatı anlamlı bir geri çekilmeye izin vermeden yukarı sürdü — devreye girmeye istekli satıcı yoktu. Bu tek taraflı agresiflik bu fiyat seviyesinde güçlü talebe işaret ediyor.",
+        "nextMove": "Güçlü yükseliş. Bu mumun açılışı artık ana destek — o seviyeye geri çekilme yüksek olasılıklı bir long girişidir. Az konsolidasyonla bir sonraki ana dirence doğru devam bekleyin."
+      },
+      "bearishMarubozu": {
+        "name": "Düşüş Marubozu",
+        "summary": "Fitil yok — satıcılar mumun tamamını hiç tereddüt etmeden kontrol etti.",
+        "narrative": "Saf kurumsal satış baskısı. Piyasa yapıcılar fiyatı açılıştan kapanışa durmadan aşağı sürdü — alıcıların karşılık vermek için anlamlı bir penceresi olmadı. Bu amansız agresiflik bu fiyat seviyesinde güçlü arza işaret ediyor.",
+        "nextMove": "Güçlü düşüş. Bu mumun açılışı artık ana direnç — o seviyeye sekiş yüksek olasılıklı bir short girişidir. Bir sonraki ana desteğe doğru devam bekleyin."
+      },
+      "hammer": {
+        "name": "Çekiç",
+        "summary": "Uzun alt fitil satıcıların başarısız olduğunu gösteriyor — alıcılar tüm arzı emdi.",
+        "narrative": "Piyasa yapıcılar desteğin altında bir stop-loss süpürmesi yaptı. Uzun fitil, satıcıların sert bastırdığını ama kurumların hepsini emip açılışı geri aldığını ortaya koyuyor. Bu silkeleme, bir dönüş öncesi zayıf elleri temizler.",
+        "nextMove": "Sonraki mum çekicin zirvesinin üzerinde kapanırsa yükseliş. Fitilin dibi artık kritik destek — kurumların almayı seçtiği seviye. O bölgenin yeniden test edilip tutunması yüksek olasılıklı bir giriştir."
+      },
+      "hangingMan": {
+        "name": "Asılı Adam",
+        "summary": "Yükseliş trendi sonrası çekiç şekli — satıcılar karşılık vermeye başlıyor.",
+        "narrative": "Görsel toparlanmaya rağmen bu, zirvede bir dağıtım uyarısıdır. Piyasa yapıcılar fiyatın sert düşmesine izin vererek satıcıların bu yüksek seviyelerde aktifleştiğini ortaya koydu. Toparlanma, artan satış baskısını gizliyor.",
+        "nextMove": "Sonraki mum asılı adamın dibinin altında kapanırsa düşüş. Bu mumun zirvesi artık direnç — o seviyenin başarısız bir yeniden testini izleyin; bu, dağıtımın sürdüğünü doğrular."
+      },
+      "shootingStar": {
+        "name": "Kayan Yıldız",
+        "summary": "Uzun üst fitil alıcıların başarısız olduğunu gösteriyor — satıcılar her yükseliş denemesini emdi.",
+        "narrative": "Piyasa yapıcılar yukarı sıçramayı, kırılımı kovalayan bireysel işlemcilere stok boşaltmak için kullandı. Uzun fitil güçlenmeye kurumsal satışın kanıtı — zirvede alan herkes anında para kaybediyor.",
+        "nextMove": "Sonraki mum kayan yıldızın dibinin altında kapanırsa düşüş. Fitilin zirvesi artık güçlü direnç — o seviyenin başarısız yeniden testinde short girişleri iyi bir risk/getiri sunar."
+      },
+      "invertedHammer": {
+        "name": "Ters Çekiç",
+        "summary": "Düşüş trendi sonrası uzun üst fitil — alıcılar diplerden daha yukarıyı yokladı.",
+        "narrative": "Piyasa yapıcılar direnci aşağıdan test ediyor olabilir. Alıcılar fiyatı belirgin şekilde yukarı itti, ardından satıcılar kontrolü geri aldı; bu satıcı hâkimiyetinin zayıfladığına işaret ediyor. Düşüş sonrası beliren talebin ilk işareti.",
+        "nextMove": "Sonraki mum ters çekicin zirvesinin üzerinde kapanırsa yükseliş — bu, alıcıların kontrolü aldığını doğrular. Harekete geçmeden önce o onay mumunu bekleyin; onsuz formasyonun devamı yoktur."
+      },
+      "insideBar": {
+        "name": "İç Çubuk (Konsolidasyon)",
+        "summary": "Mevcut mum tamamen önceki mumun aralığında — kırılım için sıkışıyor.",
+        "narrative": "Piyasa yapıcılar dar bir aralıkta sessizce emir emerek yönlü bir hareket için enerji topluyor. Kurumlar bir trende girmeden önce bu sıkışma formasyonunu tercih eder — kendileri pozisyon alırken bireyselleri tahmin oyununda tutar.",
+        "nextMove": "Önceki mumun zirvesinin üzerine kırılım yükseliş; önceki dibin altı düşüş. Kırılım mumunun gövdesi iç çubuğa göre ne kadar büyükse inanç o kadar güçlü. İç çubuğun kendisini değil, kırılımı işleyin."
+      },
+      "sustainedBullish": {
+        "name": "Süregelen Yükseliş Momentumu",
+        "summary": "Art arda beş yeşil mum — alıcılar ara vermeden hâkim.",
+        "narrative": "Kurumlar sistematik olarak biriktiriyor. Her olası geri çekilme anında alınıyor — piyasa yapıcılar satıcılara tutunacak yer bırakmıyor; bu, bireyseller tam katılmadan fiyatı yukarıda görmek istediklerine işaret ediyor.",
+        "nextMove": "Momentum devamı destekliyor ama art arda 5 yeşil mum çoğu zaman kısa vadeli bir duraklama veya küçük geri çekilmeye yol açar. Bir sonraki giriş için 1-2 mumluk konsolidasyon ve önceki zirvenin üzerinde yeniden kapanış bekleyin. İlk kırmızı mum dönüş değil — bir sıfırlamadır."
+      },
+      "sustainedBearish": {
+        "name": "Süregelen Düşüş Momentumu",
+        "summary": "Art arda beş kırmızı mum — satıcılar ara vermeden hâkim.",
+        "narrative": "Kurumlar sistematik olarak dağıtım yapıyor. Her sekiş denemesi satılıyor — piyasa yapıcılar anlamlı bir toparlanmayı engelliyor; bu, short pozisyonda olduklarına ya da stoklarını kademeli boşalttıklarına işaret ediyor.",
+        "nextMove": "Momentum düşüşün devamını destekliyor ama art arda 5 kırmızı mum çoğu zaman kısa vadeli bir sekiş üretir. Short'lar riski yönetmeli ve stop'ları takip ettirmeli. İlk yeşil mum dönüş değil — bir sonraki düşüş ayağından önce bir nefes molasıdır."
+      },
+      "noPatternBullish": {
+        "name": "Belirgin Formasyon Yok — Trend Sağlam",
+        "summary": "Son birkaç mumda klasik bir mum formasyonu yok ama genel trend yükseliş yönünde.",
+        "narrative": "Şu anda ders kitabı niteliğinde üç mumlu bir kurulum yok ama fiyat yapısı genel olarak alıcıları destekliyor. Belirgin formasyon olmaması yön olmadığı anlamına gelmez — burada konuşan, alttaki trend.",
+        "nextMove": "Belirli bir formasyon beklemek yerine trendle uyumlu kalın. Desteğe geri çekilme, devamı izlemek için makul bir bölge."
+      },
+      "noPatternBearish": {
+        "name": "Belirgin Formasyon Yok — Trend Sağlam",
+        "summary": "Son birkaç mumda klasik bir mum formasyonu yok ama genel trend düşüş yönünde.",
+        "narrative": "Şu anda ders kitabı niteliğinde üç mumlu bir kurulum yok ama fiyat yapısı genel olarak satıcıları destekliyor. Belirgin formasyon olmaması yön olmadığı anlamına gelmez — burada konuşan, alttaki trend.",
+        "nextMove": "Belirli bir formasyon beklemek yerine trendle uyumlu kalın. Dirence doğru sekiş, aşağı yönlü devamı izlemek için makul bir bölge."
+      },
+      "noClearPattern": {
+        "name": "Net Formasyon Yok",
+        "summary": "Klasik bir mum formasyonu tespit edilmedi ve genel trend şu anda yatay.",
+        "narrative": "Fiyat hareketinde şu anda hem ders kitabı formasyonu hem de net bir yön eğilimi yok — bu genellikle piyasanın bir sonraki gerçek hareketinden önce konsolide olduğu anlamına gelir.",
+        "nextMove": "Bir yöne yaslanmadan önce tanınabilir bir formasyon ya da bu aralıktan kararlı bir kırılım bekleyin."
+      }
+    },
+    "canvas": {
+      "bullDiv": "Yükseliş uyms.",
+      "bearDiv": "Düşüş uyms."
+    }
+  }
+}

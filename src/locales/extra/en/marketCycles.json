@@ -1,0 +1,33 @@
+{
+  "marketCycles": {
+    "range": { "30": "30d", "365": "1y", "all": "All" },
+    "title": "Bitcoin Market Cycles",
+    "error": "Cycle data couldn't load right now.",
+    "puellStatus": "Puell Multiple Status",
+    "undervalued": "Undervalued",
+    "overvalued": "Overvalued",
+    "piTitle": "Pi Cycle Top Indicator",
+    "topSignal": "Top signal",
+    "noTopSignal": "No top signal",
+    "rainbowCard": "Rainbow Chart",
+    "price": "Price {{v}}",
+    "puellTip": "Daily miner revenue ÷ its 365-day average. Under 0.5 has marked cycle bottoms; over 4, cycle tops.",
+    "btcPrice": "Bitcoin Price",
+    "piTip": "The 111-day average crossing above 2 × the 350-day average has marked past cycle tops.",
+    "rainbowTitle": "Bitcoin Rainbow Price Chart Indicator",
+    "rainbowTip": "A log curve fitted to Bitcoin's whole price history, split into 9 colour bands from Fire sale to Maximum bubble.",
+    "now": "Now: {{zone}}",
+    "halving": "{{n}}. Halving",
+    "rainbow": {
+      "0": "Fire sale",
+      "1": "BUY!",
+      "2": "Accumulate",
+      "3": "Still cheap",
+      "4": "HODL!",
+      "5": "Is this a bubble?",
+      "6": "FOMO intensifies",
+      "7": "Sell. Seriously, sell!",
+      "8": "Maximum bubble"
+    }
+  }
+}

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { CoinRow, fmtBig, fmtPrice, Sparkline, cgFetch, TTL } from "./GlobalMarkets";
 import { DEFAULT_IDS } from "./Watchlist";
 import { technicalsLean } from "./CoinPageTabs";
@@ -196,6 +197,15 @@ const PV_ROWS = 10;
 const PV_COINS = new Set(COINS.map((c) => c.symbol.toUpperCase()));
 
 export function MarketSignalTable({ coins, onSelectCoin, onOpenAuth, onTradeCoin }: Props) {
+  const { t } = useTranslation();
+  // Translated labels — keys/values in the constants above stay English.
+  const colLabel = (k: ColKey, fallback: string) => t(`marketSignals.cols.${k}`, fallback);
+  const colInfo = (k: ColKey, fallback?: string) => (fallback ? t(`marketSignals.info.${k}`, fallback) : undefined);
+  const rangeLabel = (r: Range) =>
+    r.label === "Any" ? t("marketSignals.any")
+      : r.label.startsWith("Under ") ? t("marketSignals.under", { value: r.label.slice(6) })
+      : r.label;
+  const sigWord = (s: Sig) => t(`marketSignals.words.${s.tone}`, s.word);
   const { user } = useAuth();
   // Paper trading activated = signed in and accepted the one-time
   // disclaimer (same flag PaperTradingCard checks).
@@ -364,43 +374,43 @@ export function MarketSignalTable({ coins, onSelectCoin, onOpenAuth, onTradeCoin
   const filtersBody = (inSheet: boolean) => (
     <div className={`mst-filters${inSheet ? " mst-filters--sheet" : ""}`}>
       <div className="mst-f-row">
-        <span className="mst-f-label">Signal</span>
+        <span className="mst-f-label">{t("marketSignals.signal")}</span>
         {sigOpen
-          ? seg<SigFilter>(sigF, setSigF, [{ v: "any", label: "Any" }, { v: "long", label: "Long" }, { v: "neutral", label: "Neutral" }, { v: "short", label: "Short" }])
+          ? seg<SigFilter>(sigF, setSigF, [{ v: "any", label: t("marketSignals.any") }, { v: "long", label: t("marketSignals.words.bull") }, { v: "neutral", label: t("marketSignals.words.neutral") }, { v: "short", label: t("marketSignals.words.bear") }])
           : (
             <button type="button" className="mst-f-signup" onClick={() => { setSheetOpen(false); onOpenAuth?.(); }}>
-              Sign up to filter by signal ›
+              {t("marketSignals.signUpFilter")}
             </button>
           )}
       </div>
       <div className="mst-f-row">
-        <span className="mst-f-label">24h change</span>
-        {seg<ChgFilter>(chgF, setChgF, [{ v: "any", label: "Any" }, { v: "up", label: "Up" }, { v: "down", label: "Down" }])}
+        <span className="mst-f-label">{t("marketSignals.chg24")}</span>
+        {seg<ChgFilter>(chgF, setChgF, [{ v: "any", label: t("marketSignals.any") }, { v: "up", label: t("marketSignals.up") }, { v: "down", label: t("marketSignals.down") }])}
       </div>
       <label className="mst-f-check">
         <input type="checkbox" checked={hideStables} onChange={(e) => setHideStables(e.target.checked)} />
-        Hide stablecoins
+        {t("marketSignals.hideStables")}
       </label>
       {!inSheet && (
         <div className="mst-f-foot">
-          <button type="button" className="mst-f-reset" onClick={resetFilters} disabled={!anyFilter}>Reset all</button>
+          <button type="button" className="mst-f-reset" onClick={resetFilters} disabled={!anyFilter}>{t("marketSignals.resetAll")}</button>
         </div>
       )}
     </div>
   );
   const SORTS: { key: SortKey; label: string }[] = [
-    { key: "rank", label: "Rank" },
-    { key: "price", label: "Price" },
-    { key: "h24", label: "24h change" },
-    { key: "cap", label: "Market cap" },
-    { key: "vol", label: "Volume" },
-    ...(sigOpen ? [{ key: "sig" as SortKey, label: "Signal" }] : []),
+    { key: "rank", label: t("marketSignals.sorts.rank") },
+    { key: "price", label: t("marketSignals.sorts.price") },
+    { key: "h24", label: t("marketSignals.chg24") },
+    { key: "cap", label: t("marketSignals.sorts.cap") },
+    { key: "vol", label: t("marketSignals.sorts.vol") },
+    ...(sigOpen ? [{ key: "sig" as SortKey, label: t("marketSignals.signal") }] : []),
   ];
   const chips = (ranges: Range[], idx: number, set: (i: number) => void) => (
     <div className="mst-chips">
       {ranges.map((r, i) => (
         <button key={r.label} type="button" className={`mst-chip${i === idx ? " mst-chip--on" : ""}`} onClick={() => set(i)}>
-          {r.label}
+          {rangeLabel(r)}
         </button>
       ))}
     </div>
@@ -408,12 +418,12 @@ export function MarketSignalTable({ coins, onSelectCoin, onOpenAuth, onTradeCoin
   // A function (not a const element): it uses `seg`, defined further down.
   const phoneSheet = () => (
     <>
-    <BottomSheet open={sheet === "columns"} onClose={() => setSheet(null)} title="Columns" ariaLabel="Columns">
+    <BottomSheet open={sheet === "columns"} onClose={() => setSheet(null)} title={t("marketSignals.columns")} ariaLabel={t("marketSignals.columns")}>
       <div className="mst-sheet">
         <div className="mst-sheet-checks">
           {COLS.map((c) => (
             <label key={c.key} className="mst-sheet-check">
-              <span>{c.label}</span>
+              <span>{colLabel(c.key, c.label)}</span>
               <input
                 type="checkbox"
                 checked={has(c.key)}
@@ -423,15 +433,15 @@ export function MarketSignalTable({ coins, onSelectCoin, onOpenAuth, onTradeCoin
           ))}
         </div>
         <div className="mst-sheet-foot">
-          <button type="button" className="mst-sheet-reset" onClick={() => setCols(ALL_COLS)} disabled={cols.length === ALL_COLS.length}>Show all</button>
-          <button type="button" className="mst-sheet-done" onClick={() => setSheet(null)}>Done</button>
+          <button type="button" className="mst-sheet-reset" onClick={() => setCols(ALL_COLS)} disabled={cols.length === ALL_COLS.length}>{t("marketSignals.showAll")}</button>
+          <button type="button" className="mst-sheet-done" onClick={() => setSheet(null)}>{t("marketSignals.done")}</button>
         </div>
       </div>
     </BottomSheet>
-    <BottomSheet open={sheet === "filters"} onClose={() => setSheet(null)} title="Filters & sort" ariaLabel="Filters and sort">
+    <BottomSheet open={sheet === "filters"} onClose={() => setSheet(null)} title={t("marketSignals.filtersSort")} ariaLabel={t("marketSignals.filtersSortAria")}>
       <div className="mst-sheet">
         <div className="mst-f-row">
-          <span className="mst-f-label">Sort by</span>
+          <span className="mst-f-label">{t("marketSignals.sortBy")}</span>
           <div className="mst-chips">
             {SORTS.map((s) => {
               const on = sort.key === s.key;
@@ -449,11 +459,11 @@ export function MarketSignalTable({ coins, onSelectCoin, onOpenAuth, onTradeCoin
           </div>
         </div>
         <div className="mst-f-row">
-          <span className="mst-f-label">Market cap</span>
+          <span className="mst-f-label">{t("marketSignals.sorts.cap")}</span>
           {chips(CAP_RANGES, capIdx, setCapIdx)}
         </div>
         <div className="mst-f-row">
-          <span className="mst-f-label">Volume (24h)</span>
+          <span className="mst-f-label">{t("marketSignals.volume24h")}</span>
           {chips(VOL_RANGES, volIdx, setVolIdx)}
         </div>
         {filtersBody(true)}
@@ -464,10 +474,10 @@ export function MarketSignalTable({ coins, onSelectCoin, onOpenAuth, onTradeCoin
             onClick={() => { resetFilters(); setSort({ key: "rank", dir: "asc" }); }}
             disabled={!anyFilter && sort.key === "rank" && sort.dir === "asc"}
           >
-            Reset
+            {t("marketSignals.reset")}
           </button>
           <button type="button" className="mst-sheet-done" onClick={() => setSheetOpen(false)}>
-            Show {list.length.toLocaleString()} coins
+            {t("marketSignals.showCoins", { n: list.length.toLocaleString() })}
           </button>
         </div>
       </div>
@@ -485,7 +495,7 @@ export function MarketSignalTable({ coins, onSelectCoin, onOpenAuth, onTradeCoin
         className={`mst-h${opts?.left ? " mst-h--left" : ""}${dir ? " mst-h--on" : ""}`}
         onClick={() => onSort(key)}
         disabled={disabled}
-        aria-label={`Sort by ${label}`}
+        aria-label={t("marketSignals.sortByAria", { label })}
       >
         {opts?.info && <span className="mst-info" title={opts.info}><InfoIcon /></span>}
         <span>{label}</span>
@@ -505,7 +515,7 @@ export function MarketSignalTable({ coins, onSelectCoin, onOpenAuth, onTradeCoin
           className={`mst-menu-item${i === idx ? " mst-menu-item--on" : ""}`}
           onClick={() => { set(i); close(); }}
         >
-          {r.label}
+          {rangeLabel(r)}
           {i === idx && <span aria-hidden="true">✓</span>}
         </button>
       ))}
@@ -522,39 +532,39 @@ export function MarketSignalTable({ coins, onSelectCoin, onOpenAuth, onTradeCoin
   );
 
   return (
-    <section className="mst" aria-label="Markets" style={{ ["--mst-cols" as string]: gridCols, ["--mst-cols-m" as string]: gridColsM, ["--mst-min" as string]: `${minW}px` }}>
+    <section className="mst" aria-label={t("marketSignals.ariaMarkets")} style={{ ["--mst-cols" as string]: gridCols, ["--mst-cols-m" as string]: gridColsM, ["--mst-min" as string]: `${minW}px` }}>
       <div className="mst-head">
         <div className="mst-title">
-          <h3>Cryptocurrencies</h3>
-          <span>{loading ? "Loading…" : `${list.length.toLocaleString()} coins`}</span>
+          <h3>{t("marketSignals.title")}</h3>
+          <span>{loading ? t("marketSignals.loading") : t("marketSignals.coinsCount", { n: list.length.toLocaleString() })}</span>
         </div>
         <div className="mst-bar">
-          <nav className="mst-tabs" aria-label="Market filters">
-            {TABS.map((t) => (
+          <nav className="mst-tabs" aria-label={t("marketSignals.ariaFilters")}>
+            {TABS.map((tb) => (
               <button
-                key={t.key}
+                key={tb.key}
                 type="button"
-                className={`mst-tab${tab === t.key ? " mst-tab--on" : ""}`}
-                aria-pressed={tab === t.key}
+                className={`mst-tab${tab === tb.key ? " mst-tab--on" : ""}`}
+                aria-pressed={tab === tb.key}
                 onClick={() => {
                   // Watchlist needs an account.
-                  if (t.key === "watchlist" && !user) { onOpenAuth?.(); return; }
-                  setTab(t.key);
+                  if (tb.key === "watchlist" && !user) { onOpenAuth?.(); return; }
+                  setTab(tb.key);
                 }}
               >
-                {t.label}
+                {t(`marketSignals.tabs.${tb.key}`, tb.label)}
               </button>
             ))}
           </nav>
           <div className="mst-tools">
-            <Pop label={capIdx ? `Market Cap: ${CAP_RANGES[capIdx].label}` : "Market Cap"} icon={<FunnelIcon />} active={capIdx > 0}>
+            <Pop label={capIdx ? t("marketSignals.capWith", { range: rangeLabel(CAP_RANGES[capIdx]) }) : t("marketSignals.capLabel")} icon={<FunnelIcon />} active={capIdx > 0}>
               {rangeMenu(CAP_RANGES, capIdx, setCapIdx)}
             </Pop>
-            <Pop label={volIdx ? `Volume: ${VOL_RANGES[volIdx].label}` : "Volume(24h)"} icon={<FunnelIcon />} active={volIdx > 0}>
+            <Pop label={volIdx ? t("marketSignals.volWith", { range: rangeLabel(VOL_RANGES[volIdx]) }) : t("marketSignals.volLabel")} icon={<FunnelIcon />} active={volIdx > 0}>
               {rangeMenu(VOL_RANGES, volIdx, setVolIdx)}
             </Pop>
             <Pop
-              label={<>Filters{extraFilters > 0 && <span className="mst-badge">{extraFilters}</span>}</>}
+              label={<>{t("marketSignals.filters")}{extraFilters > 0 && <span className="mst-badge">{extraFilters}</span>}</>}
               icon={<FunnelIcon />}
               active={extraFilters > 0}
               wide
@@ -562,7 +572,7 @@ export function MarketSignalTable({ coins, onSelectCoin, onOpenAuth, onTradeCoin
               {() => filtersBody(false)}
             </Pop>
             <Pop
-              label="Columns"
+              label={t("marketSignals.columns")}
               icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M9 4v16M15 4v16" /></svg>}
               active={cols.length < ALL_COLS.length}
             >
@@ -575,10 +585,10 @@ export function MarketSignalTable({ coins, onSelectCoin, onOpenAuth, onTradeCoin
                         checked={has(c.key)}
                         onChange={() => setCols((prev) => prev.includes(c.key) ? prev.filter((k) => k !== c.key) : ALL_COLS.filter((k) => k === c.key || prev.includes(k)))}
                       />
-                      {c.label}
+                      {colLabel(c.key, c.label)}
                     </label>
                   ))}
-                  <button type="button" className="mst-menu-reset" onClick={() => setCols(ALL_COLS)}>Show all</button>
+                  <button type="button" className="mst-menu-reset" onClick={() => setCols(ALL_COLS)}>{t("marketSignals.showAll")}</button>
                 </div>
               )}
             </Pop>
@@ -590,28 +600,28 @@ export function MarketSignalTable({ coins, onSelectCoin, onOpenAuth, onTradeCoin
       <div className="mst-mtools">
         <button type="button" className={`mst-mtool${anyFilter || sort.key !== "rank" ? " mst-mtool--on" : ""}`} onClick={() => setSheet("filters")}>
           <FunnelIcon />
-          Filters
+          {t("marketSignals.filters")}
           {(capIdx > 0 ? 1 : 0) + (volIdx > 0 ? 1 : 0) + extraFilters > 0 && (
             <span className="mst-badge">{(capIdx > 0 ? 1 : 0) + (volIdx > 0 ? 1 : 0) + extraFilters}</span>
           )}
         </button>
         <button type="button" className={`mst-mtool${cols.length < ALL_COLS.length ? " mst-mtool--on" : ""}`} onClick={() => setSheet("columns")}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M9 4v16M15 4v16" /></svg>
-          Columns
+          {t("marketSignals.columns")}
         </button>
       </div>
 
       <div className="mst-scroll">
         <div className="mst-th" role="row">
           <span className="mst-c-rank">{head("rank", "#")}</span>
-          <span className="mst-c-coin">{head("name", "Name", { left: true })}</span>
-          <span className="mst-c-trade"><span className="mst-h mst-h--static mst-h--center">Trade</span></span>
+          <span className="mst-c-coin">{head("name", t("marketSignals.name"), { left: true })}</span>
+          <span className="mst-c-trade"><span className="mst-h mst-h--static mst-h--center">{t("marketSignals.trade")}</span></span>
           <span className="mst-c-px">
-            {head("price", "Price")}
+            {head("price", t("marketSignals.sorts.price"))}
           </span>
           {visible.map((c) => (
             <span key={c.key} className={`mst-c-${c.key}`}>
-              {c.key === "chart" ? <span className="mst-h mst-h--static">{c.label}</span> : head(c.key, c.label, { info: c.info })}
+              {c.key === "chart" ? <span className="mst-h mst-h--static">{colLabel(c.key, c.label)}</span> : head(c.key, colLabel(c.key, c.label), { info: colInfo(c.key, c.info) })}
             </span>
           ))}
         </div>
@@ -619,8 +629,8 @@ export function MarketSignalTable({ coins, onSelectCoin, onOpenAuth, onTradeCoin
         {loading && Array.from({ length: 8 }, (_, i) => <div key={i} className="mst-skel" style={{ animationDelay: `${i * 60}ms` }} />)}
         {!loading && rows.length === 0 && (
           <div className="mst-empty">
-            {tab === "watchlist" && !anyFilter ? "No coins in your watchlist yet — tap ☆ on any coin to add it." : "No coins match these filters."}
-            {anyFilter && <button type="button" className="mst-f-reset" onClick={resetFilters}>Reset filters</button>}
+            {tab === "watchlist" && !anyFilter ? t("marketSignals.emptyWatchlist") : t("marketSignals.noMatch")}
+            {anyFilter && <button type="button" className="mst-f-reset" onClick={resetFilters}>{t("marketSignals.resetFilters")}</button>}
           </div>
         )}
 
@@ -645,7 +655,7 @@ export function MarketSignalTable({ coins, onSelectCoin, onOpenAuth, onTradeCoin
                 <button
                   type="button"
                   className={`mst-star${on ? " on" : ""}`}
-                  aria-label={on ? `Remove ${c.name} from watchlist` : `Add ${c.name} to watchlist`}
+                  aria-label={on ? t("marketSignals.removeWatch", { name: c.name }) : t("marketSignals.addWatch", { name: c.name })}
                   onClick={(e) => { e.stopPropagation(); toggleWatch(c.id); }}
                 >
                   {on ? "★" : "☆"}
@@ -669,13 +679,13 @@ export function MarketSignalTable({ coins, onSelectCoin, onOpenAuth, onTradeCoin
                   <button
                     type="button"
                     className={`mst-trade${paperOn ? " mst-trade--on" : ""}`}
-                    title={!user ? "Sign in to paper trade" : paperOn ? `Paper trade ${sym}` : "Activate paper trading"}
+                    title={!user ? t("marketSignals.tradeSignIn") : paperOn ? t("marketSignals.tradeCoin", { sym }) : t("marketSignals.tradeActivate")}
                     onClick={(e) => { e.stopPropagation(); trade(sym); }}
                   >
-                    Trade
+                    {t("marketSignals.trade")}
                   </button>
                 ) : (
-                  <span className="mst-muted" title="Not available for paper trading yet">—</span>
+                  <span className="mst-muted" title={t("marketSignals.tradeUnavailable")}>—</span>
                 )}
               </span>
               <span className="mst-c-px">
@@ -703,11 +713,11 @@ export function MarketSignalTable({ coins, onSelectCoin, onOpenAuth, onTradeCoin
                       onClick={(e) => { e.stopPropagation(); onOpenAuth?.(); }}
                     >
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
-                      Sign up
+                      {t("marketSignals.signUp")}
                     </button>
                   ) : s ? (
                     <>
-                      <span className="mst-sig-word">{s.word} <b>{s.score}</b></span>                      <span className="mst-sig-bar" aria-hidden="true"><i style={{ left: `${s.score}%` }} /></span>
+                      <span className="mst-sig-word">{sigWord(s)} <b>{s.score}</b></span>                      <span className="mst-sig-bar" aria-hidden="true"><i style={{ left: `${s.score}%` }} /></span>
                       {pvLink && (
                         <button
                           type="button"
@@ -736,7 +746,7 @@ export function MarketSignalTable({ coins, onSelectCoin, onOpenAuth, onTradeCoin
       {phoneSheet()}
       {list.length > shown && (
         <button type="button" className="mst-more" onClick={() => setShown((n) => n + PAGE)}>
-          Show more
+          {t("marketSignals.showMore")}
         </button>
       )}
     </section>

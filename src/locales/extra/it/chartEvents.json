@@ -1,0 +1,49 @@
+{
+  "chartEvents": {
+    "ago": {
+      "justNow": "proprio ora",
+      "m": "{{n}} min fa",
+      "h": "{{n}} h fa",
+      "d": "{{n}} g fa",
+      "mo": "{{n}} mesi fa",
+      "y": "{{n}} anni fa"
+    },
+    "headline": {
+      "oversold": "Zona di ipervenduto",
+      "overbought": "Zona di ipercomprato",
+      "supportBreak": "Sceso sotto il supporto",
+      "resistanceReject": "Respinto alla resistenza",
+      "resistanceBreakout": "Salito sopra la resistenza",
+      "supportBounce": "Rimbalzato sul supporto",
+      "atSupport": "Test del supporto",
+      "atResistance": "Test della resistenza"
+    },
+    "title": {
+      "current": "In corso ora",
+      "supportBreak": "Sotto il supporto",
+      "resistanceReject": "Resistenza respinta",
+      "resistanceBreakout": "Rottura della resistenza",
+      "supportBounce": "Rimbalzo sul supporto",
+      "atSupport": "Sul supporto",
+      "atResistance": "Sulla resistenza"
+    },
+    "body": {
+      "currentOversold": "{{name}} è in zona di ipervenduto a {{price}}: il recente movimento potrebbe essere eccessivo al ribasso.",
+      "currentOverbought": "{{name}} è in zona di ipercomprato a {{price}}: il recente movimento potrebbe essere eccessivo al rialzo.",
+      "supportBreak_one": "{{name}} è sceso sotto {{price}}, un prezzo sopra cui è rimasto quasi sempre nell'ultima {{count}} candela.",
+      "supportBreak_other": "{{name}} è sceso sotto {{price}}, un prezzo sopra cui è rimasto quasi sempre nelle ultime {{count}} candele.",
+      "resistanceReject": "{{name}} è stato respinto vicino a {{price}} ed è tornato indietro.",
+      "resistanceBreakout_one": "{{name}} ha superato {{price}}, un prezzo sotto cui è rimasto quasi sempre nell'ultima {{count}} candela.",
+      "resistanceBreakout_other": "{{name}} ha superato {{price}}, un prezzo sotto cui è rimasto quasi sempre nelle ultime {{count}} candele.",
+      "supportBounce": "{{name}} è rimbalzato sul supporto vicino a {{price}} e ha recuperato.",
+      "atSupport": "{{name}} sta testando il supporto vicino a {{price}}.",
+      "atResistance": "{{name}} sta testando la resistenza vicino a {{price}}."
+    },
+    "live": "LIVE",
+    "bullishSetup": "Setup rialzista",
+    "bearishSetup": "Setup ribassista",
+    "show": "Mostra {{title}}",
+    "summary": "riepilogo",
+    "event": "evento"
+  }
+}

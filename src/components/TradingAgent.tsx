@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation, Trans } from "react-i18next";
+import type { TFunction } from "i18next";
 import { Capacitor } from "@capacitor/core";
 import { Browser } from "@capacitor/browser";
 import { Keyboard } from "@capacitor/keyboard";
@@ -121,15 +123,15 @@ function hapticTap() {
 
 // Same "Nm/h/d ago, then a plain date" convention NotificationsCenter
 // already uses, for the History list's per-conversation timestamp.
-function timeAgo(iso: string): string {
+function timeAgo(iso: string, t: TFunction): string {
   const diffMs = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diffMs / 60_000);
-  if (mins < 1) return "now";
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return t("tradingAgent.time.now");
+  if (mins < 60) return t("tradingAgent.time.minAgo", { n: mins });
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return t("tradingAgent.time.hourAgo", { n: hours });
   const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
+  if (days < 7) return t("tradingAgent.time.dayAgo", { n: days });
   return new Date(iso).toLocaleDateString();
 }
 
@@ -226,6 +228,7 @@ function ConversationRow({
   onDelete: () => void;
   onTogglePin: () => void;
 }) {
+  const { t } = useTranslation();
   // null while not actively dragging — rendered offset then falls back to
   // the committed `revealed` state instead, which is what makes the row
   // snap-animate back into place with a CSS transition rather than jumping.
@@ -328,7 +331,7 @@ function ConversationRow({
           type="button"
           className="ta-history-item-swipe-pin"
           onClick={() => { hapticTap(); onTogglePin(); onReveal(null); }}
-          aria-label={pinned ? "Unpin conversation" : "Pin conversation"}
+          aria-label={pinned ? t("tradingAgent.conv.unpinConversation") : t("tradingAgent.conv.pinConversation")}
         >
           <PinIcon size={22} slash={pinned} className="ta-history-item-swipe-icon" style={{ transform: `scale(${0.6 + 0.4 * pinProgress})` }} />
         </button>
@@ -338,7 +341,7 @@ function ConversationRow({
           type="button"
           className="ta-history-item-swipe-delete"
           onClick={() => { hapticTap(); onDelete(); }}
-          aria-label="Delete conversation"
+          aria-label={t("tradingAgent.conv.deleteConversation")}
         >
           <TrashIcon size={22} className="ta-history-item-swipe-icon" style={{ transform: `scale(${0.6 + 0.4 * deleteProgress})` }} />
         </button>
@@ -355,9 +358,9 @@ function ConversationRow({
         >
           <span className="ta-history-item-preview-row">
             {pinned && <PinIcon size={11} filled className="ta-history-item-pin-badge" />}
-            <span className="ta-history-item-preview">{conversation.preview || "(empty)"}</span>
+            <span className="ta-history-item-preview">{conversation.preview || t("tradingAgent.conv.empty")}</span>
           </span>
-          <span className="ta-history-item-meta">{conversation.messageCount} message{conversation.messageCount === 1 ? "" : "s"} · {timeAgo(conversation.updatedAt)}</span>
+          <span className="ta-history-item-meta">{t("tradingAgent.conv.messages", { count: conversation.messageCount })} · {timeAgo(conversation.updatedAt, t)}</span>
         </button>
       </div>
     </div>
@@ -523,14 +526,15 @@ function PositionsListCard({ list, coinTickers, onClosePosition, closingKey }: {
   onClosePosition?: (item: PositionsListItem) => void;
   closingKey?: string | null;
 }) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState<number | null>(null);
   const { status, items } = list;
 
   if (items.length === 0) {
     return (
       <div className="ta-positions-list">
-        <span className="ta-positions-list-label">{status === "open" ? "Open Positions" : "Closed Positions"}</span>
-        <p className="ta-positions-list-empty">{status === "open" ? "No open positions right now." : "No closed positions yet."}</p>
+        <span className="ta-positions-list-label">{status === "open" ? t("tradingAgent.positions.openTitle") : t("tradingAgent.positions.closedTitle")}</span>
+        <p className="ta-positions-list-empty">{status === "open" ? t("tradingAgent.positions.noOpen") : t("tradingAgent.positions.noClosed")}</p>
       </div>
     );
   }
@@ -538,9 +542,9 @@ function PositionsListCard({ list, coinTickers, onClosePosition, closingKey }: {
   return (
     <div className="ta-positions-list">
       <div className="ta-positions-list-head">
-        <span className="ta-positions-list-label">{status === "open" ? "Open Positions" : "Closed Positions"}</span>
+        <span className="ta-positions-list-label">{status === "open" ? t("tradingAgent.positions.openTitle") : t("tradingAgent.positions.closedTitle")}</span>
         <span className="ta-positions-list-hint">
-          {items.length > 8 ? `${items.length} positions · scroll for more` : "Tap a position for full details"}
+          {items.length > 8 ? t("tradingAgent.positions.scrollMore", { count: items.length }) : t("tradingAgent.positions.tapHint")}
         </span>
       </div>
       {/* Own scroll area so a long history scrolls instead of piling up. */}
@@ -562,7 +566,7 @@ function PositionsListCard({ list, coinTickers, onClosePosition, closingKey }: {
                 </span>
               )}
               {status === "closed" && item.closeReason && (
-                <span className="ta-positions-list-tag">{item.closeReason.replace("_", " ")}</span>
+                <span className="ta-positions-list-tag">{t(`tradingAgent.positions.closeReason.${item.closeReason}`, { defaultValue: item.closeReason.replace("_", " ") })}</span>
               )}
               <span className={`ta-positions-list-chevron${isOpenRow ? " ta-positions-list-chevron--open" : ""}`}>▾</span>
             </button>
@@ -580,19 +584,19 @@ function PositionsListCard({ list, coinTickers, onClosePosition, closingKey }: {
             {isOpenRow && (
               <div className="ta-positions-list-detail">
                 <div className="ta-proposal-detail">
-                  <span>Side</span>
-                  <strong>{item.market === "futures" ? `${item.side === "long" ? "LONG" : "SHORT"} ${item.leverage}x` : "SPOT"}</strong>
+                  <span>{t("tradingAgent.positions.side")}</span>
+                  <strong>{item.market === "futures" ? `${item.side === "long" ? t("tradingAgent.proposal.long") : t("tradingAgent.proposal.short")} ${item.leverage}x` : t("tradingAgent.proposal.spot")}</strong>
                 </div>
                 <div className="ta-proposal-detail">
-                  <span>Size</span>
+                  <span>{t("tradingAgent.positions.size")}</span>
                   <strong>{item.qty} {item.coin}</strong>
                 </div>
                 <div className="ta-proposal-detail">
-                  <span>Entry</span>
+                  <span>{t("tradingAgent.positions.entry")}</span>
                   <strong>${item.avgEntryPrice.toLocaleString()}</strong>
                 </div>
                 <div className="ta-proposal-detail">
-                  <span>{status === "open" ? "Current" : "Exit"}</span>
+                  <span>{status === "open" ? t("tradingAgent.positions.current") : t("tradingAgent.positions.exit")}</span>
                   <strong>
                     {status === "open"
                       ? (livePrice ? formatLivePrice(livePrice) : "—")
@@ -600,18 +604,18 @@ function PositionsListCard({ list, coinTickers, onClosePosition, closingKey }: {
                   </strong>
                 </div>
                 <div className="ta-proposal-detail">
-                  <span>P&L</span>
+                  <span>{t("tradingAgent.positions.pnl")}</span>
                   <strong className={pnl != null ? (pnl >= 0 ? "ta-proposal-tp" : "ta-proposal-sl") : undefined}>
                     {pnl != null ? `${pnl >= 0 ? "+" : "-"}$${Math.abs(pnl).toLocaleString(undefined, { maximumFractionDigits: 2 })}` : "—"}
                   </strong>
                 </div>
                 <div className="ta-proposal-detail">
-                  <span>Opened</span>
+                  <span>{t("tradingAgent.positions.opened")}</span>
                   <strong>{item.openedAt ? new Date(item.openedAt).toLocaleString() : "—"}</strong>
                 </div>
                 {status === "closed" && (
                   <div className="ta-proposal-detail">
-                    <span>Closed</span>
+                    <span>{t("tradingAgent.positions.closed")}</span>
                     <strong>{item.closedAt ? new Date(item.closedAt).toLocaleString() : "—"}</strong>
                   </div>
                 )}
@@ -622,7 +626,7 @@ function PositionsListCard({ list, coinTickers, onClosePosition, closingKey }: {
                     onClick={(e) => { e.stopPropagation(); onClosePosition(item); }}
                     disabled={closingKey === `${item.coin}:${item.market}`}
                   >
-                    {closingKey === `${item.coin}:${item.market}` ? "Closing…" : "Close Position"}
+                    {closingKey === `${item.coin}:${item.market}` ? t("tradingAgent.positions.closing") : t("tradingAgent.positions.closePosition")}
                   </button>
                 )}
               </div>
@@ -647,6 +651,7 @@ function ActionProposalCard({
   onConfirm: (m: AgentMessage) => void;
   onDismiss: (m: AgentMessage) => void;
 }) {
+  const { t } = useTranslation();
   const action = message.action;
   if (!action) return null;
   const pnl = estimateNetPnl(action);
@@ -655,28 +660,28 @@ function ActionProposalCard({
       <div className="ta-proposal-row">
         <span className={`ta-proposal-side ta-proposal-side--${action.side}`}>
           {action.market === "futures"
-            ? (action.side === "buy" ? "▲ LONG" : "▼ SHORT")
-            : (action.side === "buy" ? "▲ BUY" : "▼ SELL")}
+            ? (action.side === "buy" ? `▲ ${t("tradingAgent.proposal.long")}` : `▼ ${t("tradingAgent.proposal.short")}`)
+            : (action.side === "buy" ? `▲ ${t("tradingAgent.proposal.buy")}` : `▼ ${t("tradingAgent.proposal.sell")}`)}
         </span>
         <span className="ta-proposal-coin">{action.coin}</span>
         <span className="ta-proposal-market">
-          {action.market === "futures" ? `FUTURES ${action.leverage}x` : "SPOT"}
+          {action.market === "futures" ? t("tradingAgent.proposal.futures", { leverage: action.leverage }) : t("tradingAgent.proposal.spot")}
         </span>
       </div>
       <div className="ta-proposal-details">
         <div className="ta-proposal-detail">
-          <span>{action.market === "futures" ? "Margin" : "Cost"}</span>
+          <span>{action.market === "futures" ? t("tradingAgent.proposal.margin") : t("tradingAgent.proposal.cost")}</span>
           <strong>${action.amountUsd.toLocaleString()}</strong>
         </div>
         {action.market === "futures" && (
           <div className="ta-proposal-detail">
-            <span>Notional</span>
+            <span>{t("tradingAgent.proposal.notional")}</span>
             <strong>${(action.amountUsd * action.leverage).toLocaleString()}</strong>
           </div>
         )}
         {action.takeProfit != null && (
           <div className="ta-proposal-detail">
-            <span>Take Profit</span>
+            <span>{t("tradingAgent.proposal.takeProfit")}</span>
             <strong className="ta-proposal-tp">
               ${action.takeProfit.toLocaleString()}
               {pnl && <span className="ta-proposal-pnl"> ({formatPnl(pnl.profit)})</span>}
@@ -685,7 +690,7 @@ function ActionProposalCard({
         )}
         {action.stopLoss != null && (
           <div className="ta-proposal-detail">
-            <span>Stop Loss</span>
+            <span>{t("tradingAgent.proposal.stopLoss")}</span>
             <strong className="ta-proposal-sl">
               ${action.stopLoss.toLocaleString()}
               {pnl && <span className="ta-proposal-pnl"> ({formatPnl(pnl.loss)})</span>}
@@ -702,15 +707,15 @@ function ActionProposalCard({
             onClick={() => onConfirm(message)}
             disabled={executingId === message.id}
           >
-            {executingId === message.id ? "Executing…" : "Confirm"}
+            {executingId === message.id ? t("tradingAgent.proposal.executing") : t("tradingAgent.proposal.confirm")}
           </button>
           <button type="button" className="ta-proposal-dismiss" onClick={() => onDismiss(message)}>
-            Dismiss
+            {t("tradingAgent.proposal.dismiss")}
           </button>
         </div>
       ) : (
         <span className="ta-proposal-status">
-          {message.actionStatus === "confirmed" ? "✓ Executed" : "Dismissed"}
+          {message.actionStatus === "confirmed" ? t("tradingAgent.proposal.executed") : t("tradingAgent.proposal.dismissed")}
         </span>
       )}
     </div>
@@ -719,6 +724,7 @@ function ActionProposalCard({
 
 export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers, onNavigateToSection, onAgentLocked, onReportIssue, showIntroShowcase, triggerLabel = "Agent ready", triggerCapturesChart }: Props) {
   const { user, tier, profile } = useAuth();
+  const { t } = useTranslation();
   const isDesktop = useIsDesktop();
 
   // Elite-only (not Pro) — a live chat agent burns through the AI quota far
@@ -826,7 +832,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
     setWebPushError(null);
     const result = await subscribeWebPush(user.id);
     setWebPushSubscribed(result.ok);
-    if (!result.ok) setWebPushError(result.error ?? "Couldn't enable browser notifications");
+    if (!result.ok) setWebPushError(result.error ?? t("tradingAgent.errors.enableNotifications"));
     setWebPushPrompting(false);
   };
 
@@ -934,9 +940,9 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
 
     (async () => {
       if (firstUse) {
-        await typeText("Agent is connecting");
+        await typeText(t("tradingAgent.connecting"));
         await sleep(900);
-        await eraseText("Agent is connecting");
+        await eraseText(t("tradingAgent.connecting"));
         await typeText(triggerLabel);
         localStorage.setItem("tradingAgentFirstUseDone", "true");
       } else {
@@ -1174,7 +1180,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
       await acceptConsent(user.id);
       await loadAll(conversationId);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't save that — please try again.");
+      setError(e instanceof Error ? e.message : t("tradingAgent.errors.saveFailed"));
     } finally {
       setAcceptingConsent(false);
     }
@@ -1502,11 +1508,11 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
     try {
       setClosedPositions(await fetchClosedPositions(user.id));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't load your closed positions — please try again.");
+      setError(e instanceof Error ? e.message : t("tradingAgent.errors.loadClosed"));
     } finally {
       setLoadingClosedPositions(false);
     }
-  }, [user]);
+  }, [user, t]);
 
   const handleOpenPositions = async () => {
     setShowHistory(false);
@@ -1527,7 +1533,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
       setPortfolio(p);
       setClosedPositions(closed);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't refresh your positions — please try again.");
+      setError(e instanceof Error ? e.message : t("tradingAgent.errors.refreshPositions"));
     } finally {
       setRefreshingPositions(false);
     }
@@ -1716,7 +1722,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
       // request on purpose — the user is already mid-way into their next
       // turn by the time this rejects, so there's nothing to show here.
       if (!(e instanceof DOMException && e.name === "AbortError")) {
-        setError(e instanceof Error ? e.message : "Something went wrong — please try again.");
+        setError(e instanceof Error ? e.message : t("tradingAgent.errors.generic"));
       }
     } finally {
       // Chat transcript always gets the full back-and-forth from loadAll
@@ -2160,7 +2166,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
       await setActionStatus(m.id, "confirmed");
       await loadAll(conversationId);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Trade failed — please try again.");
+      setError(e instanceof Error ? e.message : t("tradingAgent.errors.tradeFailed"));
     } finally {
       setExecutingId(null);
     }
@@ -2175,7 +2181,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
       await setActionStatus(m.id, "confirmed");
       await loadAll(conversationId);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Some legs may not have executed — please check your positions.");
+      setError(e instanceof Error ? e.message : t("tradingAgent.errors.basketFailed"));
     } finally {
       setExecutingId(null);
     }
@@ -2191,7 +2197,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
       await setActionStatus(m.id, "confirmed");
       await loadAll(conversationId);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't update your balance — please try again.");
+      setError(e instanceof Error ? e.message : t("tradingAgent.errors.balanceFailed"));
     } finally {
       setExecutingId(null);
     }
@@ -2207,7 +2213,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
       await loadAll(conversationId);
       if (showWatches) await loadAllWatches();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't set up that watch — please try again.");
+      setError(e instanceof Error ? e.message : t("tradingAgent.errors.watchFailed"));
     } finally {
       setExecutingId(null);
     }
@@ -2222,7 +2228,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
   const saveCash = async () => {
     const value = Number(cashDraft);
     if (!Number.isFinite(value) || value < 0) {
-      setError("Cash balance must be a non-negative number.");
+      setError(t("tradingAgent.errors.cashInvalid"));
       return;
     }
     setSavingCash(true);
@@ -2232,7 +2238,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
       await loadAll(conversationId);
       setEditingCash(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't update cash balance — please try again.");
+      setError(e instanceof Error ? e.message : t("tradingAgent.errors.cashFailed"));
     } finally {
       setSavingCash(false);
     }
@@ -2247,7 +2253,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
       await closePosition(user!.id, p);
       await loadAll(conversationId);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't close that position — please try again.");
+      setError(e instanceof Error ? e.message : t("tradingAgent.errors.closeFailed"));
     } finally {
       setClosingPosition(null);
     }
@@ -2267,7 +2273,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
       await loadAll(conversationId);
       if (showWatches) await loadAllWatches();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't cancel the watch — please try again.");
+      setError(e instanceof Error ? e.message : t("tradingAgent.errors.cancelWatchFailed"));
     } finally {
       setCancellingWatchId(null);
     }
@@ -2288,30 +2294,30 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
         </span>
         {isMobile ? (
           <div className="ta-head-actions">
-            <button type="button" className="ta-head-icon-btn ta-head-icon-btn--labelled" onClick={() => setHubOpen(true)} title="Agent actions" aria-label="Agent actions">
+            <button type="button" className="ta-head-icon-btn ta-head-icon-btn--labelled" onClick={() => setHubOpen(true)} title={t("tradingAgent.head.agentActions")} aria-label={t("tradingAgent.head.agentActions")}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
-              <span>Menu</span>
+              <span>{t("tradingAgent.head.menu")}</span>
             </button>
             {/* Round close button — just the X in a circle, no label. */}
-            <button type="button" className="ta-head-close ta-head-close--round" onClick={() => setOpen(false)} title="Close" aria-label="Close">
+            <button type="button" className="ta-head-close ta-head-close--round" onClick={() => setOpen(false)} title={t("tradingAgent.head.close")} aria-label={t("tradingAgent.head.close")}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
             </button>
           </div>
         ) : (
           <div className="ta-head-actions">
-            <button type="button" className="ta-head-icon-btn" onClick={handleNewConversation} title="New chat" aria-label="New chat">
+            <button type="button" className="ta-head-icon-btn" onClick={handleNewConversation} title={t("tradingAgent.head.newChat")} aria-label={t("tradingAgent.head.newChat")}>
               +
             </button>
-            <button type="button" className="ta-head-icon-btn" onClick={handleOpenHistory} title="History" aria-label="History">
+            <button type="button" className="ta-head-icon-btn" onClick={handleOpenHistory} title={t("tradingAgent.head.history")} aria-label={t("tradingAgent.head.history")}>
               ☰
             </button>
-            <button type="button" className="ta-head-icon-btn" onClick={handleOpenWatches} title="Watchlist" aria-label="Watchlist">
+            <button type="button" className="ta-head-icon-btn" onClick={handleOpenWatches} title={t("tradingAgent.head.watchlist")} aria-label={t("tradingAgent.head.watchlist")}>
               <BellIcon size={16} />
             </button>
-            <button type="button" className="ta-head-icon-btn" onClick={handleOpenPositions} title="Positions" aria-label="Positions">
+            <button type="button" className="ta-head-icon-btn" onClick={handleOpenPositions} title={t("tradingAgent.head.positions")} aria-label={t("tradingAgent.head.positions")}>
               <PositionsIcon size={16} />
             </button>
-            <button type="button" className="ta-head-close" onClick={() => setOpen(false)} title="Close" aria-label="Close">✕</button>
+            <button type="button" className="ta-head-close" onClick={() => setOpen(false)} title={t("tradingAgent.head.close")} aria-label={t("tradingAgent.head.close")}>✕</button>
           </div>
         )}
       </div>
@@ -2325,20 +2331,20 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
             const near = !atLimit && n >= MAX_CHATS - 2;
             return (
               <div className={`ta-chat-limit${atLimit ? " ta-chat-limit--hit" : near ? " ta-chat-limit--near" : ""}`} role="status">
-                <strong>{n}/{MAX_CHATS} chats</strong>
+                <strong>{t("tradingAgent.history.chatsCount", { n, max: MAX_CHATS })}</strong>
                 <span>
                   {atLimit
-                    ? "You've reached the 10-chat limit. To start a new chat, delete one below first."
+                    ? t("tradingAgent.history.limitHit", { max: MAX_CHATS })
                     : near
-                      ? `Heads up: you can keep up to 10 chats. ${MAX_CHATS - n} left before you'll need to delete one to start a new chat.`
-                      : "You can keep up to 10 chats. Once you reach 10, delete one to start a new chat."}
+                      ? t("tradingAgent.history.limitNear", { max: MAX_CHATS, left: MAX_CHATS - n })
+                      : t("tradingAgent.history.limitInfo", { max: MAX_CHATS })}
                 </span>
               </div>
             );
           })()}
           <div className="ta-history-list">
             {sortedConversations.length === 0 && (
-              <p className="ta-empty">No past conversations yet.</p>
+              <p className="ta-empty">{t("tradingAgent.history.noConversations")}</p>
             )}
             {(() => {
               const renderRow = (c: ConversationSummary) => (
@@ -2359,16 +2365,16 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                     <button type="button" className="ta-history-item-main" onClick={() => handleOpenConversation(c.id)}>
                       <span className="ta-history-item-preview-row">
                         {pinnedIds.has(c.id) && <PinIcon size={11} filled className="ta-history-item-pin-badge" />}
-                        <span className="ta-history-item-preview">{c.preview || "(empty)"}</span>
+                        <span className="ta-history-item-preview">{c.preview || t("tradingAgent.conv.empty")}</span>
                       </span>
-                      <span className="ta-history-item-meta">{c.messageCount} message{c.messageCount === 1 ? "" : "s"} · {timeAgo(c.updatedAt)}</span>
+                      <span className="ta-history-item-meta">{t("tradingAgent.conv.messages", { count: c.messageCount })} · {timeAgo(c.updatedAt, t)}</span>
                     </button>
                     <button
                       type="button"
                       className="ta-history-item-pin"
                       onClick={() => togglePin(c.id)}
-                      aria-label={pinnedIds.has(c.id) ? "Unpin conversation" : "Pin conversation"}
-                      title={pinnedIds.has(c.id) ? "Unpin" : "Pin"}
+                      aria-label={pinnedIds.has(c.id) ? t("tradingAgent.conv.unpinConversation") : t("tradingAgent.conv.pinConversation")}
+                      title={pinnedIds.has(c.id) ? t("tradingAgent.conv.unpin") : t("tradingAgent.conv.pin")}
                     >
                       <PinIcon size={15} slash={pinnedIds.has(c.id)} />
                     </button>
@@ -2376,8 +2382,8 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                       type="button"
                       className="ta-history-item-delete"
                       onClick={() => handleDeleteConversation(c.id)}
-                      aria-label="Delete conversation"
-                      title="Delete"
+                      aria-label={t("tradingAgent.conv.deleteConversation")}
+                      title={t("tradingAgent.conv.delete")}
                     >
                       🗑
                     </button>
@@ -2394,16 +2400,16 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
               const restRows = sortedConversations.filter((c) => !pinnedIds.has(c.id));
               return (
                 <>
-                  <p className="ta-watchlist-section-title">Pinned</p>
+                  <p className="ta-watchlist-section-title">{t("tradingAgent.history.pinned")}</p>
                   {pinnedRows.map(renderRow)}
-                  {restRows.length > 0 && <p className="ta-watchlist-section-title">All chats</p>}
+                  {restRows.length > 0 && <p className="ta-watchlist-section-title">{t("tradingAgent.history.allChats")}</p>}
                   {restRows.map(renderRow)}
                 </>
               );
             })()}
           </div>
           <button type="button" className="ta-history-back" onClick={() => setShowHistory(false)}>
-            Back to chat
+            {t("tradingAgent.history.backToChat")}
           </button>
         </div>
       ) : showWatches ? (() => {
@@ -2412,8 +2418,8 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
         return (
           <div className="ta-history">
             <div className="ta-history-list">
-              <p className="ta-watchlist-section-title">Active watches</p>
-              {active.length === 0 && <p className="ta-empty">No active watches.</p>}
+              <p className="ta-watchlist-section-title">{t("tradingAgent.watches.active")}</p>
+              {active.length === 0 && <p className="ta-empty">{t("tradingAgent.watches.noActive")}</p>}
               {active.map((w) => (
                 <div key={w.id} className="ta-watchlist-item">
                   <div className="ta-watchlist-item-main">
@@ -2421,7 +2427,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                     <span className="ta-watchlist-item-condition">
                       {w.conditionText}
                       {/rsi|macd|volume/i.test(w.conditionText) && (
-                        <span className="ta-watch-interval-tag">{w.interval === "1d" ? "Daily" : w.interval}</span>
+                        <span className="ta-watch-interval-tag">{w.interval === "1d" ? t("tradingAgent.watches.daily") : w.interval}</span>
                       )}
                     </span>
                   </div>
@@ -2431,13 +2437,13 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                     onClick={() => handleCancelWatch(w.id)}
                     disabled={cancellingWatchId === w.id}
                   >
-                    {cancellingWatchId === w.id ? "…" : "Cancel"}
+                    {cancellingWatchId === w.id ? "…" : t("tradingAgent.watches.cancel")}
                   </button>
                 </div>
               ))}
 
-              <p className="ta-watchlist-section-title ta-watchlist-section-title--notifications">Notifications</p>
-              {triggered.length === 0 && <p className="ta-empty">No triggered watches yet.</p>}
+              <p className="ta-watchlist-section-title ta-watchlist-section-title--notifications">{t("tradingAgent.watches.notifications")}</p>
+              {triggered.length === 0 && <p className="ta-empty">{t("tradingAgent.watches.noTriggered")}</p>}
               {triggered.map((w) => (
                 <div key={w.id} className="ta-watchlist-item ta-watchlist-item--triggered">
                   <div className="ta-watchlist-item-main">
@@ -2445,32 +2451,32 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                     <span className="ta-watchlist-item-condition">{w.conditionText}</span>
                     <span className="ta-watchlist-item-time">{w.triggeredAt ? formatMsgTime(w.triggeredAt) : ""}</span>
                   </div>
-                  <span className="ta-watch-status">✓ Triggered</span>
+                  <span className="ta-watch-status">{t("tradingAgent.watches.triggered")}</span>
                 </div>
               ))}
             </div>
             <button type="button" className="ta-history-back" onClick={() => setShowWatches(false)}>
-              Back to chat
+              {t("tradingAgent.history.backToChat")}
             </button>
           </div>
         );
       })() : showPositions ? (
         <div className="ta-history">
           <div className="ta-positions-page-head">
-            <span className="ta-positions-page-title">Positions</span>
+            <span className="ta-positions-page-title">{t("tradingAgent.positions.title")}</span>
             <button
               type="button"
               className={`ta-positions-refresh-btn${refreshingPositions ? " ta-positions-refresh-btn--spinning" : ""}`}
               onClick={handleRefreshPositions}
               disabled={refreshingPositions}
-              title="Refresh"
-              aria-label="Refresh positions"
+              title={t("tradingAgent.positions.refresh")}
+              aria-label={t("tradingAgent.positions.refreshPositions")}
             >
               <svg className="ta-positions-refresh-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 12a9 9 0 1 1-2.64-6.36" />
                 <path d="M21 3v6h-6" />
               </svg>
-              <span>Refresh</span>
+              <span>{t("tradingAgent.positions.refresh")}</span>
             </button>
           </div>
           <div className="ta-positions-view-tabs">
@@ -2479,14 +2485,14 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
               className={`ta-positions-view-tab${positionsTab === "open" ? " ta-positions-view-tab--active" : ""}`}
               onClick={() => setPositionsTab("open")}
             >
-              Open
+              {t("tradingAgent.positions.tabOpen")}
             </button>
             <button
               type="button"
               className={`ta-positions-view-tab${positionsTab === "closed" ? " ta-positions-view-tab--active" : ""}`}
               onClick={() => setPositionsTab("closed")}
             >
-              Closed
+              {t("tradingAgent.positions.tabClosed")}
             </button>
           </div>
           <div
@@ -2515,26 +2521,23 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                 closingKey={closingPosition}
               />
             ) : loadingClosedPositions ? (
-              <p className="ta-empty">Loading your closed positions…</p>
+              <p className="ta-empty">{t("tradingAgent.positions.loadingClosed")}</p>
             ) : (
               <PositionsListCard list={{ status: "closed", items: closedPositions ?? [] }} />
             )}
           </div>
           <button type="button" className="ta-history-back" onClick={() => setShowPositions(false)}>
-            Back to chat
+            {t("tradingAgent.history.backToChat")}
           </button>
         </div>
       ) : needsConsent ? (
         <div className="ta-onboard">
           <p className="ta-onboard-disclaimer">
-            <strong>Paper trading only — simulated money, simulated trades.</strong> This agent is not a registered
-            financial or investment advisor, and nothing it says is financial advice. coinhintz is not responsible for
-            any losses, simulated or otherwise, from using this feature. We'll only ask you to accept this once —
-            you won't see this disclaimer again after today.
+            <strong>{t("tradingAgent.consent.strong")}</strong> {t("tradingAgent.consent.body")}
           </p>
           {error && <p className="ta-error">{error}</p>}
           <button type="button" className="ta-onboard-continue" onClick={handleAcceptConsent} disabled={acceptingConsent}>
-            {acceptingConsent ? "One sec…" : "I understood and agreed!"}
+            {acceptingConsent ? t("tradingAgent.consent.oneSec") : t("tradingAgent.consent.agree")}
           </button>
         </div>
       ) : (
@@ -2549,22 +2552,22 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
           {!messages.some((m) => m.role === "user") && lastConversation && (
             <div className="ta-continue-banner">
               <span className="ta-continue-banner-text">
-                Pick up where you left off: <em>"{lastConversation.preview.length > 60 ? `${lastConversation.preview.slice(0, 60)}…` : lastConversation.preview}"</em>
+                {t("tradingAgent.continueBanner.text")} <em>"{lastConversation.preview.length > 60 ? `${lastConversation.preview.slice(0, 60)}…` : lastConversation.preview}"</em>
               </span>
               <button
                 type="button"
                 className="ta-continue-banner-btn"
                 onClick={() => handleOpenConversation(lastConversation.id)}
               >
-                Continue →
+                {t("tradingAgent.continueBanner.continue")}
               </button>
             </div>
           )}
           {isWebPushAvailable() && !webPushSubscribed && (
             <div className="ta-webpush-banner">
-              <span className="ta-webpush-banner-text">Get a browser alert when a watch or position triggers, even with this closed.</span>
+              <span className="ta-webpush-banner-text">{t("tradingAgent.webPush.text")}</span>
               <button type="button" className="ta-webpush-banner-btn" onClick={handleEnableWebPush} disabled={webPushPrompting}>
-                🔔 {webPushPrompting ? "Enabling…" : "Enable"}
+                🔔 {webPushPrompting ? t("tradingAgent.webPush.enabling") : t("tradingAgent.webPush.enable")}
               </button>
             </div>
           )}
@@ -2577,7 +2580,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                 onClick={() => setPortfolioCollapsed((v) => !v)}
                 aria-expanded={!portfolioCollapsed}
               >
-                Portfolio
+                {t("tradingAgent.portfolio.title")}
                 <span className={`ta-portfolio-toggle-chevron${portfolioCollapsed ? " ta-portfolio-toggle-chevron--collapsed" : ""}`}>
                   ▾
                 </span>
@@ -2585,7 +2588,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
               {!portfolioCollapsed && (
               <>
               <div className="ta-portfolio-cash">
-                <span className="ta-portfolio-label">Cash</span>
+                <span className="ta-portfolio-label">{t("tradingAgent.portfolio.cash")}</span>
                 {editingCash ? (
                   <span className="ta-portfolio-cash-edit">
                     <span className="ta-portfolio-cash-prefix">$</span>
@@ -2609,25 +2612,25 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                       ${portfolio.cashBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                     </button>
                     <button type="button" className="ta-portfolio-cash-edit-link" onClick={startEditCash}>
-                      Edit
+                      {t("tradingAgent.portfolio.edit")}
                     </button>
                   </span>
                 )}
               </div>
               {performance && performance.totalClosed > 0 && (
                 <div className="ta-portfolio-performance">
-                  <span className="ta-portfolio-label">Win Rate</span>
+                  <span className="ta-portfolio-label">{t("tradingAgent.portfolio.winRate")}</span>
                   <span className={`ta-portfolio-winrate${(performance.winRate ?? 0) >= 0.5 ? " ta-portfolio-winrate--good" : " ta-portfolio-winrate--bad"}`}>
                     {Math.round((performance.winRate ?? 0) * 100)}%
                     <span className="ta-portfolio-winrate-detail">
-                      ({performance.wins}W–{performance.losses}L)
+                      {t("tradingAgent.portfolio.winLoss", { wins: performance.wins, losses: performance.losses })}
                     </span>
                   </span>
                 </div>
               )}
               {portfolio.positions.length > 0 && (
                 <div className="ta-portfolio-positions">
-                  <span className="ta-portfolio-positions-label">Current Positions</span>
+                  <span className="ta-portfolio-positions-label">{t("tradingAgent.portfolio.currentPositions")}</span>
                   {portfolio.positions.map((p) => {
                     const key = `${p.coin}:${p.market}`;
                     const livePrice = coinTickers?.get(p.coin)?.price;
@@ -2650,7 +2653,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                             onClick={() => handleClosePosition(p)}
                             disabled={closingPosition === key}
                           >
-                            {closingPosition === key ? "Closing…" : "Close"}
+                            {closingPosition === key ? t("tradingAgent.positions.closing") : t("tradingAgent.positions.close")}
                           </button>
                         </div>
                         {p.market === "futures" && livePrice && livePrice > 0 && (
@@ -2675,7 +2678,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
           <div className="ta-feed" ref={feedRef} onClick={() => { if (hubOpen) setHubOpen(false); }}>
             {messages.length === 0 && (
               <p className="ta-empty">
-                Try "buy $200 of BTC", "sell half my ETH", or "what do you think about SOL?" — everything here is simulated, no real money or exchange involved.
+                {t("tradingAgent.feed.emptyHint")}
               </p>
             )}
             {messages.map((m) => (
@@ -2691,12 +2694,12 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                     dim/italic thought-process styling. */}
                 {m.thoughtProcess && m.content.replace(/\s+/g, " ").trim() !== m.thoughtProcess.replace(/\s+/g, " ").trim() && (
                   <div className="ta-thought-process">
-                    <span className="ta-thought-process-label">Thought process</span>
+                    <span className="ta-thought-process-label">{t("tradingAgent.feed.thoughtProcess")}</span>
                     <p className="ta-thought-process-text">{m.thoughtProcess}</p>
                   </div>
                 )}
                 {m.imageUrl && (
-                  <img src={m.imageUrl} alt="Chart screenshot" className="ta-msg-image" />
+                  <img src={m.imageUrl} alt={t("tradingAgent.feed.chartScreenshot")} className="ta-msg-image" />
                 )}
                 {editingId === m.id ? (
                   <div className="ta-msg-edit">
@@ -2712,8 +2715,8 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                       autoFocus
                     />
                     <div className="ta-msg-edit-actions">
-                      <button type="button" className="ta-msg-edit-cancel" onClick={() => setEditingId(null)}>Cancel</button>
-                      <button type="button" className="ta-msg-edit-save" onClick={() => saveEdit(m)} disabled={!editText.trim() || sending}>Save &amp; resend</button>
+                      <button type="button" className="ta-msg-edit-cancel" onClick={() => setEditingId(null)}>{t("tradingAgent.feed.cancel")}</button>
+                      <button type="button" className="ta-msg-edit-save" onClick={() => saveEdit(m)} disabled={!editText.trim() || sending}>{t("tradingAgent.feed.saveResend")}</button>
                     </div>
                   </div>
                 ) : (
@@ -2728,8 +2731,8 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                           type="button"
                           className="ta-msg-action"
                           onClick={() => copyMessage(m)}
-                          aria-label={copiedId === m.id ? "Copied" : "Copy message"}
-                          title={copiedId === m.id ? "Copied" : "Copy"}
+                          aria-label={copiedId === m.id ? t("tradingAgent.feed.copied") : t("tradingAgent.feed.copyMessage")}
+                          title={copiedId === m.id ? t("tradingAgent.feed.copied") : t("tradingAgent.feed.copy")}
                         >
                           {copiedId === m.id ? (
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>
@@ -2743,8 +2746,8 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                             className="ta-msg-action"
                             onClick={() => { setEditText(m.content); setEditingId(m.id); }}
                             disabled={sending}
-                            aria-label="Edit message"
-                            title="Edit"
+                            aria-label={t("tradingAgent.feed.editMessage")}
+                            title={t("tradingAgent.feed.edit")}
                           >
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" /></svg>
                           </button>
@@ -2756,7 +2759,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                 {m.newsSources && m.newsSources.length > 0 && (
                   <div className="ta-sources">
                     <span className="ta-sources-label">
-                      {m.newsSources.length} {m.newsSources.length === 1 ? "Source" : "Sources"}
+                      {t("tradingAgent.feed.sources", { count: m.newsSources.length })}
                     </span>
                     <div className="ta-sources-list">
                       {m.newsSources.map((n, i) => (
@@ -2788,22 +2791,22 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                           <div className="ta-proposal-row">
                             <span className={`ta-proposal-side ta-proposal-side--${leg.side}`}>
                               {leg.market === "futures"
-                                ? (leg.side === "buy" ? "▲ LONG" : "▼ SHORT")
-                                : (leg.side === "buy" ? "▲ BUY" : "▼ SELL")}
+                                ? (leg.side === "buy" ? `▲ ${t("tradingAgent.proposal.long")}` : `▼ ${t("tradingAgent.proposal.short")}`)
+                                : (leg.side === "buy" ? `▲ ${t("tradingAgent.proposal.buy")}` : `▼ ${t("tradingAgent.proposal.sell")}`)}
                             </span>
                             <span className="ta-proposal-coin">{leg.coin}</span>
                             <span className="ta-proposal-market">
-                              {leg.market === "futures" ? `FUTURES ${leg.leverage}x` : "SPOT"}
+                              {leg.market === "futures" ? t("tradingAgent.proposal.futures", { leverage: leg.leverage }) : t("tradingAgent.proposal.spot")}
                             </span>
                           </div>
                           <div className="ta-proposal-details">
                             <div className="ta-proposal-detail">
-                              <span>{leg.market === "futures" ? "Margin" : "Cost"}</span>
+                              <span>{leg.market === "futures" ? t("tradingAgent.proposal.margin") : t("tradingAgent.proposal.cost")}</span>
                               <strong>${leg.amountUsd.toLocaleString()}</strong>
                             </div>
                             {leg.takeProfit != null && (
                               <div className="ta-proposal-detail">
-                                <span>Take Profit</span>
+                                <span>{t("tradingAgent.proposal.takeProfit")}</span>
                                 <strong className="ta-proposal-tp">
                                   ${leg.takeProfit.toLocaleString()}
                                   {pnl && <span className="ta-proposal-pnl"> ({formatPnl(pnl.profit)})</span>}
@@ -2812,7 +2815,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                             )}
                             {leg.stopLoss != null && (
                               <div className="ta-proposal-detail">
-                                <span>Stop Loss</span>
+                                <span>{t("tradingAgent.proposal.stopLoss")}</span>
                                 <strong className="ta-proposal-sl">
                                   ${leg.stopLoss.toLocaleString()}
                                   {pnl && <span className="ta-proposal-pnl"> ({formatPnl(pnl.loss)})</span>}
@@ -2826,8 +2829,8 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                       })}
                     </div>
                     <div className="ta-basket-total">
-                      <span>Total</span>
-                      <strong>${m.basket.reduce((sum, leg) => sum + leg.amountUsd, 0).toLocaleString()} across {m.basket.length} {m.basket.length === 1 ? "name" : "names"}</strong>
+                      <span>{t("tradingAgent.proposal.total")}</span>
+                      <strong>{t("tradingAgent.proposal.totalAcross", { amount: `$${m.basket.reduce((sum, leg) => sum + leg.amountUsd, 0).toLocaleString()}`, count: m.basket.length })}</strong>
                     </div>
                     {m.actionStatus === "pending" ? (
                       <div className="ta-proposal-actions">
@@ -2837,15 +2840,15 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                           onClick={() => handleConfirmBasket(m)}
                           disabled={executingId === m.id}
                         >
-                          {executingId === m.id ? "Executing…" : "Confirm All"}
+                          {executingId === m.id ? t("tradingAgent.proposal.executing") : t("tradingAgent.proposal.confirmAll")}
                         </button>
                         <button type="button" className="ta-proposal-dismiss" onClick={() => handleDismiss(m)}>
-                          Dismiss
+                          {t("tradingAgent.proposal.dismiss")}
                         </button>
                       </div>
                     ) : (
                       <span className="ta-proposal-status">
-                        {m.actionStatus === "confirmed" ? "✓ Executed" : "Dismissed"}
+                        {m.actionStatus === "confirmed" ? t("tradingAgent.proposal.executed") : t("tradingAgent.proposal.dismissed")}
                       </span>
                     )}
                   </div>
@@ -2856,11 +2859,11 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                 {m.balanceUpdate && (
                   <div className={`ta-proposal ta-proposal--${m.actionStatus}`}>
                     <div className="ta-proposal-row">
-                      <span className="ta-proposal-badge">Update Balance</span>
+                      <span className="ta-proposal-badge">{t("tradingAgent.proposal.updateBalance")}</span>
                     </div>
                     <div className="ta-proposal-details">
                       <div className="ta-proposal-detail">
-                        <span>New cash balance</span>
+                        <span>{t("tradingAgent.proposal.newCashBalance")}</span>
                         <strong>${m.balanceUpdate.newBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong>
                       </div>
                     </div>
@@ -2873,15 +2876,15 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                           onClick={() => handleConfirmBalanceUpdate(m)}
                           disabled={executingId === m.id}
                         >
-                          {executingId === m.id ? "Updating…" : "Confirm"}
+                          {executingId === m.id ? t("tradingAgent.proposal.updating") : t("tradingAgent.proposal.confirm")}
                         </button>
                         <button type="button" className="ta-proposal-dismiss" onClick={() => handleDismiss(m)}>
-                          Dismiss
+                          {t("tradingAgent.proposal.dismiss")}
                         </button>
                       </div>
                     ) : (
                       <span className="ta-proposal-status">
-                        {m.actionStatus === "confirmed" ? "✓ Updated" : "Dismissed"}
+                        {m.actionStatus === "confirmed" ? t("tradingAgent.proposal.updated") : t("tradingAgent.proposal.dismissed")}
                       </span>
                     )}
                   </div>
@@ -2910,7 +2913,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                 {m.watch && m.actionStatus !== "confirmed" && (
                   <div className={`ta-proposal ta-proposal--${m.actionStatus}`}>
                     <div className="ta-proposal-row">
-                      <span className="ta-proposal-badge"><BellIcon /> Watch</span>
+                      <span className="ta-proposal-badge"><BellIcon /> {t("tradingAgent.watches.watch")}</span>
                     </div>
                     <div className="ta-proposal-details">
                       <div className="ta-proposal-detail">
@@ -2922,7 +2925,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                         plain price level has no timeframe to pick. */}
                     {m.actionStatus === "pending" && /rsi|macd|volume/i.test(m.watch.condition) && (
                       <div className="ta-watch-interval">
-                        <span className="ta-watch-interval-label">Timeframe</span>
+                        <span className="ta-watch-interval-label">{t("tradingAgent.watches.timeframe")}</span>
                         <div className="ta-watch-interval-options">
                           {(["1h", "4h", "1d"] as MarketInterval[]).map((iv) => (
                             <button
@@ -2931,7 +2934,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                               className={`ta-watch-interval-btn${(watchIntervalDrafts[m.id] ?? m.watch!.interval) === iv ? " ta-watch-interval-btn--active" : ""}`}
                               onClick={() => setWatchIntervalDrafts((prev) => ({ ...prev, [m.id]: iv }))}
                             >
-                              {iv === "1d" ? "Daily" : iv}
+                              {iv === "1d" ? t("tradingAgent.watches.daily") : iv}
                             </button>
                           ))}
                         </div>
@@ -2945,14 +2948,14 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                           onClick={() => handleConfirmWatch(m)}
                           disabled={executingId === m.id}
                         >
-                          {executingId === m.id ? "Setting up…" : "Confirm"}
+                          {executingId === m.id ? t("tradingAgent.watches.settingUp") : t("tradingAgent.proposal.confirm")}
                         </button>
                         <button type="button" className="ta-proposal-dismiss" onClick={() => handleDismiss(m)}>
-                          Dismiss
+                          {t("tradingAgent.proposal.dismiss")}
                         </button>
                       </div>
                     ) : (
-                      <span className="ta-proposal-status">Dismissed</span>
+                      <span className="ta-proposal-status">{t("tradingAgent.proposal.dismissed")}</span>
                     )}
                   </div>
                 )}
@@ -2961,9 +2964,9 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                   return (
                     <div className={`ta-watch${w.active ? "" : w.triggeredAt ? " ta-watch--triggered" : " ta-watch--cancelled"}`}>
                       <span className="ta-watch-text">
-                        <BellIcon /> Watching <strong>{w.coin}</strong> — {w.conditionText}
+                        <BellIcon /> <Trans i18nKey="tradingAgent.watches.watching" values={{ coin: w.coin }} components={{ b: <strong /> }} /> — {w.conditionText}
                         {/rsi|macd|volume/i.test(w.conditionText) && (
-                          <span className="ta-watch-interval-tag">{w.interval === "1d" ? "Daily" : w.interval}</span>
+                          <span className="ta-watch-interval-tag">{w.interval === "1d" ? t("tradingAgent.watches.daily") : w.interval}</span>
                         )}
                       </span>
                       {w.active ? (
@@ -2973,10 +2976,10 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                           onClick={() => handleCancelWatch(w.id)}
                           disabled={cancellingWatchId === w.id}
                         >
-                          {cancellingWatchId === w.id ? "…" : "Cancel"}
+                          {cancellingWatchId === w.id ? "…" : t("tradingAgent.watches.cancel")}
                         </button>
                       ) : (
-                        <span className="ta-watch-status">{w.triggeredAt ? "✓ Triggered" : "Cancelled"}</span>
+                        <span className="ta-watch-status">{w.triggeredAt ? t("tradingAgent.watches.triggered") : t("tradingAgent.watches.cancelled")}</span>
                       )}
                     </div>
                   );
@@ -2987,7 +2990,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                     className="ta-navigate-btn"
                     onClick={() => { onNavigateToSection?.(m.navigateTo!.section); setOpen(false); }}
                   >
-                    Open {m.navigateTo.label} →
+                    {t("tradingAgent.proposal.openSection", { label: m.navigateTo.label })}
                   </button>
                 )}
                 {/* Live numbers (price/RSI/MACD/funding/OI) for whatever
@@ -3011,7 +3014,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                           </span>
                           {s.trend && (
                             <span className={`ta-snapshot-trend ta-snapshot-trend--${s.trend}`}>
-                              {s.trend === "up" ? "▲" : s.trend === "down" ? "▼" : "—"} {s.trend}
+                              {s.trend === "up" ? "▲" : s.trend === "down" ? "▼" : "—"} {t(`tradingAgent.snapshot.trend.${s.trend}`, { defaultValue: s.trend })}
                             </span>
                           )}
                         </div>
@@ -3019,10 +3022,10 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                           <Sparkline closes={s.recentCloses} />
                         )}
                         <div className="ta-snapshot-row">
-                          <span>RSI {s.rsi != null ? s.rsi.toFixed(1) : "n/a"}</span>
-                          <span>MACD {s.macdHist != null ? (s.macdHist >= 0 ? "▲" : "▼") : "n/a"}</span>
+                          <span>RSI {s.rsi != null ? s.rsi.toFixed(1) : t("tradingAgent.snapshot.na")}</span>
+                          <span>MACD {s.macdHist != null ? (s.macdHist >= 0 ? "▲" : "▼") : t("tradingAgent.snapshot.na")}</span>
                           {s.fundingRatePct != null && (
-                            <span>Funding {s.fundingRatePct >= 0 ? "+" : ""}{s.fundingRatePct.toFixed(3)}%</span>
+                            <span>{t("tradingAgent.snapshot.funding")} {s.fundingRatePct >= 0 ? "+" : ""}{s.fundingRatePct.toFixed(3)}%</span>
                           )}
                           {s.openInterestUsd != null && (
                             <span>OI {formatAbbrevUsd(s.openInterestUsd)}</span>
@@ -3032,16 +3035,16 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                           <button
                             type="button"
                             className="ta-snapshot-action-btn"
-                            onClick={() => { showOpeningNote(`Opening ${s.coin} Chart…`); setChartModal({ coin: s.coin }); }}
+                            onClick={() => { showOpeningNote(t("tradingAgent.snapshot.openingChart", { coin: s.coin })); setChartModal({ coin: s.coin }); }}
                           >
-                            Chart
+                            {t("tradingAgent.snapshot.chart")}
                           </button>
                           <button
                             type="button"
                             className="ta-snapshot-action-btn"
-                            onClick={() => { showOpeningNote(`Opening ${s.coin} Order Book…`); setOrderBookModalCoin(s.coin); }}
+                            onClick={() => { showOpeningNote(t("tradingAgent.snapshot.openingOrderBook", { coin: s.coin })); setOrderBookModalCoin(s.coin); }}
                           >
-                            Order Book
+                            {t("tradingAgent.snapshot.orderBook")}
                           </button>
                         </div>
                         {openingNote && <span className="ta-snapshot-opening-note">{openingNote}</span>}
@@ -3059,7 +3062,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                 <div className="ta-coin-scan" role="status">
                   <p className="ta-coin-pick-cap">
                     <span className="ta-coin-scan-spin" aria-hidden="true" />
-                    I'm checking the market for the best options for ya
+                    {t("tradingAgent.opener.scanning")}
                     <span className="ta-dots" aria-hidden="true"><i /><i /><i /></span>
                   </p>
                   <div className="ta-op-row" aria-hidden="true">
@@ -3079,8 +3082,8 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
               {/* Market cap / Top gainers — a sideways row of coin cards
                   (5, then "+5 more"); tap a card to start with that coin. */}
               <div className="ta-op-head">
-                <div className="ta-op-tabs" role="tablist" aria-label="Coin list">
-                  {([["cap", "Market cap"], ["gainers", "Top gainers"]] as const).map(([id, label]) => (
+                <div className="ta-op-tabs" role="tablist" aria-label={t("tradingAgent.opener.coinList")}>
+                  {([["cap", t("tradingAgent.opener.marketCap")], ["gainers", t("tradingAgent.opener.topGainers")]] as const).map(([id, label]) => (
                     <button
                       key={id}
                       type="button"
@@ -3093,18 +3096,18 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                     </button>
                   ))}
                 </div>
-                <span className="ta-coin-pick-sub">Tap one to start — or just tell me a coin.</span>
+                <span className="ta-coin-pick-sub">{t("tradingAgent.opener.tapToStart")}</span>
               </div>
               {(() => {
                 const all = openerTab === "cap" ? openerCoins : openerGainers;
                 const shown = openerMore ? all : all.slice(0, 5);
                 if (!all.length) return (
                   <p className="ta-coin-pick-sub">
-                    {openerTab === "gainers" && openerCoins.length ? "No gainers in the top 100 right now." : "Market data isn't loading right now — just tell me which coin."}
+                    {openerTab === "gainers" && openerCoins.length ? t("tradingAgent.opener.noGainers") : t("tradingAgent.opener.marketDataDown")}
                   </p>
                 );
                 return (
-                  <div className="ta-op-row" role="list" aria-label={openerTab === "cap" ? "Top coins by market cap" : "Top gainers, 24h"}>
+                  <div className="ta-op-row" role="list" aria-label={openerTab === "cap" ? t("tradingAgent.opener.topByCapAria") : t("tradingAgent.opener.topGainersAria")}>
                     {shown.map((c, i) => {
                       const chg = c.change24h;
                       return (
@@ -3114,7 +3117,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                           role="listitem"
                           className="ta-op-card"
                           style={{ animationDelay: `${(i % 5) * 0.05}s` }}
-                          aria-label={`Start with ${c.name}`}
+                          aria-label={t("tradingAgent.opener.startWith", { name: c.name })}
                           onClick={() => handleSend(c.name !== c.symbol ? `Let's look at ${c.name} (${c.symbol}). What's your read right now?` : `Let's look at ${c.symbol}. What's your read right now?`)}
                         >
                           <span className="ta-coin-chip-logo">
@@ -3135,7 +3138,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                     })}
                     {!openerMore && all.length > 5 && (
                       <button type="button" className="ta-op-more" onClick={() => setOpenerMore(true)}>
-                        +{all.length - 5} more
+                        {t("tradingAgent.opener.more", { count: all.length - 5 })}
                       </button>
                     )}
                   </div>
@@ -3144,7 +3147,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
               {/* Headlines still loading: a row of placeholder cards. */}
               {openerNewsLoading && openerNews.length === 0 && (
                 <>
-                  <p className="ta-op-label">Headlines</p>
+                  <p className="ta-op-label">{t("tradingAgent.opener.headlines")}</p>
                   <div className="ta-op-row" aria-hidden="true">
                     {[0, 1, 2].map((i) => (
                       <span key={i} className="ta-op-news ta-op-news--skel" style={{ animationDelay: `${i * 0.12}s` }}>
@@ -3159,8 +3162,8 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
               {/* Latest crypto headlines — tap to ask the agent about it. */}
               {openerNews.length > 0 && (
                 <>
-                  <p className="ta-op-label">Headlines</p>
-                  <div className="ta-op-row" role="list" aria-label="Latest crypto headlines">
+                  <p className="ta-op-label">{t("tradingAgent.opener.headlines")}</p>
+                  <div className="ta-op-row" role="list" aria-label={t("tradingAgent.opener.headlinesAria")}>
                     {openerNews.map((n, i) => (
                       <button
                         key={n.url}
@@ -3187,11 +3190,11 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
             )}
             {openerThinking && !sending && (
               <div className="ta-msg ta-msg--agent">
-                <div className="ta-msg-text ta-typing" aria-label="Thinking">
+                <div className="ta-msg-text ta-typing" aria-label={t("tradingAgent.feed.thinking")}>
                   <span className="ta-thinking-orb" />
                   <span className="ta-thinking-copy">
                     <span className="ta-thinking-label">
-                      Thinking<span className="ta-dots" aria-hidden="true"><i /><i /><i /></span>
+                      {t("tradingAgent.feed.thinking")}<span className="ta-dots" aria-hidden="true"><i /><i /><i /></span>
                     </span>
                   </span>
                 </div>
@@ -3203,15 +3206,15 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                   type="button"
                   className="ta-msg-text ta-typing ta-typing--interruptible"
                   onClick={handleInterruptTyping}
-                  aria-label="Tap to interrupt"
+                  aria-label={t("tradingAgent.feed.tapToInterrupt")}
                 >
                   <span className="ta-thinking-orb" />
                   <span className="ta-thinking-copy">
                     <span className="ta-thinking-label">
-                      {liveThinking ? liveThinking.replace(/(\.\.\.|…)\s*$/, "") : "Thinking"}
+                      {liveThinking ? liveThinking.replace(/(\.\.\.|…)\s*$/, "") : t("tradingAgent.feed.thinking")}
                       <span className="ta-dots" aria-hidden="true"><i /><i /><i /></span>
                     </span>
-                    <span className="ta-thinking-interrupt-hint">Tap to interrupt</span>
+                    <span className="ta-thinking-interrupt-hint">{t("tradingAgent.feed.tapToInterrupt")}</span>
                   </span>
                 </button>
               </div>
@@ -3227,19 +3230,19 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
               on to show anything. */}
           {(speaking || synthesizing) && (
             <button type="button" className="ta-speaking-pill" onClick={handleInterruptSpeech}>
-              🔊 {synthesizing && !speaking ? "Getting audio ready…" : "Speaking — tap to stop"}
+              🔊 {synthesizing && !speaking ? t("tradingAgent.speech.gettingReady") : t("tradingAgent.speech.speaking")}
             </button>
           )}
 
           {pendingImage && (
             <div className="ta-pending-image">
-              <img src={pendingImage} alt="Chart screenshot to analyze" />
+              <img src={pendingImage} alt={t("tradingAgent.composer.pendingImageAlt")} />
               <button
                 type="button"
                 className="ta-pending-image-remove"
                 onClick={() => setPendingImage(null)}
-                aria-label="Remove attached image"
-                title="Remove attached image"
+                aria-label={t("tradingAgent.composer.removeImage")}
+                title={t("tradingAgent.composer.removeImage")}
               >
                 ✕
               </button>
@@ -3251,8 +3254,8 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                 type="button"
                 className="ta-composer-cancel"
                 onClick={handleMicCancel}
-                aria-label="Cancel recording"
-                title="Cancel recording"
+                aria-label={t("tradingAgent.composer.cancelRecording")}
+                title={t("tradingAgent.composer.cancelRecording")}
               >
                 ✕
               </button>
@@ -3280,8 +3283,8 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
               className="ta-composer-attach"
               onClick={() => attachInputRef.current?.click()}
               disabled={sending || listening}
-              aria-label="Attach an image"
-              title="Attach an image"
+              aria-label={t("tradingAgent.composer.attachImage")}
+              title={t("tradingAgent.composer.attachImage")}
             >
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
@@ -3320,7 +3323,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
               onChange={(e) => { setDraft(e.target.value); lastSendWasVoiceRef.current = false; noteTyping(); }}
               onKeyDown={(e) => { if (e.key === "Enter") { setTyping(false); handleSend(); } }}
               onFocus={() => { if (hubOpen) setHubOpen(false); }}
-              placeholder={listening ? "Listening…" : "Tell the agent what to do…"}
+              placeholder={listening ? t("tradingAgent.composer.listening") : t("tradingAgent.composer.placeholder")}
               disabled={sending || listening}
             />
             {/* Mic and Send live inside the pill too, at its right end. */}
@@ -3330,8 +3333,8 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                 className={`ta-composer-mic${listening ? " ta-composer-mic--active" : ""}`}
                 onClick={handleMicTap}
                 disabled={sending}
-                aria-label={listening ? "Stop recording" : "Speak to the agent"}
-                title={listening ? "Stop recording" : "Speak to the agent"}
+                aria-label={listening ? t("tradingAgent.composer.stopRecording") : t("tradingAgent.composer.speakToAgent")}
+                title={listening ? t("tradingAgent.composer.stopRecording") : t("tradingAgent.composer.speakToAgent")}
               >
                 {listening ? (
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -3353,11 +3356,11 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                 className="ta-composer-send"
                 onClick={() => { setTyping(false); handleSend(); }}
                 disabled={sending || (!draft.trim() && !pendingImage)}
-                aria-label="Send"
-                title="Send"
+                aria-label={t("tradingAgent.composer.send")}
+                title={t("tradingAgent.composer.send")}
               >
                 {sending || (typing && draft.trim())
-                  ? <span className="ta-send-dots" aria-label={sending ? "Sending" : "Typing"}><i /><i /><i /></span>
+                  ? <span className="ta-send-dots" aria-label={sending ? t("tradingAgent.composer.sending") : t("tradingAgent.composer.typing")}><i /><i /><i /></span>
                   : (
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       <path d="M12 19V5" />
@@ -3392,27 +3395,27 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
             <span className="ta-hub-circle">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
             </span>
-            <span className="ta-hub-circle-label">New</span>
+            <span className="ta-hub-circle-label">{t("tradingAgent.hub.new")}</span>
           </button>
           <button type="button" className="ta-hub-row-item" style={{ "--i": 1 } as React.CSSProperties} onClick={() => { handleOpenHistory(); setHubOpen(false); }}>
             <span className="ta-hub-circle">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
             </span>
-            <span className="ta-hub-circle-label">History</span>
+            <span className="ta-hub-circle-label">{t("tradingAgent.hub.history")}</span>
           </button>
           <button type="button" className="ta-hub-row-item" style={{ "--i": 2 } as React.CSSProperties} onClick={() => { handleOpenWatches(); setHubOpen(false); }}>
             <span className="ta-hub-circle"><BellIcon size={20} /></span>
-            <span className="ta-hub-circle-label">Watch</span>
+            <span className="ta-hub-circle-label">{t("tradingAgent.hub.watch")}</span>
           </button>
           <button type="button" className="ta-hub-row-item" style={{ "--i": 3 } as React.CSSProperties} onClick={() => { handleOpenPositions(); setHubOpen(false); }}>
             <span className="ta-hub-circle"><PositionsIcon size={20} /></span>
-            <span className="ta-hub-circle-label">Positions</span>
+            <span className="ta-hub-circle-label">{t("tradingAgent.hub.positions")}</span>
           </button>
           <button type="button" className="ta-hub-row-item" style={{ "--i": 4 } as React.CSSProperties} onClick={() => { onReportIssue?.(); setHubOpen(false); }}>
             <span className="ta-hub-circle">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
             </span>
-            <span className="ta-hub-circle-label">Report</span>
+            <span className="ta-hub-circle-label">{t("tradingAgent.hub.report")}</span>
           </button>
         </div>
       )}
@@ -3458,7 +3461,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
       {showcasePlaying && !open && (
         <div className="ta-trigger-callout" role="status">
           <span className="ta-trigger-callout-sparkle" aria-hidden="true">✨</span>
-          Meet Agent Ready — your AI trading copilot
+          {t("tradingAgent.callout")}
         </div>
       )}
       {open && isDesktop && createPortal(<div className="ta-backdrop" onClick={() => setOpen(false)} />, document.body)}

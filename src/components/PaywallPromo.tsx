@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { BlurGate } from "./MembershipGate";
 import { BottomSheet } from "./BottomSheet";
 import { useAuthFirst } from "../hooks/useAuthFirst";
@@ -26,13 +27,15 @@ export function PaywallPromo({ open, onClose, requiredTier, featureName, onOpenA
   // Signed out → the sign-in window opens instead; this sheet appears only
   // once signed in (and closes if sign-in is dismissed).
   const signedIn = useAuthFirst(open, onOpenAuth, onClose);
+  const { t } = useTranslation();
+  const planName = requiredTier === "elite" ? "Elite" : "Pro";
   return (
     <BottomSheet
       open={open && signedIn}
       onClose={onClose}
       desktopModal
       className={`paywall-promo-sheet paywall-promo-sheet--${requiredTier === "elite" ? "elite" : "pro"}`}
-      ariaLabel={`${featureName} — upgrade`}
+      ariaLabel={t("paywallPromo.ariaLabel", { feature: featureName })}
     >
       <BlurGate
         requiredTier={requiredTier}
@@ -43,7 +46,7 @@ export function PaywallPromo({ open, onClose, requiredTier, featureName, onOpenA
         onOpenUpgrade={() => { onClose(); onOpenUpgrade(); }}
         className="bg-root--promo"
         extraFeature={extraFeature}
-        eyebrow={`${featureName} is part of ${requiredTier === "elite" ? "Elite" : "Pro"}`}
+        eyebrow={t("paywallPromo.eyebrow", { feature: featureName, plan: planName })}
       >
         <div />
       </BlurGate>

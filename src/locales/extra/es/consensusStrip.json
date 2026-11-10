@@ -1,0 +1,44 @@
+{
+  "consensusStrip": {
+    "title": "Consenso",
+    "aria": "Consenso de coinhintz",
+    "mixedPicture": "Panorama mixto",
+    "leaning": { "bull": "Tendencia alcista", "bear": "Tendencia bajista" },
+    "noClearSide": "{{n}} herramientas, sin un lado claro",
+    "agreeCount": { "bull": "{{n}} de {{total}} herramientas alcistas", "bear": "{{n}} de {{total}} herramientas bajistas" },
+    "noReads": "Aún sin lecturas",
+    "kicker": "Consenso de coinhintz · {{tf}}",
+    "coinMixed": "{{coin}}: panorama mixto",
+    "coinLeans": { "bull": "{{coin}} se inclina al alza", "bear": "{{coin}} se inclina a la baja" },
+    "cardNote": "Cada herramienta lee el mercado a su manera. Toca cualquier fila para ver por qué. No es asesoramiento financiero.",
+    "pvAgrees": "ProVision, la señal principal, coincide.",
+    "pvLeans": { "bull": "ProVision se inclina al alza.", "bear": "ProVision se inclina a la baja.", "neutral": "ProVision se mantiene neutral." },
+    "pvDiffers": "ProVision lo interpreta de otra forma.",
+    "sentenceNone": "Aún sin lecturas para el gráfico de {{tf}}.",
+    "sentenceSplit": "Las herramientas están divididas en el gráfico de {{tf}} — aún sin un lado claro.",
+    "sentenceLean": {
+      "bull": "{{n}} de {{total}} herramientas se inclinan al alza en el gráfico de {{tf}}.",
+      "bear": "{{n}} de {{total}} herramientas se inclinan a la baja en el gráfico de {{tf}}."
+    },
+    "about": {
+      "pv": "Tendencia + 7 indicadores, puntuados tras comisiones",
+      "sig": "Escáner de setups de todo el mercado (4h)",
+      "tech": "Osciladores clásicos y medias móviles",
+      "ai": "Patrones de velas, leídos por IA",
+      "ev": "Zonas de precio y momentos clave recientes",
+      "agent": "Pregunta a un analista de IA por qué"
+    },
+    "whereLands": "Dónde se sitúa cada herramienta",
+    "sell": "Venta",
+    "neutral": "Neutral",
+    "buy": "Compra",
+    "howAgree": "Cuánto coinciden",
+    "nBearish": "{{n}} bajistas",
+    "nNeutral": "{{n}} neutrales",
+    "nBullish": "{{n}} alcistas",
+    "theTools": "Las herramientas",
+    "sheetNote": "Cómo leerlo: cada punto es la lectura de una herramienta de coinhintz, de venta (izquierda) a compra (derecha). Cuantas más herramientas en un lado, mayor el acuerdo. No es asesoramiento financiero.",
+    "lineTitle": "Cada punto es una herramienta de coinhintz. No es asesoramiento financiero.",
+    "whatsNext": "¿Qué sigue para {{coin}}?"
+  }
+}

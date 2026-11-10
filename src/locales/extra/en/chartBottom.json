@@ -1,0 +1,65 @@
+{
+  "chartBottom": {
+    "tabs": {
+      "toptraders": "Top Traders",
+      "positions": "Positions",
+      "history": "History",
+      "balance": "Balance",
+      "performance": "Performance"
+    },
+    "gate": {
+      "signInAccount": "Sign in to see your paper trading positions, history and performance.",
+      "signIn": "Sign in",
+      "activateText": "Activate paper trading to start tracking positions here.",
+      "activate": "Activate paper trading",
+      "signInTopTraders": "Sign in to see what Hyperliquid's top traders are holding on {{coin}}."
+    },
+    "loading": "Loading…",
+    "noPositions": "No open positions.",
+    "noClosed": "No closed trades yet.",
+    "col": {
+      "coin": "Coin",
+      "side": "Side",
+      "size": "Size",
+      "entry": "Entry",
+      "mark": "Mark",
+      "pnl": "PnL",
+      "margin": "Margin",
+      "liq": "Liq. price",
+      "tpsl": "TP / SL",
+      "opened": "Opened",
+      "exit": "Exit",
+      "realizedPnl": "Realized PnL",
+      "reason": "Reason",
+      "closed": "Closed"
+    },
+    "spot": "Spot",
+    "long": "Long",
+    "short": "Short",
+    "closing": "Closing…",
+    "close": "Close",
+    "reason": {
+      "manual": "Manual",
+      "take_profit": "Take profit",
+      "stop_loss": "Stop loss",
+      "liquidation": "Liquidated"
+    },
+    "stat": {
+      "equity": "Equity",
+      "cash": "Cash",
+      "inPositions": "In positions (margin)",
+      "unrealizedPnl": "Unrealized PnL",
+      "openPositions": "Open positions",
+      "winRate": "Win rate",
+      "closedTrades": "Closed trades",
+      "wins": "Wins",
+      "losses": "Losses"
+    },
+    "filterAria": "Filter top traders",
+    "filter": {
+      "winners": "Winners",
+      "losers": "Losers",
+      "all": "All"
+    }
+  }
+}

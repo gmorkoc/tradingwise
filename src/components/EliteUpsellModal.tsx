@@ -121,7 +121,7 @@ export function EliteUpsellModal({ onClose, onOpenAuth }: Props) {
   return (
     <div className="bg-modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="bg-elite-card bg-elite-card--modal">
-        <button className="bg-modal-close" onClick={onClose} aria-label="Close">✕</button>
+        <button className="bg-modal-close" onClick={onClose} aria-label={t("eliteUpsell.close")}>✕</button>
 
         <div className="bg-elite-top">
           <div className="bg-elite-badge">✦ ELITE</div>
@@ -134,8 +134,8 @@ export function EliteUpsellModal({ onClose, onOpenAuth }: Props) {
         {upgraded ? (
           <div className="bg-proration-success">
             <span className="bg-proration-check">✓</span>
-            <p>You're now on <strong>Elite</strong>.</p>
-            <button className="bg-elite-cta" onClick={onClose}>Done</button>
+            <p>{t("eliteUpsell.nowOnPre")}<strong>Elite</strong>{t("eliteUpsell.nowOnPost")}</p>
+            <button className="bg-elite-cta" onClick={onClose}>{t("eliteUpsell.done")}</button>
           </div>
         ) : (
           <>
@@ -149,22 +149,23 @@ export function EliteUpsellModal({ onClose, onOpenAuth }: Props) {
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M20 6L9 17l-5-5"/>
                 </svg>
-                <span>You're on <strong>Pro</strong> · all features carry over</span>
+                <span>{t("eliteUpsell.onProPre")}<strong>Pro</strong>{t("eliteUpsell.onProPost")}</span>
               </div>
             )}
 
             {prorationData ? (
               <div className="bg-proration">
                 <p className="bg-proration-body">
-                  You'll be charged{" "}
-                  <strong>{formatAmount(prorationData.amountDue, prorationData.currency)}</strong>{" "}
-                  today — prorated for the rest of your billing period. Then{" "}
-                  <strong>$59.99/mo</strong> on your normal renewal date.
+                  {t("eliteUpsell.chargedPre")}
+                  <strong>{formatAmount(prorationData.amountDue, prorationData.currency)}</strong>
+                  {t("eliteUpsell.chargedMid")}
+                  <strong>{t("eliteUpsell.monthlyPrice", { price: "$59.99" })}</strong>
+                  {t("eliteUpsell.chargedPost")}
                 </p>
                 <button className="bg-elite-cta" onClick={handleConfirmUpgrade} disabled={upgrading}>
                   {upgrading
                     ? t("membershipGate.blurGate.redirecting")
-                    : `Pay ${formatAmount(prorationData.amountDue, prorationData.currency)} & Upgrade to Elite`}
+                    : t("eliteUpsell.payUpgrade", { amount: formatAmount(prorationData.amountDue, prorationData.currency) })}
                   {!upgrading && (
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -172,7 +173,7 @@ export function EliteUpsellModal({ onClose, onOpenAuth }: Props) {
                   )}
                 </button>
                 <button className="bg-proration-back" onClick={() => setProrationData(null)} disabled={upgrading}>
-                  ← Go back
+                  ← {t("eliteUpsell.goBack")}
                 </button>
               </div>
             ) : (

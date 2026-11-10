@@ -1,0 +1,171 @@
+{
+  "coinTabs": {
+    "tabs": {
+      "overview": "Chart",
+      "chart": "Chart",
+      "stats": "Statistics",
+      "cycles": "Market Cycles",
+      "news": "News",
+      "technicals": "Technicals",
+      "seasonals": "Seasonals",
+      "markets": "Markets",
+      "fundamentals": "Fundamentals",
+      "traders": "Top Traders"
+    },
+    "sub": {
+      "overview": "Live chart, stats and ProVision",
+      "chart": "Price, intervals and drawing tools",
+      "stats": "Market cap, volume, supply and links",
+      "cycles": "Puell Multiple, Pi Cycle Top, Rainbow",
+      "news": "Latest headlines for this coin",
+      "technicals": "Buy/sell read from oscillators & averages",
+      "seasonals": "How every month did, year by year",
+      "markets": "Where it trades and at what volume",
+      "fundamentals": "Market cap, supply and about",
+      "traders": "Biggest positions, winners and losers"
+    },
+    "coinSections": "Coin sections",
+    "proVisionOff": "Turn ProVision off",
+    "proVisionOn": "Turn ProVision on — draws on this chart",
+    "more": "More",
+    "backToSections": "Back to sections",
+    "explore": "Explore {{name}}",
+    "loading": "Loading…",
+    "notEnoughData": "Not enough data",
+    "oscillators": "Oscillators",
+    "movingAverages": "Moving averages",
+    "vol24": "24h volume",
+    "ago": {
+      "m": "{{n}}m ago",
+      "h": "{{n}}h ago",
+      "d": "{{n}}d ago"
+    },
+    "news": {
+      "loading": "Loading {{name}} news…",
+      "emptyTitle": "No news right now",
+      "emptyText": "Check back in a bit — headlines refresh every few minutes.",
+      "title": "{{name}} News",
+      "sortAria": "Sort news",
+      "top": "Top",
+      "latest": "Latest",
+      "noCoinNews": "No {{name}}-specific headlines right now — here's the latest across crypto."
+    },
+    "verdict": {
+      "strongBuy": "Strong buy",
+      "buy": "Buy",
+      "strongSell": "Strong sell",
+      "sell": "Sell",
+      "neutral": "Neutral"
+    },
+    "desk": {
+      "kicker": "Technical signal",
+      "votesBuy": "buy",
+      "votesNeutral": "neutral",
+      "votesSell": "sell",
+      "vsBarsAgo": "vs {{n}} bars ago",
+      "history": "Signal history · last {{n}} bars",
+      "histScale": "+100 buy / −100 sell",
+      "everyIndicator": "Every indicator",
+      "rsiNA": "unavailable",
+      "rsiOversold": "oversold ({{v}})",
+      "rsiOverbought": "overbought ({{v}})",
+      "rsiNeutral": "neutral ({{v}})",
+      "readMaAbove": "Price is above {{n}} of {{total}} moving averages",
+      "readMaBelow": "Price is below {{n}} of {{total}} moving averages",
+      "macdAbove": "MACD above signal",
+      "macdBelow": "MACD below signal",
+      "read": "{{ma}} · RSI {{rsi}} · {{macd}} · momentum {{mom}}% over 10 bars."
+    },
+    "osc": {
+      "macdBullUp": "Bullish and strengthening — bars growing above zero.",
+      "macdBullFade": "Still bullish, but bars are shrinking.",
+      "macdBearUp": "Bearish and strengthening — bars growing below zero.",
+      "macdBearFade": "Still bearish, but selling pressure is easing.",
+      "rsiNA": "Not enough data.",
+      "rsiOversold": "Oversold — sellers may be running out of steam.",
+      "rsiOverbought": "Overbought — buyers may be stretched.",
+      "rsiMid": "Between 30 and 70 — no extreme either way.",
+      "stoch": "Price sits {{k}}% of the way up its 14-bar range.",
+      "low": "Low {{v}}",
+      "high": "High {{v}}",
+      "momUp": "Up {{v}}% versus 10 bars ago.",
+      "momDown": "Down {{v}}% versus 10 bars ago."
+    },
+    "ma": {
+      "sub": "Price {{px}} is above <b>{{n}}</b> of {{total}}",
+      "priceBelow": "Price below",
+      "priceAbove": "Price above"
+    },
+    "mtf": {
+      "timeframe": "Timeframe",
+      "movingAvgs": "Moving avgs",
+      "summary": "Summary",
+      "vsEma": "vs EMA {{n}}"
+    },
+    "table": {
+      "indicator": "Indicator",
+      "value": "Value",
+      "action": "Action",
+      "bbWidth": "Bollinger width"
+    },
+    "levels": {
+      "price": "Price",
+      "pivot": "Pivot",
+      "longStop": "Long stop · 1.5 ATR",
+      "shortStop": "Short stop · 1.5 ATR"
+    },
+    "frames": {
+      "15min": "15 min",
+      "1h": "1 hour",
+      "4h": "4 hours",
+      "1day": "1 day",
+      "1week": "1 week"
+    },
+    "tech": {
+      "title": "{{name}} Technicals",
+      "notEnoughText": "This coin doesn't have enough candles on this timeframe yet.",
+      "reading": "Reading indicators…",
+      "acrossTf": "Across timeframes",
+      "allIndicators": "All indicators",
+      "keyLevels": "Key levels · classic pivots",
+      "disclaimer": "Indicator readings, not financial advice."
+    },
+    "seasonals": {
+      "emptyTitle": "No seasonal data",
+      "emptyText": "{{name}} isn't listed on Binance, so we can't build its monthly history.",
+      "building": "Building monthly history…",
+      "title": "{{name}} Seasonals",
+      "note": "Monthly return (open → close) for each year. This month: <m>{{month}}</m> averaged <v>{{avg}}</v> historically.",
+      "year": "Year",
+      "avg": "Avg"
+    },
+    "markets": {
+      "stillLoading": "Still loading exchange data…",
+      "finding": "Finding where it trades…",
+      "title": "{{name}} Markets",
+      "exchange": "Exchange",
+      "pair": "Pair",
+      "price": "Price",
+      "trust": "Trust",
+      "trustAria": "Trust {{v}}",
+      "trustUnknown": "Trust unknown"
+    },
+    "fund": {
+      "stillLoading": "Still loading fundamentals…",
+      "loading": "Loading fundamentals…",
+      "title": "{{name}} Fundamentals",
+      "marketCap": "Market cap",
+      "fdv": "Fully diluted value",
+      "volMcap": "Volume / market cap",
+      "circ": "Circulating supply",
+      "ofMax": "{{pct}}% of max supply ({{n}})",
+      "ofTotal": "{{pct}}% of total supply ({{n}})",
+      "ath": "All-time high",
+      "atl": "All-time low",
+      "fromAth": "{{date}} · {{pct}}% from ATH",
+      "sinceAtl": "{{date}} · +{{pct}}% since",
+      "about": "About {{name}}",
+      "website": "Official website ↗"
+    }
+  }
+}

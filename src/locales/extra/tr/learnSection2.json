@@ -1,0 +1,22 @@
+{
+  "learnSection2": {
+    "patterns": {
+      "hammer": { "name": "Çekiç", "desc": "Üst kısma yakın küçük gövde ve uzun alt fitil (gövdenin 2 katı veya fazlası). Düşüş trendinin ardından alıcılar fiyatı yeniden yukarı itti — güçlü potansiyel dönüş sinyali." },
+      "invertedHammer": { "name": "Ters Çekiç", "desc": "Alt kısma yakın küçük gövde ve uzun üst fitil. Alıcılar bir yükseliş denedi; satıcılar baskıyı sürdüremedi — devam teyidini izleyin." },
+      "bullishEngulfing": { "name": "Yükseliş Yutan", "desc": "Büyük bir yeşil mum, önceki kırmızı mumun gövdesini tamamen yutar. Güçlü dönüş sinyali — alıcılar kontrolü satıcılardan kesin şekilde aldı." },
+      "piercingLine": { "name": "Delen Çizgi", "desc": "Yeşil mum, önceki kırmızı mumun dibinin altında açılır ama orta noktasının üzerinde kapanır. Sert bir düşüşün ardından alıcıların agresif şekilde devreye girdiğini gösterir." },
+      "morningStar": { "name": "Sabah Yıldızı", "desc": "Üç mumlu dönüş: büyük kırmızı, küçük kararsız mum, ardından büyük yeşil. Artan alıcı kararlılığını gösteren klasik dip dönüş formasyonu." },
+      "threeWhiteSoldiers": { "name": "Üç Beyaz Asker", "desc": "Art arda üç yeşil mum; her biri önceki kapanışa yakın açılır ve daha yüksekte kapanır. Alım baskısına doğru güçlü ve kalıcı bir geçişe işaret eder." },
+      "bullishHarami": { "name": "Yükseliş Harami", "desc": "Küçük bir yeşil mum, önceki büyük kırmızı mumun gövdesinin tamamen içinde kalır. Düşüş trendi ivme kaybediyor — bir dönüş yakın olabilir." },
+      "dragonflyDoji": { "name": "Yusufçuk Doji", "desc": "Açılış, en yüksek ve kapanış tepeye yakın, çok uzun bir alt fitil var. Satıcılar fiyatı sert düşürdü ama alıcılar tamamen geri aldı — güçlü talep sinyali." },
+      "shootingStar": { "name": "Kayan Yıldız", "desc": "Dibe yakın küçük gövde ve uzun üst fitil (gövdenin 2 katı veya fazlası). Piyasa tepelerinde alıcılar yükseltti ama satıcılar onları geri ezdi — olası dönüş." },
+      "hangingMan": { "name": "Asılı Adam", "desc": "Çekiç gibi görünür ama yükseliş trendinin tepesinde oluşur. Uzun alt fitil, boğalar şimdilik toparlansa da artan satış baskısını gösterir." },
+      "bearishEngulfing": { "name": "Düşüş Yutan", "desc": "Büyük bir kırmızı mum, önceki yeşil mumun gövdesini tamamen yutar. Güçlü dönüş sinyali — satıcılar kontrolü alıcılardan kesin şekilde aldı." },
+      "darkCloudCover": { "name": "Kara Bulut Örtüsü", "desc": "Kırmızı mum, önceki yeşil mumun tepesinin üzerinde açılır ama orta noktasının altında kapanır. Satıcıların yüksek fiyatlarda agresif şekilde devreye girdiğini gösterir." },
+      "eveningStar": { "name": "Akşam Yıldızı", "desc": "Üç mumlu dönüş: büyük yeşil, küçük kararsız mum, ardından büyük kırmızı. Alıcıların tükendiğini ve satıcıların kontrolü ele aldığını gösteren klasik tepe dönüşü." },
+      "threeBlackCrows": { "name": "Üç Kara Karga", "desc": "Art arda üç kırmızı mum; her biri önceki kapanışa yakın açılır ve daha aşağıda kapanır. Ağır satış baskısına doğru güçlü ve kalıcı bir geçişe işaret eder." },
+      "bearishHarami": { "name": "Düşüş Harami", "desc": "Küçük bir kırmızı mum, önceki büyük yeşil mumun gövdesinin tamamen içinde kalır. Yükseliş trendi güç kaybediyor — desteğin altına kırılmayı izleyin." },
+      "gravestoneDoji": { "name": "Mezar Taşı Doji", "desc": "Açılış, en düşük ve kapanış dibe yakın, çok uzun bir üst fitil var. Alıcılar sert itti ama satıcılar tamamen geri aldı — güçlü arz reddi sinyali." }
+    }
+  }
+}

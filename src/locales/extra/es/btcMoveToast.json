@@ -1,0 +1,11 @@
+{
+  "btcMoveToast": {
+    "live": "EN VIVO",
+    "whaleAlert": "ALERTA DE BALLENA",
+    "bullish": "ALCISTA",
+    "bearish": "BAJISTA",
+    "priceAlert": "ALERTA DE PRECIO {{coin}}",
+    "inLastMove": "{{change}} ({{pct}}%) en el último movimiento",
+    "dismiss": "Descartar"
+  }
+}

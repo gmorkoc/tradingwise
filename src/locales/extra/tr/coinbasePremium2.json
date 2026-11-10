@@ -1,0 +1,8 @@
+{
+  "coinbasePremium2": {
+    "title": "Coinbase Prim Endeksi",
+    "priceUsd": "— Fiyat USD",
+    "premiumVs": "Prim (Coinbase - {{source}})",
+    "na": "Yok"
+  }
+}

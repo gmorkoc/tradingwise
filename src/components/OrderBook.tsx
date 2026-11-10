@@ -232,6 +232,7 @@ function PillSelect<T extends string | number>({
   labelFor: (v: T) => string;
   onChange: (v: T) => void;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -277,7 +278,7 @@ function PillSelect<T extends string | number>({
           <div className="ob-sheet" onClick={(e) => e.stopPropagation()}>
             <div className="ob-sheet-header">
               <span className="ob-sheet-title">{title}</span>
-              <button type="button" className="ob-sheet-close" onClick={() => setOpen(false)} aria-label="Close">✕</button>
+              <button type="button" className="ob-sheet-close" onClick={() => setOpen(false)} aria-label={t("orderBook2.close")}>✕</button>
             </div>
             <div className="ob-sheet-options">
               {optionList((opt) => { onChange(opt); setOpen(false); })}
@@ -442,7 +443,7 @@ export function OrderBook({ coin, onHide, embedded, view }: OrderBookProps) {
   return (
     <div className={embedded ? "ob-embedded" : "ob-card"}>
       {onHide && (
-        <button className="ob-hide-btn" onClick={onHide} title="Hide order book">
+        <button className="ob-hide-btn" onClick={onHide} title={t("orderBook2.hide")}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M9 18l6-6-6-6" />
           </svg>
@@ -462,9 +463,9 @@ export function OrderBook({ coin, onHide, embedded, view }: OrderBookProps) {
           className={`ob-tab${activeTab === "trades" ? " ob-tab--active" : ""}`}
           onClick={() => setActiveTab("trades")}
         >
-          Recent trades
+          {t("orderBook2.recentTrades")}
         </button>
-        <button type="button" className="ob-expand-btn" title="Expand" aria-label="Expand">
+        <button type="button" className="ob-expand-btn" title={t("orderBook2.expand")} aria-label={t("orderBook2.expand")}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
           </svg>
@@ -474,8 +475,8 @@ export function OrderBook({ coin, onHide, embedded, view }: OrderBookProps) {
       {activeTab === "orderbook" ? (
         <>
           <div className="ob-dropdown-row">
-            <PillSelect title="Precision" value={activePrecision} options={ladder} labelFor={fmtPrecisionLabel} onChange={setPrecision} />
-            <PillSelect title="Exchange" value={exchange} options={EXCHANGES} labelFor={(v) => v} onChange={setExchange} />
+            <PillSelect title={t("orderBook2.precision")} value={activePrecision} options={ladder} labelFor={fmtPrecisionLabel} onChange={setPrecision} />
+            <PillSelect title={t("orderBook2.exchange")} value={exchange} options={EXCHANGES} labelFor={(v) => v} onChange={setExchange} />
           </div>
 
           {loading && (
@@ -497,9 +498,9 @@ export function OrderBook({ coin, onHide, embedded, view }: OrderBookProps) {
           {!loading && !unavailable && (
             <div className="ob-body">
               <div className="ob-col-headers">
-                <span>Price (USD)</span>
-                <span>Amount ({coin})</span>
-                <span>Total (USD)</span>
+                <span>{t("orderBook2.priceUsd")}</span>
+                <span>{t("orderBook2.amountCoin", { coin })}</span>
+                <span>{t("orderBook2.totalUsd")}</span>
               </div>
 
               {/* Asks — best ask nearest the spread row, at the bottom of this section */}
@@ -517,7 +518,7 @@ export function OrderBook({ coin, onHide, embedded, view }: OrderBookProps) {
               <div className="ob-mid-row">
                 <span className="ob-mid-price">{fmtPrice(midPrice)}</span>
                 <span className="ob-spread-label">
-                  Spread {spread >= 1 ? fmtPrice(spread) : spread.toPrecision(2).replace(/\.?0+$/, "")} ({spreadBps < 0.1 ? spreadBps.toFixed(3) : spreadBps.toFixed(2)} bps)
+                  {t("orderBook2.spread")} {spread >= 1 ? fmtPrice(spread) : spread.toPrecision(2).replace(/\.?0+$/, "")} ({spreadBps < 0.1 ? spreadBps.toFixed(3) : spreadBps.toFixed(2)} bps)
                 </span>
               </div>
 
@@ -538,9 +539,9 @@ export function OrderBook({ coin, onHide, embedded, view }: OrderBookProps) {
       ) : (
         <div className="ob-body ob-body--trades">
           <div className="ob-col-headers ob-col-headers--trades">
-            <span>Price (USD)</span>
-            <span>Amount ({coin})</span>
-            <span>Time</span>
+            <span>{t("orderBook2.priceUsd")}</span>
+            <span>{t("orderBook2.amountCoin", { coin })}</span>
+            <span>{t("orderBook2.time")}</span>
           </div>
           {tradesLoading && (
             <div className="ob-skeleton-rows">

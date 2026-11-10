@@ -1,0 +1,11 @@
+{
+  "topMovers2": {
+    "tabTrending": "Trending",
+    "tabGainers": "Gainers",
+    "tabLosers": "Losers",
+    "live": "LIVE",
+    "viewChart": "View chart",
+    "showMore": "Show more",
+    "showLess": "Show less"
+  }
+}

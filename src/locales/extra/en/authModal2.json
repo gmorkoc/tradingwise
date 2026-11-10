@@ -1,0 +1,32 @@
+{
+  "authModal2": {
+    "sendCodeFailed": "Couldn't send a new code: {{error}}",
+    "enterCode": "Enter the code from the email.",
+    "codeWrong": "That code is wrong or has expired. Check the latest email, or send a new code.",
+    "emailConfirmed": "Email confirmed. Sign in to continue.",
+    "notConfirmed": "Not confirmed yet. Enter the code from the email, or open the link in it first.",
+    "newCodeSent": "New code sent. Check your inbox (and spam folder).",
+    "passkey": "Sign in with a passkey",
+    "checking": "Checking…",
+    "emailAvailable": "Email available",
+    "signsInWith": "This email signs in with {{provider}}.",
+    "emailHasAccount": "This email already has an account.",
+    "signIn": "Sign in",
+    "accountExists": "An account with this email already exists.",
+    "or": "or",
+    "verifyTitle": "Check your email",
+    "verifySubBefore": "We sent a verification code to",
+    "verifySubAfter": ". Enter it below to confirm your account.",
+    "codeLabel": "Verification code",
+    "codePlaceholder": "Code",
+    "confirming": "Confirming…",
+    "confirmEmail": "Confirm email",
+    "didntGetIt": "Didn't get it?",
+    "resendIn": "Resend code in {{seconds}}s",
+    "resend": "Resend code",
+    "differentEmail": "Use a different email",
+    "confirmedWithLink": "Confirmed with the link in the email?",
+    "continue": "Continue",
+    "close": "Close"
+  }
+}

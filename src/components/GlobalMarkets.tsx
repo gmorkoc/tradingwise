@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, type CSSProperties } from "react";
 import { Capacitor } from "@capacitor/core";
+import { useTranslation } from "react-i18next";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
   CartesianGrid, PieChart, Pie, Cell, ComposedChart, Bar, Line, Brush, ReferenceArea,
@@ -303,6 +304,7 @@ function renderDonutSliceLabel(props: any) {
 
 // ── Skeleton loader ──────────────────────────────────────────────────────────────
 function GmSkeleton() {
+  const { t } = useTranslation();
   return (
     <div className="gm-wrap">
       <div className="gm-skel gm-skel-hero" />
@@ -315,7 +317,7 @@ function GmSkeleton() {
       <div className="gm-skel gm-skel-section" />
       <div className="gm-loading-row">
         <span className="gm-spinner" />
-        Loading global market data…
+        {t("globalMarkets.loadingGlobal")}
       </div>
     </div>
   );
@@ -348,6 +350,14 @@ interface Props {
 }
 
 export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props = {}) {
+  const { t } = useTranslation();
+  // alternative.me's English classification → translated label.
+  const fngLabel = (cls: string) => {
+    const key = ({ "Extreme Fear": "extremeFear", "Fear": "fear", "Neutral": "neutral", "Greed": "greed", "Extreme Greed": "extremeGreed" } as Record<string, string>)[cls];
+    return key ? t(`globalMarkets.fng.${key}`) : cls;
+  };
+  // "All" period tab → translated; other period labels (7D, 1Y…) stay as-is.
+  const periodLabel = (label: string) => (label === "All" ? t("globalMarkets.periodAll") : label);
   // Desktop gets a bigger dominance donut (taller chart here + a wider
   // .gm-dom-donut box in GlobalMarkets.css); mobile keeps 300px.
   const [isDesktopDonut, setIsDesktopDonut] = useState(() => window.matchMedia("(min-width: 641px)").matches);
@@ -622,7 +632,7 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
   const othersPct = Math.max(0, 100 - domEntries.reduce((s, [, p]) => s + p, 0));
   const pieData = [
     ...domEntries.map(([sym, pct], i) => ({ name: sym.toUpperCase(), value: pct, fill: DOM_COLORS[i] })),
-    { name: "Others", value: othersPct, fill: DOM_COLORS[6] },
+    { name: t("globalMarkets.others"), value: othersPct, fill: DOM_COLORS[6] },
   ];
   // Simple 3-segment version of the same real dominance data for the
   // horizontal-bar widget (BTC / ETH / Others), matching the screenshot's
@@ -727,7 +737,7 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
           fetch — see othersDomPct comment above. */}
       <div className="gm-dom-hbar-wrap">
         <div className="gm-dom-hbar-head">
-          <span className="gm-dom-hbar-title">Bitcoin Dominance</span>
+          <span className="gm-dom-hbar-title">{t("globalMarkets.bitcoinDominance")}</span>
           <span className="gm-dom-hbar-value">{btcDom.toFixed(1)}%</span>
         </div>
         <div className="gm-dom-hbar">
@@ -738,7 +748,7 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
         <div className="gm-dom-hbar-legend">
           <span className="gm-dom-hbar-legend-item"><span className="gm-dom-dot" style={{ background: DOM_COLORS[0] }} />BTC {btcDom.toFixed(1)}%</span>
           <span className="gm-dom-hbar-legend-item"><span className="gm-dom-dot" style={{ background: DOM_COLORS[1] }} />ETH {ethDom.toFixed(1)}%</span>
-          <span className="gm-dom-hbar-legend-item"><span className="gm-dom-dot" style={{ background: DOM_COLORS[5] }} />Others {othersDomPct.toFixed(1)}%</span>
+          <span className="gm-dom-hbar-legend-item"><span className="gm-dom-dot" style={{ background: DOM_COLORS[5] }} />{t("globalMarkets.others")} {othersDomPct.toFixed(1)}%</span>
         </div>
       </div>
     </>
@@ -748,12 +758,12 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
     <>
       <div className="gm-section-header">
         <div className="gm-chart-tabs">
-          {CHART_TABS.map(t => (
-            <button key={t.key}
-              className={`gm-chart-tab${chartKey === t.key ? " gm-chart-tab--active" : ""}`}
-              style={chartKey === t.key ? { color: t.color, borderColor: t.color } : {}}
-              onClick={() => setChartKey(t.key)}>
-              {t.label}
+          {CHART_TABS.map(ct => (
+            <button key={ct.key}
+              className={`gm-chart-tab${chartKey === ct.key ? " gm-chart-tab--active" : ""}`}
+              style={chartKey === ct.key ? { color: ct.color, borderColor: ct.color } : {}}
+              onClick={() => setChartKey(ct.key)}>
+              {t(`globalMarkets.chartTabs.${ct.key}`, ct.label)}
             </button>
           ))}
         </div>
@@ -820,7 +830,7 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
       {isHeroDesktop && (() => {
         const ago = (ts: number) => {
           const m = Math.max(1, Math.round((Date.now() - ts) / 60000));
-          return m < 60 ? `${m}m` : m < 1440 ? `${Math.round(m / 60)}h` : `${Math.round(m / 1440)}d`;
+          return m < 60 ? t("globalMarkets.ago.m", { n: m }) : m < 1440 ? t("globalMarkets.ago.h", { n: Math.round(m / 60) }) : t("globalMarkets.ago.d", { n: Math.round(m / 1440) });
         };
         const days = liqData.slice(-30);
         const upDays = days.filter((d) => d.ret >= 0).length;
@@ -844,15 +854,15 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
             >
               {/* Market Status */}
               <section className="gmh-card">
-                <div className="gmh-head">Market Status <span className="gmh-chev">›</span></div>
+                <div className="gmh-head">{t("globalMarkets.marketStatus")} <span className="gmh-chev">›</span></div>
                 <div className="gmh-ms">
                   <div className="gmh-ms-col">
                     <div className="gmh-tile gmh-tile--fng">
-                      <span className="gmh-label">Fear &amp; Greed</span>
-                      {fngValue !== null ? <FearGreedGauge value={fngValue} label={fng!.value_classification} compact /> : <span className="gm-skel gm-skel-stat" />}
+                      <span className="gmh-label">{t("globalMarkets.fearGreed")}</span>
+                      {fngValue !== null ? <FearGreedGauge value={fngValue} label={fngLabel(fng!.value_classification)} compact /> : <span className="gm-skel gm-skel-stat" />}
                     </div>
                     <div className="gmh-tile">
-                      <span className="gmh-label">Altcoin Season</span>
+                      <span className="gmh-label">{t("globalMarkets.altcoinSeason")}</span>
                       {altcoinStrengthPct !== null ? (
                         <div className="gmh-alt">
                           <strong>{altcoinStrengthPct}</strong>
@@ -863,16 +873,16 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
                   </div>
                   <div className="gmh-ms-col">
                     <div className="gmh-tile">
-                      <span className="gmh-label">Market Cap</span>
+                      <span className="gmh-label">{t("globalMarkets.marketCap")}</span>
                       <div className="gmh-val"><strong>{fmtBig(mcap)}</strong>
                         <em className={chg24h >= 0 ? "up" : "down"}>{chg24h >= 0 ? "▲" : "▼"} {Math.abs(chg24h).toFixed(2)}%</em></div>
                     </div>
                     <div className="gmh-tile">
-                      <span className="gmh-label">24h Volume</span>
+                      <span className="gmh-label">{t("globalMarkets.volume24h")}</span>
                       <div className="gmh-val"><strong>{fmtBig(vol)}</strong></div>
                     </div>
                     <div className="gmh-tile">
-                      <span className="gmh-label">BTC Dominance</span>
+                      <span className="gmh-label">{t("globalMarkets.btcDominance")}</span>
                       <div className="gmh-val"><strong>{btcDom.toFixed(1)}%</strong></div>
                     </div>
                   </div>
@@ -882,12 +892,12 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
               {/* Trending (CoinGecko search trending) */}
               <section className="gmh-card">
                 <div className="gmh-head">
-                  Trending <span className="gmh-chev">›</span>
+                  {t("globalMarkets.trending")} <span className="gmh-chev">›</span>
                   {trending.length > 5 && (
                     <span className="gmh-pager">
-                      <button type="button" onClick={() => setTrendPage((p) => (p === 0 ? 1 : 0))} aria-label="Previous">‹</button>
+                      <button type="button" onClick={() => setTrendPage((p) => (p === 0 ? 1 : 0))} aria-label={t("globalMarkets.previous")}>‹</button>
                       <span>{trendPage + 1}/2</span>
-                      <button type="button" onClick={() => setTrendPage((p) => (p === 0 ? 1 : 0))} aria-label="Next">›</button>
+                      <button type="button" onClick={() => setTrendPage((p) => (p === 0 ? 1 : 0))} aria-label={t("globalMarkets.next")}>›</button>
                       <span key={trendPage} className="gmh-pager-ring" aria-hidden="true" />
                     </span>
                   )}
@@ -910,12 +920,12 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
 
               {/* Derivatives */}
               <section className="gmh-card">
-                <div className="gmh-head">Derivatives <span className="gmh-chev">›</span></div>
+                <div className="gmh-head">{t("globalMarkets.derivatives")} <span className="gmh-chev">›</span></div>
                 <div className="gmh-tile gmh-deriv">
                   <div className="gmh-deriv-stats">
-                    <div><span className="gmh-label">BTC daily moves (30d)</span><strong>{avgMove.toFixed(2)}% avg</strong></div>
-                    <div><span className="gmh-label">Up days</span><strong className="up">{upDays}</strong></div>
-                    <div><span className="gmh-label">Down days</span><strong className="down">{downDays}</strong></div>
+                    <div><span className="gmh-label">{t("globalMarkets.btcDailyMoves")}</span><strong>{t("globalMarkets.avgMove", { value: avgMove.toFixed(2) })}</strong></div>
+                    <div><span className="gmh-label">{t("globalMarkets.upDays")}</span><strong className="up">{upDays}</strong></div>
+                    <div><span className="gmh-label">{t("globalMarkets.downDays")}</span><strong className="down">{downDays}</strong></div>
                   </div>
                   <div className="gmh-bars">
                     {days.map((d, i) => (
@@ -924,12 +934,12 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
                   </div>
                 </div>
                 <div className="gmh-row2">
-                  <div className="gmh-tile" title="BTC + ETH futures open interest">
-                    <span className="gmh-label">Open Interest</span>
+                  <div className="gmh-tile" title={t("globalMarkets.oiTitle")}>
+                    <span className="gmh-label">{t("globalMarkets.openInterest")}</span>
                     <div className="gmh-val"><strong>{oiTotal !== null ? fmtBig(oiTotal) : "—"}</strong></div>
                   </div>
                   <div className="gmh-tile">
-                    <span className="gmh-label">Volume (24h)</span>
+                    <span className="gmh-label">{t("globalMarkets.volumeParen24h")}</span>
                     <div className="gmh-val"><strong>{fmtBig(vol)}</strong></div>
                   </div>
                 </div>
@@ -937,7 +947,7 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
 
               {/* Community → latest crypto headlines */}
               <section className="gmh-card">
-                <div className="gmh-head">Community <span className="gmh-chev">›</span></div>
+                <div className="gmh-head">{t("globalMarkets.community")} <span className="gmh-chev">›</span></div>
                 <div className="gmh-posts">
                   {news.length === 0 && [0, 1].map((i) => <span key={i} className="gm-skel gmh-post-skel" />)}
                   {news.slice(0, 2).map((n) => (
@@ -963,22 +973,22 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
             <div className="gmh-pills">
               {news[0] && (
                 <button type="button" className="gmh-pill gmh-pill--topic" onClick={() => openLink(news[0].url)}>
-                  <span className="gmh-pill-tag">Topic</span><span className="gmh-pill-text">{news[0].title}</span>
+                  <span className="gmh-pill-tag">{t("globalMarkets.topic")}</span><span className="gmh-pill-text">{news[0].title}</span>
                 </button>
               )}
               <button type="button" className="gmh-pill gmh-pill--new" onClick={() => window.dispatchEvent(new CustomEvent("open-trading-agent"))}>
-                <span className="gmh-pill-new">New</span>Try Agent Ready
+                <span className="gmh-pill-new">{t("globalMarkets.new")}</span>{t("globalMarkets.tryAgent")}
               </button>
               <button type="button" className="gmh-pill gmh-pill--new" onClick={() => window.dispatchEvent(new CustomEvent("open-daily-brief"))}>
-                <span className="gmh-pill-new">New</span>Top News
+                <span className="gmh-pill-new">{t("globalMarkets.new")}</span>{t("globalMarkets.topNews")}
               </button>
               {!aiAlertPillHidden && (
                 <span className="gmh-pill gmh-pill--alert">
                   <button type="button" onClick={() => window.dispatchEvent(new CustomEvent("open-strategy-alert"))}>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></svg>
-                    Add AI alert
+                    {t("globalMarkets.addAiAlert")}
                   </button>
-                  <button type="button" className="gmh-pill-x" aria-label="Hide" onClick={() => { setAiAlertPillHidden(true); try { localStorage.setItem("gmhAiAlertPillHidden", "1"); } catch { /* ignore */ } }}>×</button>
+                  <button type="button" className="gmh-pill-x" aria-label={t("globalMarkets.hide")} onClick={() => { setAiAlertPillHidden(true); try { localStorage.setItem("gmhAiAlertPillHidden", "1"); } catch { /* ignore */ } }}>×</button>
                 </span>
               )}
               {news[1] && (
@@ -986,14 +996,14 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
                   <span aria-hidden="true">🔥</span><span className="gmh-pill-text">{news[1].title}</span>
                 </button>
               )}
-              <button type="button" className="gmh-pill gmh-pill--ask" onClick={() => askAI(`Why is the crypto market ${chg24h >= 0 ? "up" : "down"} today?`)}>
-                <span aria-hidden="true">{chg24h >= 0 ? "↗" : "↘"}</span>Why is the market {chg24h >= 0 ? "up" : "down"} today?
+              <button type="button" className="gmh-pill gmh-pill--ask" onClick={() => askAI(chg24h >= 0 ? t("globalMarkets.askWhyUp") : t("globalMarkets.askWhyDown"))}>
+                <span aria-hidden="true">{chg24h >= 0 ? "↗" : "↘"}</span>{chg24h >= 0 ? t("globalMarkets.whyUp") : t("globalMarkets.whyDown")}
               </button>
-              <button type="button" className="gmh-pill gmh-pill--ask" onClick={() => askAI("Are altcoins outperforming Bitcoin right now?")}>
-                <span aria-hidden="true">⇄</span>Are altcoins outperforming Bitcoin?
+              <button type="button" className="gmh-pill gmh-pill--ask" onClick={() => askAI(t("globalMarkets.askAltsVsBtc"))}>
+                <span aria-hidden="true">⇄</span>{t("globalMarkets.altsVsBtc")}
               </button>
-              <button type="button" className="gmh-pill gmh-pill--ask" onClick={() => askAI("What are the key support and resistance levels for BTC right now?")}>
-                <span aria-hidden="true">◎</span>Key BTC levels right now?
+              <button type="button" className="gmh-pill gmh-pill--ask" onClick={() => askAI(t("globalMarkets.askKeyLevels"))}>
+                <span aria-hidden="true">◎</span>{t("globalMarkets.keyLevels")}
               </button>
             </div>
           </div>
@@ -1016,13 +1026,13 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
             aren't things we can show honestly, so Volume/BTC Dominance
             (both real, already computed) fill those two slots instead. */}
         <div className="gm-status-col">
-          <div className="gm-status-col-head"><span className="gm-status-col-icon gm-status-col-icon--fng">{IC.cap}</span>Market Status</div>
+          <div className="gm-status-col-head"><span className="gm-status-col-icon gm-status-col-icon--fng">{IC.cap}</span>{t("globalMarkets.marketStatus")}</div>
           <div className="gm-marketstatus-grid">
             <div className="gm-marketstatus-col">
               <div className="gm-marketstatus-tile gm-marketstatus-tile--fng">
-                <span className="gm-marketstatus-tile-label">Fear &amp; Greed</span>
+                <span className="gm-marketstatus-tile-label">{t("globalMarkets.fearGreed")}</span>
                 {fngValue !== null ? (
-                  <FearGreedGauge value={fngValue} label={fng!.value_classification} compact />
+                  <FearGreedGauge value={fngValue} label={fngLabel(fng!.value_classification)} compact />
                 ) : (
                   <div className="gm-fng-skel">
                     <span className="gm-skel gm-fng-skel-arc" />
@@ -1032,7 +1042,7 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
               </div>
               {altcoinStrengthPct !== null && (
                 <div className="gm-marketstatus-tile">
-                  <span className="gm-marketstatus-tile-label">Altcoin Season <em>({altSeasonPeriod.label})</em></span>
+                  <span className="gm-marketstatus-tile-label">{t("globalMarkets.altcoinSeason")} <em>({altSeasonPeriod.label})</em></span>
                   <div className="gm-marketstatus-altseason-value">{altcoinStrengthPct}</div>
                   <div className="gm-altseason-track gm-marketstatus-altseason-track">
                     <span className="gm-altseason-dot" style={{ left: `${altcoinStrengthPct}%` }} />
@@ -1042,7 +1052,7 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
             </div>
             <div className="gm-marketstatus-col">
               <div className="gm-marketstatus-tile">
-                <span className="gm-marketstatus-tile-label">Market Cap</span>
+                <span className="gm-marketstatus-tile-label">{t("globalMarkets.marketCap")}</span>
                 <div className="gm-marketstatus-stat">
                   <strong>{fmtBig(mcap)}</strong>
                   <span className={chg24h >= 0 ? "gm-pct--pos" : "gm-pct--neg"}>
@@ -1051,11 +1061,11 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
                 </div>
               </div>
               <div className="gm-marketstatus-tile">
-                <span className="gm-marketstatus-tile-label">24h Volume</span>
+                <span className="gm-marketstatus-tile-label">{t("globalMarkets.volume24h")}</span>
                 <div className="gm-marketstatus-stat"><strong>{fmtBig(vol)}</strong></div>
               </div>
               <div className="gm-marketstatus-tile">
-                <span className="gm-marketstatus-tile-label">BTC Dominance</span>
+                <span className="gm-marketstatus-tile-label">{t("globalMarkets.btcDominance")}</span>
                 <div className="gm-marketstatus-stat"><strong>{btcDom.toFixed(1)}%</strong></div>
               </div>
             </div>
@@ -1069,12 +1079,12 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
             row treatment here). */}
         <div className="gm-status-col">
           <div className="gm-status-col-head gm-status-col-head--trending">
-            <span><span className="gm-status-col-icon">{moverPage === 0 ? "▲" : "▼"}</span>Top {moverPage === 0 ? "Gainers" : "Losers"}</span>
+            <span><span className="gm-status-col-icon">{moverPage === 0 ? "▲" : "▼"}</span>{moverPage === 0 ? t("globalMarkets.topGainers") : t("globalMarkets.topLosers")}</span>
             <div className="gm-trending-pager">
-              <button type="button" className="gm-mover-banner-pager-arrow" aria-label="Previous"
+              <button type="button" className="gm-mover-banner-pager-arrow" aria-label={t("globalMarkets.previous")}
                 onClick={() => setMoverPage(p => (p === 0 ? 1 : 0))}>‹</button>
               <span className="gm-mover-banner-pager-label">{moverPage + 1}/2</span>
-              <button type="button" className="gm-mover-banner-pager-arrow" aria-label="Next"
+              <button type="button" className="gm-mover-banner-pager-arrow" aria-label={t("globalMarkets.next")}
                 onClick={() => setMoverPage(p => (p === 0 ? 1 : 0))}>›</button>
               {/* Progress ring mirrors the 5s auto-advance timer above —
                   key={moverPage} remounts (restarts) it on every page
@@ -1108,27 +1118,27 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
 
         {/* Market Activity — real CoinGecko-sourced volume figures. */}
         <div className="gm-status-col">
-          <div className="gm-status-col-head"><span className="gm-status-col-icon">{IC.vol}</span>Market Activity</div>
+          <div className="gm-status-col-head"><span className="gm-status-col-icon">{IC.vol}</span>{t("globalMarkets.marketActivity")}</div>
           <div className="gm-activity-grid">
             <div className="gm-activity-tile">
               <span className="gm-activity-tile-icon">{IC.vol}</span>
               <span className="gm-activity-tile-value">{fmtBig(vol)}</span>
-              <span className="gm-activity-tile-label">Total 24h Volume</span>
+              <span className="gm-activity-tile-label">{t("globalMarkets.totalVolume24h")}</span>
             </div>
             <div className="gm-activity-tile">
               <span className="gm-activity-tile-icon">{IC.btc}</span>
               <span className="gm-activity-tile-value">{btcRow ? fmtBig(btcRow.total_volume) : "—"}</span>
-              <span className="gm-activity-tile-label">BTC 24h Volume</span>
+              <span className="gm-activity-tile-label">{t("globalMarkets.btcVolume24h")}</span>
             </div>
             <div className="gm-activity-tile">
               <span className="gm-activity-tile-icon">{IC.markets}</span>
               <span className="gm-activity-tile-value">{g.markets?.toLocaleString() ?? "—"}</span>
-              <span className="gm-activity-tile-label">Active Markets</span>
+              <span className="gm-activity-tile-label">{t("globalMarkets.activeMarkets")}</span>
             </div>
             <div className="gm-activity-tile">
               <span className="gm-activity-tile-icon">{IC.coins}</span>
               <span className="gm-activity-tile-value">{g.active_cryptocurrencies?.toLocaleString() ?? "—"}</span>
-              <span className="gm-activity-tile-label">Active Cryptocurrencies</span>
+              <span className="gm-activity-tile-label">{t("globalMarkets.activeCryptos")}</span>
             </div>
           </div>
         </div>
@@ -1145,19 +1155,19 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
             are the same real oi/dvol figures the old standalone section
             used to show. */}
         <div className="gm-status-col">
-          <div className="gm-status-col-head"><span className="gm-status-col-icon">{IC.vol}</span>Derivatives</div>
+          <div className="gm-status-col-head"><span className="gm-status-col-icon">{IC.vol}</span>{t("globalMarkets.derivatives")}</div>
           <div className="gm-marketstatus-tile gm-derivatives-chart-tile">
             <div className="gm-derivatives-chart-stats">
               <div className="gm-derivatives-chart-stat">
-                <span className="gm-marketstatus-tile-label">24h Volume</span>
+                <span className="gm-marketstatus-tile-label">{t("globalMarkets.volume24h")}</span>
                 <strong>{fmtBig(vol)}</strong>
               </div>
               <div className="gm-derivatives-chart-stat">
-                <span className="gm-marketstatus-tile-label">Gainers</span>
+                <span className="gm-marketstatus-tile-label">{t("globalMarkets.gainers")}</span>
                 <strong className="gm-pct--pos">{gainersCount}</strong>
               </div>
               <div className="gm-derivatives-chart-stat">
-                <span className="gm-marketstatus-tile-label">Losers</span>
+                <span className="gm-marketstatus-tile-label">{t("globalMarkets.losers")}</span>
                 <strong className="gm-pct--neg">{losersCount}</strong>
               </div>
             </div>
@@ -1172,7 +1182,7 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
           </div>
           <div className="gm-marketstatus-grid">
             <div className="gm-marketstatus-tile">
-              <span className="gm-marketstatus-tile-label">Open Interest</span>
+              <span className="gm-marketstatus-tile-label">{t("globalMarkets.openInterest")}</span>
               {oiStats ? (
                 <>
                   <div className="gm-marketstatus-stat"><strong>{fmtBig(oiStats.btcUsd)}</strong><span>BTC</span></div>
@@ -1183,7 +1193,7 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
               )}
             </div>
             <div className="gm-marketstatus-tile">
-              <span className="gm-marketstatus-tile-label">Implied Vol (DVOL)</span>
+              <span className="gm-marketstatus-tile-label">{t("globalMarkets.impliedVol")}</span>
               {dvol ? (
                 <>
                   <div className="gm-marketstatus-stat"><strong>{dvol.btc.toFixed(1)}%</strong><span>BTC</span></div>
@@ -1207,35 +1217,35 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
         <div className="gm-fnghist-section">
           <div className="gm-section gm-fnghist-card">
             <div className="gm-section-header">
-              <span className="gm-section-title">Fear &amp; Greed Index</span>
+              <span className="gm-section-title">{t("globalMarkets.fngIndex")}</span>
             </div>
             <div className="gm-fnghist-gauge-wrap">
-              <FearGreedGauge value={fngValue} label={fng!.value_classification} />
+              <FearGreedGauge value={fngValue} label={fngLabel(fng!.value_classification)} />
             </div>
             {(fngYesterday || fngLastWeek || fngLastMonth) && (
               <div className="gm-fnghist-block">
-                <div className="gm-fnghist-block-title">Historical Values</div>
+                <div className="gm-fnghist-block-title">{t("globalMarkets.historicalValues")}</div>
                 {fngYesterday && (
                   <div className="gm-fnghist-row">
-                    <span>Yesterday</span>
+                    <span>{t("globalMarkets.yesterday")}</span>
                     <span className="gm-fnghist-pill" style={{ color: fngColor(Number(fngYesterday.value)) }}>
-                      {fngYesterday.value_classification} · {fngYesterday.value}
+                      {fngLabel(fngYesterday.value_classification)} · {fngYesterday.value}
                     </span>
                   </div>
                 )}
                 {fngLastWeek && (
                   <div className="gm-fnghist-row">
-                    <span>Last Week</span>
+                    <span>{t("globalMarkets.lastWeek")}</span>
                     <span className="gm-fnghist-pill" style={{ color: fngColor(Number(fngLastWeek.value)) }}>
-                      {fngLastWeek.value_classification} · {fngLastWeek.value}
+                      {fngLabel(fngLastWeek.value_classification)} · {fngLastWeek.value}
                     </span>
                   </div>
                 )}
                 {fngLastMonth && (
                   <div className="gm-fnghist-row">
-                    <span>Last Month</span>
+                    <span>{t("globalMarkets.lastMonth")}</span>
                     <span className="gm-fnghist-pill" style={{ color: fngColor(Number(fngLastMonth.value)) }}>
-                      {fngLastMonth.value_classification} · {fngLastMonth.value}
+                      {fngLabel(fngLastMonth.value_classification)} · {fngLastMonth.value}
                     </span>
                   </div>
                 )}
@@ -1243,17 +1253,17 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
             )}
             {fngYearHigh && fngYearLow && (
               <div className="gm-fnghist-block">
-                <div className="gm-fnghist-block-title">Yearly High &amp; Low</div>
+                <div className="gm-fnghist-block-title">{t("globalMarkets.yearlyHighLow")}</div>
                 <div className="gm-fnghist-row">
-                  <span>High ({new Date(Number(fngYearHigh.timestamp) * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" })})</span>
+                  <span>{t("globalMarkets.highOn", { date: new Date(Number(fngYearHigh.timestamp) * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" }) })}</span>
                   <span className="gm-fnghist-pill" style={{ color: fngColor(Number(fngYearHigh.value)) }}>
-                    {fngYearHigh.value_classification} · {fngYearHigh.value}
+                    {fngLabel(fngYearHigh.value_classification)} · {fngYearHigh.value}
                   </span>
                 </div>
                 <div className="gm-fnghist-row">
-                  <span>Low ({new Date(Number(fngYearLow.timestamp) * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" })})</span>
+                  <span>{t("globalMarkets.lowOn", { date: new Date(Number(fngYearLow.timestamp) * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" }) })}</span>
                   <span className="gm-fnghist-pill" style={{ color: fngColor(Number(fngYearLow.value)) }}>
-                    {fngYearLow.value_classification} · {fngYearLow.value}
+                    {fngLabel(fngYearLow.value_classification)} · {fngYearLow.value}
                   </span>
                 </div>
               </div>
@@ -1262,13 +1272,13 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
 
           <div className="gm-section gm-fnghist-chart-card">
             <div className="gm-section-header">
-              <span className="gm-section-title">Fear &amp; Greed Chart</span>
+              <span className="gm-section-title">{t("globalMarkets.fngChart")}</span>
               <div className="gm-period-tabs">
                 {FNG_PERIODS.map(p => (
                   <button key={p.label}
                     className={`gm-period-tab${fngPeriod.label === p.label ? " gm-period-tab--active" : ""}`}
                     onClick={() => setFngPeriod(p)}>
-                    {p.label}
+                    {periodLabel(p.label)}
                   </button>
                 ))}
               </div>
@@ -1320,7 +1330,7 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
         {altcoinStrengthPct !== null && (
           <div className="gm-section gm-altseason-card">
             <div className="gm-section-header">
-              <span className="gm-section-title">Altcoin Season</span>
+              <span className="gm-section-title">{t("globalMarkets.altcoinSeason")}</span>
               <div className="gm-period-tabs">
                 {ALT_SEASON_PERIODS.map(p => (
                   <button key={p.label}
@@ -1336,36 +1346,36 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
               <span className="gm-altseason-dot" style={{ left: `${altcoinStrengthPct}%` }} />
             </div>
             <div className="gm-altseason-labels">
-              <span>Bitcoin Season</span>
-              <span>Altcoin Season</span>
+              <span>{t("globalMarkets.bitcoinSeason")}</span>
+              <span>{t("globalMarkets.altcoinSeason")}</span>
             </div>
           </div>
         )}
 
         <div className="gm-section gm-mcap-card">
           <div className="gm-section-header">
-            <span className="gm-section-title">Crypto Market Cap</span>
+            <span className="gm-section-title">{t("globalMarkets.cryptoMarketCap")}</span>
             <div className="gm-period-tabs">
               {MCAP_PERIODS.map(p => (
                 <button key={p.label}
                   className={`gm-period-tab${mcapPeriod.label === p.label ? " gm-period-tab--active" : ""}`}
                   onClick={() => setMcapPeriod(p)}>
-                  {p.label}
+                  {periodLabel(p.label)}
                 </button>
               ))}
             </div>
           </div>
           <div className="gm-mcap-stats">
             <div className="gm-mcap-stat">
-              <span className="gm-mcap-stat-label">Market Cap</span>
+              <span className="gm-mcap-stat-label">{t("globalMarkets.marketCap")}</span>
               <span className="gm-mcap-stat-value">{fmtBig(mcap)}</span>
             </div>
             <div className="gm-mcap-stat">
-              <span className="gm-mcap-stat-label">Volume</span>
+              <span className="gm-mcap-stat-label">{t("globalMarkets.volume")}</span>
               <span className="gm-mcap-stat-value">{fmtBig(vol)}</span>
             </div>
           </div>
-          <div className="gm-chart-est-note">Line estimated from BTC market cap ÷ current BTC dominance — not an exact historical series</div>
+          <div className="gm-chart-est-note">{t("globalMarkets.estNote")}</div>
           <div className="gm-chart-wrap">
             {mcapLoading && (
               <div className="gm-chart-loading">
@@ -1411,27 +1421,27 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
           are all currently rejecting with "Upgrade plan") ─────────────────── */}
       <div className="gm-section gm-liq">
         <div className="gm-section-header">
-          <span className="gm-section-title">{IC.vol} Market Pulse</span>
-          <span className="gm-section-sub">live CoinGecko data</span>
+          <span className="gm-section-title">{IC.vol} {t("globalMarkets.marketPulse")}</span>
+          <span className="gm-section-sub">{t("globalMarkets.liveCoinGecko")}</span>
         </div>
 
         <div className="gm-liq-grid">
           <div className="gm-liq-side">
             <div className="gm-liq-stat-card">
-              <div className="gm-liq-stat-label">24h Trading Volume</div>
+              <div className="gm-liq-stat-label">{t("globalMarkets.tradingVolume24h")}</div>
               <div className="gm-liq-stat-value">{fmtBig(vol)}</div>
               <div className="gm-liq-stat-row">
-                <span className="gm-liq-stat-row-label">Gainers</span>
+                <span className="gm-liq-stat-row-label">{t("globalMarkets.gainers")}</span>
                 <span className="gm-liq-stat-row-value gm-pct--pos">{gainersCount}</span>
               </div>
               <div className="gm-liq-stat-row">
-                <span className="gm-liq-stat-row-label">Losers</span>
+                <span className="gm-liq-stat-row-label">{t("globalMarkets.losers")}</span>
                 <span className="gm-liq-stat-row-value gm-pct--neg">{losersCount}</span>
               </div>
             </div>
 
             <div className="gm-liq-events-card">
-              <div className="gm-liq-events-title">Today's Biggest Movers</div>
+              <div className="gm-liq-events-title">{t("globalMarkets.biggestMovers")}</div>
               {topMovers.map((c, i) => {
                 const chg = c.price_change_percentage_24h ?? 0;
                 return (
@@ -1451,7 +1461,7 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
 
           <div className="gm-liq-chart-card">
             <div className="gm-liq-chart-head">
-              <span className="gm-liq-chart-title">BTC Price &amp; Daily Swings</span>
+              <span className="gm-liq-chart-title">{t("globalMarkets.btcPriceSwings")}</span>
               <div className="gm-period-tabs">
                 {LIQ_RANGES.map(r => (
                   <button key={r.label}
@@ -1463,9 +1473,9 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
               </div>
             </div>
             <div className="gm-liq-legend">
-              <span className="gm-liq-legend-item"><span className="gm-liq-dot gm-liq-dot--up" />Up day</span>
-              <span className="gm-liq-legend-item"><span className="gm-liq-dot gm-liq-dot--down" />Down day</span>
-              <span className="gm-liq-legend-item"><span className="gm-liq-dot gm-liq-dot--price" />Bitcoin Price</span>
+              <span className="gm-liq-legend-item"><span className="gm-liq-dot gm-liq-dot--up" />{t("globalMarkets.upDay")}</span>
+              <span className="gm-liq-legend-item"><span className="gm-liq-dot gm-liq-dot--down" />{t("globalMarkets.downDay")}</span>
+              <span className="gm-liq-legend-item"><span className="gm-liq-dot gm-liq-dot--price" />{t("globalMarkets.bitcoinPrice")}</span>
             </div>
 
             {liqLoading && (
@@ -1506,7 +1516,7 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
       <div className="gm-dom-chart-grid">
         <div className="gm-section">
           <div className="gm-section-header">
-            <span className="gm-section-title">Market Cap Dominance</span>
+            <span className="gm-section-title">{t("globalMarkets.mcapDominance")}</span>
           </div>
           {domSectionBody}
         </div>
@@ -1546,13 +1556,14 @@ function FngHistTooltip({ active, payload, label }: { active?: boolean; payload?
 }
 
 function McapTooltip({ active, payload, label }: { active?: boolean; payload?: { payload: { mcap: number; vol: number } }[]; label?: string }) {
+  const { t } = useTranslation();
   if (!active || !payload?.length) return null;
   const d = payload[0].payload;
   return (
     <div className="gm-tooltip">
       <div className="gm-tooltip-label">{label}</div>
       <div className="gm-tooltip-value">${d.mcap.toFixed(0)}B</div>
-      <div style={{ fontSize: "0.72rem", color: "var(--color-text-muted)" }}>Vol ${d.vol.toFixed(1)}B</div>
+      <div style={{ fontSize: "0.72rem", color: "var(--color-text-muted)" }}>{t("globalMarkets.tooltipVol", { value: `$${d.vol.toFixed(1)}B` })}</div>
     </div>
   );
 }

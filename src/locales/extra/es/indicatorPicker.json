@@ -1,0 +1,113 @@
+{
+  "indicatorPicker": {
+    "title": "Indicadores",
+    "close": "Cerrar",
+    "back": "Atrás",
+    "search": "Buscar",
+    "searchAria": "Buscar indicadores",
+    "clear": "Borrar",
+    "personal": "Personal",
+    "favorites": "Favoritos",
+    "onChart": "En el gráfico",
+    "buildWithAi": "Crear con IA",
+    "buildNew": "Crear uno nuevo con IA",
+    "buildSub": "Describe un indicador — la IA lo crea para tu gráfico",
+    "builtIn": "Integrados",
+    "allIndicators": "Todos los indicadores",
+    "yourIndicators": "Tus indicadores",
+    "resultsFor": "Resultados para “{{q}}”",
+    "clearAll": "Quitar todo",
+    "clearAllCount": "Quitar todo ({{count}})",
+    "saved_one": "{{count}} guardado",
+    "saved_other": "{{count}} guardados",
+    "nOn": "{{count}} activos",
+    "nIndicators_one": "{{count}} indicador",
+    "nIndicators_other": "{{count}} indicadores",
+    "edit": "Editar",
+    "editWithAi": "Editar con IA",
+    "delete": "Eliminar",
+    "deleteConfirm": "¿Eliminar “{{name}}”?",
+    "addFav": "Añadir a favoritos",
+    "removeFav": "Quitar de favoritos",
+    "kind": {
+      "all": "Todos",
+      "overlay": "Sobre el precio",
+      "pane": "Panel propio"
+    },
+    "col": {
+      "name": "Nombre",
+      "type": "Tipo",
+      "category": "Categoría"
+    },
+    "empty": {
+      "noMatch": "Ningún indicador coincide con “{{q}}”.",
+      "fav": "Marca con una estrella (★) un indicador para tenerlo aquí.",
+      "on": "Aún no hay nada en el gráfico.",
+      "mine": "Aún no tienes indicadores de IA — usa Crear con IA para hacer uno.",
+      "nothing": "No hay nada aquí."
+    },
+    "mineAbout": {
+      "title": "¿Qué son Mis indicadores?",
+      "about": "Indicadores que creaste describiéndolos a la IA. Funcionan en todos los gráficos como los integrados. Usa Editar para cambiar uno con tus propias palabras, o elimínalo."
+    },
+    "about": {
+      "all": {
+        "title": "¿Cómo funcionan los indicadores?",
+        "about": "Todos los indicadores disponibles en este gráfico. Haz clic en una fila para añadirlo y otra vez para quitarlo. Los superpuestos se dibujan sobre el precio; los de panel tienen su propio espacio bajo el gráfico. Marca con estrella los que más usas para encontrarlos en Favoritos."
+      },
+      "fav": {
+        "title": "¿Qué son los Favoritos?",
+        "about": "Tus indicadores marcados con estrella, guardados aquí para un acceso rápido. Haz clic en la ☆ junto a cualquier indicador para añadirlo."
+      },
+      "on": {
+        "title": "¿Qué hay en tu gráfico?",
+        "about": "Todo lo que está dibujado ahora en este gráfico. Haz clic en una fila para quitarlo, o usa Quitar todo."
+      }
+    },
+    "cats": {
+      "movingAverages": {
+        "name": "Medias móviles",
+        "question": "¿Qué son las medias móviles?",
+        "about": "Suavizan el precio para mostrar la tendencia de fondo. Un precio por encima de una media ascendente tiende a ser alcista; por debajo de una descendente, bajista. Las medias rápidas (EMA 9/20) reaccionan pronto a los giros; las lentas (100/200) actúan como soporte y resistencia de largo plazo. Los cruces entre una media rápida y una lenta son señales clásicas de cambio de tendencia."
+      },
+      "trend": {
+        "name": "Tendencia",
+        "question": "¿Qué muestran los indicadores de tendencia?",
+        "about": "Te dicen hacia dónde va el mercado y con qué fuerza. Úsalos para seguir la tendencia, detectar cuándo se debilita y colocar stops dinámicos — p. ej., los puntos del Parabolic SAR cambian de lado cuando gira la tendencia, y la nube de Ichimoku muestra tendencia, momentum y soporte en una sola vista."
+      },
+      "momentum": {
+        "name": "Momentum",
+        "question": "¿Qué es el momentum?",
+        "about": "Miden lo rápido que se mueve el precio y si ese impulso se acelera o se apaga. Señalan condiciones de sobrecompra y sobreventa, y las divergencias — el precio marca un nuevo máximo pero el momentum no — suelen avisar de un giro antes de que aparezca en el precio."
+      },
+      "oscillators": {
+        "name": "Osciladores",
+        "question": "¿Cómo funcionan los osciladores?",
+        "about": "Oscilan entre niveles fijos o alrededor de cero, cada uno en su propio panel. Las lecturas extremas indican movimientos estirados que probablemente se corrijan; cruzar la línea cero confirma un cambio de dirección. Funcionan mejor en mercados laterales y como confirmación junto a una herramienta de tendencia."
+      },
+      "volatility": {
+        "name": "Volatilidad",
+        "question": "¿Qué te dice la volatilidad?",
+        "about": "Muestran cuánto se mueve el precio, no hacia dónde. Las bandas y canales se ensanchan en mercados agitados y se estrechan antes de grandes movimientos (un 'squeeze'). Las herramientas basadas en ATR ayudan a dimensionar stops y posiciones para que un vaivén normal no te saque de la operación."
+      },
+      "volume": {
+        "name": "Volumen",
+        "question": "¿Por qué importa el volumen?",
+        "about": "Miran el dinero detrás de cada movimiento. Un precio que sube con volumen creciente es un movimiento con convicción; si sube con volumen decreciente, es sospechoso. El VWAP marca el precio medio pagado hoy — una línea de valor justo en torno a la que muchos traders compran y venden."
+      },
+      "levelsZones": {
+        "name": "Niveles y zonas",
+        "question": "¿Qué son los niveles y zonas?",
+        "about": "Dibujan en el gráfico los precios que importan: soporte y resistencia, retrocesos de Fibonacci, el máximo y mínimo del día y los gaps del CME. Ahí es donde el precio suele reaccionar — útiles para entradas, objetivos y colocación de stops."
+      },
+      "smartMoney": {
+        "name": "Smart Money",
+        "question": "¿Qué es Smart Money?",
+        "about": "Conceptos para rastrear dónde probablemente compraron o vendieron los grandes jugadores: order blocks, fair-value gaps, rupturas de estructura y retests, además de patrones de velas y fases de Wyckoff. Resaltan zonas que el precio suele revisitar antes de continuar."
+      },
+      "mine": {
+        "name": "Mis indicadores"
+      }
+    }
+  }
+}

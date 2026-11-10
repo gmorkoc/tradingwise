@@ -1,0 +1,44 @@
+{
+  "consensusStrip": {
+    "title": "Konsensüs",
+    "aria": "coinhintz konsensüsü",
+    "mixedPicture": "Karışık görünüm",
+    "leaning": { "bull": "Yükseliş eğilimli", "bear": "Düşüş eğilimli" },
+    "noClearSide": "{{n}} araç, net bir yön yok",
+    "agreeCount": { "bull": "{{total}} aracın {{n}} tanesi yükselişte", "bear": "{{total}} aracın {{n}} tanesi düşüşte" },
+    "noReads": "Henüz okuma yok",
+    "kicker": "coinhintz konsensüsü · {{tf}}",
+    "coinMixed": "{{coin}}: karışık görünüm",
+    "coinLeans": { "bull": "{{coin}} yükseliş eğilimli", "bear": "{{coin}} düşüş eğilimli" },
+    "cardNote": "Her araç piyasayı kendi yöntemiyle okur. Nedenini görmek için bir satıra dokunun. Finansal tavsiye değildir.",
+    "pvAgrees": "Ana sinyal olan ProVision da aynı fikirde.",
+    "pvLeans": { "bull": "ProVision yükseliş eğilimli.", "bear": "ProVision düşüş eğilimli.", "neutral": "ProVision nötr." },
+    "pvDiffers": "ProVision farklı okuyor.",
+    "sentenceNone": "{{tf}} grafiği için henüz okuma yok.",
+    "sentenceSplit": "Araçlar {{tf}} grafiğinde bölünmüş durumda — henüz net bir yön yok.",
+    "sentenceLean": {
+      "bull": "{{tf}} grafiğinde {{total}} aracın {{n}} tanesi yükseliş eğilimli.",
+      "bear": "{{tf}} grafiğinde {{total}} aracın {{n}} tanesi düşüş eğilimli."
+    },
+    "about": {
+      "pv": "Trend + 7 gösterge, komisyonlar sonrası puanlanır",
+      "sig": "Piyasa genelinde kurulum tarayıcı (4s)",
+      "tech": "Klasik osilatörler ve hareketli ortalamalar",
+      "ai": "YZ tarafından okunan mum formasyonları",
+      "ev": "Fiyat bölgeleri ve son kilit anlar",
+      "agent": "Nedenini bir YZ analistine sorun"
+    },
+    "whereLands": "Her aracın konumu",
+    "sell": "Sat",
+    "neutral": "Nötr",
+    "buy": "Al",
+    "howAgree": "Ne kadar hemfikirler",
+    "nBearish": "{{n}} düşüş",
+    "nNeutral": "{{n}} nötr",
+    "nBullish": "{{n}} yükseliş",
+    "theTools": "Araçlar",
+    "sheetNote": "Nasıl okunur: her nokta bir coinhintz aracının okumasıdır; soldan (sat) sağa (al). Bir tarafta ne kadar çok araç varsa uzlaşma o kadar güçlüdür. Finansal tavsiye değildir.",
+    "lineTitle": "Her nokta bir coinhintz aracıdır. Finansal tavsiye değildir.",
+    "whatsNext": "{{coin}} için sırada ne var?"
+  }
+}

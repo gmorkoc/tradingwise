@@ -3,6 +3,7 @@
 // Phones: a card with a "3/4" ring and one row per tool. Locked tools show
 // next to the ones the user has (each opens its own upsell / tool on tap).
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { BottomSheet } from "./BottomSheet";
 import "../styles/ConsensusStrip.css";
 
@@ -47,6 +48,7 @@ const LockIcon = ({ size = 11 }: { size?: number }) => (
 
 export function ConsensusStrip({ coinName, timeframe, items, variant, tapToOpen = false, hideLine = false, onSummary }: Props) {
   const [sheetOpen, setSheetOpen] = useState(false);
+  const { t } = useTranslation();
   // Sheet: which row is expanded in place (ProVision opens first).
   const [expanded, setExpanded] = useState<string | null>(null);
   const openSheet = () => {
@@ -60,11 +62,11 @@ export function ConsensusStrip({ coinName, timeframe, items, variant, tapToOpen 
   const bull = read.filter((i) => i.tone === "bull").length;
   const lead: ConsensusTone = bear > bull ? "bear" : bull > bear ? "bull" : "neutral";
   const agree = lead === "bear" ? bear : lead === "bull" ? bull : read.length - bear - bull;
-  const leadWord = lead === "bear" ? "bearish" : lead === "bull" ? "bullish" : "mixed";
-  const headline = lead === "neutral" ? "Mixed picture" : `Leaning ${leadWord}`;
+  // Per-side templates (bull / bear) so each language can agree its adjectives.
+  const headline = lead === "neutral" ? t("consensusStrip.mixedPicture") : t(`consensusStrip.leaning.${lead}`);
   const countLine = read.length
-    ? lead === "neutral" ? `${read.length} tools, no clear side` : `${agree} of ${read.length} tools ${leadWord}`
-    : "No reads yet";
+    ? lead === "neutral" ? t("consensusStrip.noClearSide", { n: read.length }) : t(`consensusStrip.agreeCount.${lead}`, { n: agree, total: read.length })
+    : t("consensusStrip.noReads");
   const onSummaryRef = useRef(onSummary);
   onSummaryRef.current = onSummary;
   useEffect(() => { onSummaryRef.current?.({ lead, headline, countLine }); }, [lead, headline, countLine]);
@@ -85,7 +87,7 @@ export function ConsensusStrip({ coinName, timeframe, items, variant, tapToOpen 
     const pct = read.length ? agree / read.length : 0;
     const C = 2 * Math.PI * 26;
     return (
-      <section className={`cns-card cns--${lead}${inSheet ? " cns-card--sheet" : ""}`} aria-label="coinhintz consensus">
+      <section className={`cns-card cns--${lead}${inSheet ? " cns-card--sheet" : ""}`} aria-label={t("consensusStrip.aria")}>
         <div className="cns-card-head">
           <div className="cns-ring">
             <svg width="60" height="60" viewBox="0 0 64 64" aria-hidden="true">
@@ -95,8 +97,8 @@ export function ConsensusStrip({ coinName, timeframe, items, variant, tapToOpen 
             <span className="cns-ring-num">{read.length ? `${agree}/${read.length}` : "–"}</span>
           </div>
           <div className="cns-card-text">
-            <span className="cns-kicker">coinhintz consensus · {timeframe}</span>
-            <span className="cns-headline">{lead === "neutral" ? `${coinName}: mixed picture` : `${coinName} leans ${leadWord}`}</span>
+            <span className="cns-kicker">{t("consensusStrip.kicker", { tf: timeframe })}</span>
+            <span className="cns-headline">{lead === "neutral" ? t("consensusStrip.coinMixed", { coin: coinName }) : t(`consensusStrip.coinLeans.${lead}`, { coin: coinName })}</span>
             <span className="cns-sub">{countLine}</span>
           </div>
         </div>
@@ -128,7 +130,7 @@ export function ConsensusStrip({ coinName, timeframe, items, variant, tapToOpen 
             );
           })}
         </div>
-        <p className="cns-note">Each tool reads the market its own way. Tap any row to see why. Not financial advice.</p>
+        <p className="cns-note">{t("consensusStrip.cardNote")}</p>
       </section>
     );
   };
@@ -144,14 +146,14 @@ export function ConsensusStrip({ coinName, timeframe, items, variant, tapToOpen 
     const pv = items.find((i) => i.id === "pv");
     const pvNote = pv && !pv.locked && pv.tone
       ? pv.tone === lead
-        ? " ProVision, the main signal, agrees."
-        : lead === "neutral" ? ` ProVision leans ${pv.tone === "bull" ? "bullish" : pv.tone === "bear" ? "bearish" : "neutral"}.` : " ProVision reads it differently."
+        ? ` ${t("consensusStrip.pvAgrees")}`
+        : lead === "neutral" ? ` ${t(`consensusStrip.pvLeans.${pv.tone}`)}` : ` ${t("consensusStrip.pvDiffers")}`
       : "";
     const sentence = !read.length
-      ? `No reads yet for the ${timeframe} chart.`
+      ? t("consensusStrip.sentenceNone", { tf: timeframe })
       : lead === "neutral"
-        ? `Tools are split on the ${timeframe} chart — no clear side yet.${pvNote}`
-        : `${agree} of ${read.length} tools lean ${leadWord} on the ${timeframe} chart.${pvNote}`;
+        ? `${t("consensusStrip.sentenceSplit", { tf: timeframe })}${pvNote}`
+        : `${t(`consensusStrip.sentenceLean.${lead}`, { n: agree, total: read.length, tf: timeframe })}${pvNote}`;
     const placed = items.filter((i) => !i.locked && i.pos !== null).sort((a, b) => a.pos! - b.pos!);
     let last = -100;
     let flip = false;
@@ -162,15 +164,15 @@ export function ConsensusStrip({ coinName, timeframe, items, variant, tapToOpen 
       return { it, below: flip };
     });
     const ABOUT: Record<string, string> = {
-      pv: "Trend + 7 indicators, scored after fees",
-      sig: "Market-wide setup scanner (4h)",
-      tech: "Classic oscillators & moving averages",
-      ai: "Candle patterns, read by AI",
-      ev: "Price zones & recent key moments",
-      agent: "Ask an AI analyst why",
+      pv: t("consensusStrip.about.pv"),
+      sig: t("consensusStrip.about.sig"),
+      tech: t("consensusStrip.about.tech"),
+      ai: t("consensusStrip.about.ai"),
+      ev: t("consensusStrip.about.ev"),
+      agent: t("consensusStrip.about.agent"),
     };
     return (
-      <section className={`cns-x cns--${lead}`} aria-label="Consensus">
+      <section className={`cns-x cns--${lead}`} aria-label={t("consensusStrip.title")}>
         <div className="cns-x-hero">
           <div className="cns-ring">
             <svg width="60" height="60" viewBox="0 0 64 64" aria-hidden="true">
@@ -186,7 +188,7 @@ export function ConsensusStrip({ coinName, timeframe, items, variant, tapToOpen 
         </div>
 
         <div className="cns-x-block">
-          <span className="cns-x-label">Where each tool lands</span>
+          <span className="cns-x-label">{t("consensusStrip.whereLands")}</span>
           <div className="cns-x-map">
             <div className="cns-x-track" />
             <span className="cns-x-mid" />
@@ -197,27 +199,27 @@ export function ConsensusStrip({ coinName, timeframe, items, variant, tapToOpen 
               </span>
             ))}
           </div>
-          <div className="cns-x-scale"><span>Sell</span><span>Neutral</span><span>Buy</span></div>
+          <div className="cns-x-scale"><span>{t("consensusStrip.sell")}</span><span>{t("consensusStrip.neutral")}</span><span>{t("consensusStrip.buy")}</span></div>
         </div>
 
         {read.length > 0 && (
           <div className="cns-x-block">
-            <span className="cns-x-label">How much they agree</span>
+            <span className="cns-x-label">{t("consensusStrip.howAgree")}</span>
             <div className="cns-x-split" aria-hidden="true">
               {bear > 0 && <span className="cns-x-split-bear" style={{ flex: bear }} />}
               {neutralN > 0 && <span className="cns-x-split-neutral" style={{ flex: neutralN }} />}
               {bull > 0 && <span className="cns-x-split-bull" style={{ flex: bull }} />}
             </div>
             <div className="cns-x-legend">
-              <span><i className="cns-dot cns-dot--bear" />{bear} bearish</span>
-              <span><i className="cns-dot cns-dot--neutral" />{neutralN} neutral</span>
-              <span><i className="cns-dot cns-dot--bull" />{bull} bullish</span>
+              <span><i className="cns-dot cns-dot--bear" />{t("consensusStrip.nBearish", { n: bear })}</span>
+              <span><i className="cns-dot cns-dot--neutral" />{t("consensusStrip.nNeutral", { n: neutralN })}</span>
+              <span><i className="cns-dot cns-dot--bull" />{t("consensusStrip.nBullish", { n: bull })}</span>
             </div>
           </div>
         )}
 
         <div className="cns-x-block">
-          <span className="cns-x-label">The tools</span>
+          <span className="cns-x-label">{t("consensusStrip.theTools")}</span>
           <div className="cns-rows">
             {items.map((it) => {
               const tap = it.onClick ? () => { close(); it.onClick!(); } : undefined;
@@ -240,9 +242,7 @@ export function ConsensusStrip({ coinName, timeframe, items, variant, tapToOpen 
           </div>
         </div>
 
-        <p className="cns-note">
-          How to read this: each dot is one coinhintz tool's read, from sell (left) to buy (right). The more tools on one side, the stronger the agreement. Not financial advice.
-        </p>
+        <p className="cns-note">{t("consensusStrip.sheetNote")}</p>
       </section>
     );
   };
@@ -264,12 +264,12 @@ export function ConsensusStrip({ coinName, timeframe, items, variant, tapToOpen 
   const line = (
     <section
       className={`cns-line cns--${lead}${tapToOpen ? " cns-line--tap" : ""}`}
-      aria-label="coinhintz consensus"
-      title="Each dot is one coinhintz tool. Not financial advice."
+      aria-label={t("consensusStrip.aria")}
+      title={t("consensusStrip.lineTitle")}
       {...(tapToOpen ? { role: "button", tabIndex: 0, onClick: openSheet, onKeyDown: (e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openSheet(); } } } : {})}
     >
       <div className="cns-seg cns-seg--title">
-        <span className="cns-line-title">Consensus</span>
+        <span className="cns-line-title">{t("consensusStrip.title")}</span>
         <span className="cns-line-coin">{coinName} · {timeframe}</span>
       </div>
       <div className="cns-seg cns-line-lead">
@@ -325,8 +325,8 @@ export function ConsensusStrip({ coinName, timeframe, items, variant, tapToOpen 
       <BottomSheet
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
-        title={`What's next for ${coinName}?`}
-        ariaLabel={`What's next for ${coinName}?`}
+        title={t("consensusStrip.whatsNext", { coin: coinName })}
+        ariaLabel={t("consensusStrip.whatsNext", { coin: coinName })}
         floating
       >
         {renderSheet(() => setSheetOpen(false))}

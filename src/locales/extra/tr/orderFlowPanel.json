@@ -1,0 +1,13 @@
+{
+  "orderFlowPanel": {
+    "title": "Emir Akışı Baskısı",
+    "spread": "Spread",
+    "live": "CANLI",
+    "unavailable": "{{coin}} için emir akışı kullanılamıyor.",
+    "buyers": "%{{pct}} alıcı",
+    "sellers": "%{{pct}} satıcı",
+    "todaysStory": "Bugünün Hikâyesi",
+    "noSignals": "Şu anda bu grafikte dikkat çeken bir sinyal yok.",
+    "orderBook": "Emir Defteri"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "coinbasePremium2": {
+    "title": "Índice de prima de Coinbase",
+    "priceUsd": "— Precio USD",
+    "premiumVs": "Prima (Coinbase vs {{source}})",
+    "na": "N/D"
+  }
+}

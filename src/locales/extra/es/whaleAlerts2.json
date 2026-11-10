@@ -1,0 +1,12 @@
+{
+  "whaleAlerts2": {
+    "unmute": "Activar sonido de alertas de ballenas",
+    "mute": "Silenciar alertas de ballenas",
+    "soundOff": "Sonido desactivado",
+    "soundOn": "Sonido activado",
+    "viewTx": "Ver transacción",
+    "dismissNext": "Descartar y mostrar la siguiente",
+    "dismiss": "Descartar",
+    "snoozeAria": "Pausar alertas de ballenas durante 1 hora"
+  }
+}

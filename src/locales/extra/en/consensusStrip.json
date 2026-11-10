@@ -1,0 +1,44 @@
+{
+  "consensusStrip": {
+    "title": "Consensus",
+    "aria": "coinhintz consensus",
+    "mixedPicture": "Mixed picture",
+    "leaning": { "bull": "Leaning bullish", "bear": "Leaning bearish" },
+    "noClearSide": "{{n}} tools, no clear side",
+    "agreeCount": { "bull": "{{n}} of {{total}} tools bullish", "bear": "{{n}} of {{total}} tools bearish" },
+    "noReads": "No reads yet",
+    "kicker": "coinhintz consensus · {{tf}}",
+    "coinMixed": "{{coin}}: mixed picture",
+    "coinLeans": { "bull": "{{coin}} leans bullish", "bear": "{{coin}} leans bearish" },
+    "cardNote": "Each tool reads the market its own way. Tap any row to see why. Not financial advice.",
+    "pvAgrees": "ProVision, the main signal, agrees.",
+    "pvLeans": { "bull": "ProVision leans bullish.", "bear": "ProVision leans bearish.", "neutral": "ProVision leans neutral." },
+    "pvDiffers": "ProVision reads it differently.",
+    "sentenceNone": "No reads yet for the {{tf}} chart.",
+    "sentenceSplit": "Tools are split on the {{tf}} chart — no clear side yet.",
+    "sentenceLean": {
+      "bull": "{{n}} of {{total}} tools lean bullish on the {{tf}} chart.",
+      "bear": "{{n}} of {{total}} tools lean bearish on the {{tf}} chart."
+    },
+    "about": {
+      "pv": "Trend + 7 indicators, scored after fees",
+      "sig": "Market-wide setup scanner (4h)",
+      "tech": "Classic oscillators & moving averages",
+      "ai": "Candle patterns, read by AI",
+      "ev": "Price zones & recent key moments",
+      "agent": "Ask an AI analyst why"
+    },
+    "whereLands": "Where each tool lands",
+    "sell": "Sell",
+    "neutral": "Neutral",
+    "buy": "Buy",
+    "howAgree": "How much they agree",
+    "nBearish": "{{n}} bearish",
+    "nNeutral": "{{n}} neutral",
+    "nBullish": "{{n}} bullish",
+    "theTools": "The tools",
+    "sheetNote": "How to read this: each dot is one coinhintz tool's read, from sell (left) to buy (right). The more tools on one side, the stronger the agreement. Not financial advice.",
+    "lineTitle": "Each dot is one coinhintz tool. Not financial advice.",
+    "whatsNext": "What's next for {{coin}}?"
+  }
+}

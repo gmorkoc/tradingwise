@@ -62,6 +62,7 @@ function useTradeCalc(entry: string, stopLoss: string, accountSize: string, risk
 
 // ── AI hook ──────────────────────────────────────────────────────────────────
 function useAiReview(isPro: boolean, user: any, onOpenAuth?: () => void, onOpenUpgrade?: () => void) {
+  const { t } = useTranslation();
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResult,  setAiResult]  = useState<TradeReviewResult | null>(null);
   const [aiError,   setAiError]   = useState<string | null>(null);
@@ -76,7 +77,7 @@ function useAiReview(isPro: boolean, user: any, onOpenAuth?: () => void, onOpenU
     if (cancelRef.current) return;
     setAiLoading(false);
     if (res.success && res.result) setAiResult(res.result);
-    else setAiError(res.error ?? "AI review failed");
+    else setAiError(res.error ?? t("tradeManager2.aiReviewFailed"));
   }
 
   function cancel() { cancelRef.current = true; setAiLoading(false); }
@@ -199,9 +200,9 @@ In 2-3 sentences: how does this plan look overall? Is it well-structured? Plain 
         max_tokens: 200,
       });
       if (tipCancel.current) return;
-      setTipText(res?.choices?.[0]?.message?.content ?? "No response");
+      setTipText(res?.choices?.[0]?.message?.content ?? t("tradeManager2.noResponse"));
     } catch {
-      if (!tipCancel.current) setTipError("AI tip failed — try again");
+      if (!tipCancel.current) setTipError(t("tradeManager2.aiTipFailed"));
     } finally {
       if (!tipCancel.current) setTipLoading(false);
     }
@@ -321,7 +322,7 @@ In 2-3 sentences: how does this plan look overall? Is it well-structured? Plain 
                 <label className="rcw-field-label">{t("posCalc.s3.entryLabel")}</label>
                 <div className="rcw-input-wrap">
                   <span className="rcw-prefix">$</span>
-                  <input className="rcw-input rcw-input--has-prefix" type="number" placeholder="e.g. 65000" value={entry} onChange={e => setEntry(e.target.value)} />
+                  <input className="rcw-input rcw-input--has-prefix" type="number" placeholder={t("tradeManager2.eg", { value: "65000" })} value={entry} onChange={e => setEntry(e.target.value)} />
                 </div>
                 <p className="rcw-field-hint">{direction === "long" ? t("posCalc.s3.entryHintLong") : t("posCalc.s3.entryHintShort")}</p>
               </div>
@@ -341,7 +342,7 @@ In 2-3 sentences: how does this plan look overall? Is it well-structured? Plain 
                 <div className="rcw-input-wrap">
                   <span className="rcw-prefix">$</span>
                   <input className={`rcw-input rcw-input--has-prefix rcw-input--sl${invalidBreached ? " rcw-input--breached" : ""}`} type="number"
-                    placeholder="e.g. 61000" value={invalidation} onChange={e => setInvalidation(e.target.value)} />
+                    placeholder={t("tradeManager2.eg", { value: "61000" })} value={invalidation} onChange={e => setInvalidation(e.target.value)} />
                 </div>
                 {invalidBreached && <span style={{ fontSize: "0.72rem", color: "#ef4444" }}>{t("posCalc.s3.invWarn")}</span>}
                 <p className="rcw-field-hint">{t("posCalc.s3.invHint")}</p>
@@ -681,21 +682,21 @@ function ExperiencedView({ onSwitchMode, onOpenAuth, onOpenUpgrade }: { onSwitch
                 <label className="rcp-field-label">{t("posCalc.exp.entry")}</label>
                 <div className="rcp-input-wrap">
                   <span className="rcp-prefix">$</span>
-                  <input className="rcp-input rcp-input--pfx" type="number" placeholder="Price" value={entry} onChange={e => setEntry(e.target.value)} />
+                  <input className="rcp-input rcp-input--pfx" type="number" placeholder={t("tradeManager2.price")} value={entry} onChange={e => setEntry(e.target.value)} />
                 </div>
               </div>
               <div className="rcp-field">
                 <label className="rcp-field-label">{t("posCalc.exp.stopLoss")}</label>
                 <div className="rcp-input-wrap">
                   <span className="rcp-prefix">$</span>
-                  <input className="rcp-input rcp-input--pfx rcp-input--sl" type="number" placeholder="Price" value={stopLoss} onChange={e => setStopLoss(e.target.value)} />
+                  <input className="rcp-input rcp-input--pfx rcp-input--sl" type="number" placeholder={t("tradeManager2.price")} value={stopLoss} onChange={e => setStopLoss(e.target.value)} />
                 </div>
               </div>
               <div className="rcp-field rcp-field--full">
                 <label className="rcp-field-label">{t("posCalc.exp.inv")} <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0, opacity: 0.6 }}>{t("posCalc.exp.hardClose")}</span></label>
                 <div className="rcp-input-wrap">
                   <span className="rcp-prefix">$</span>
-                  <input className={`rcp-input rcp-input--pfx rcp-input--inv${invalidBreached ? " rcp-input--breached" : ""}`} type="number" placeholder="Price" value={invalidation} onChange={e => setInvalidation(e.target.value)} />
+                  <input className={`rcp-input rcp-input--pfx rcp-input--inv${invalidBreached ? " rcp-input--breached" : ""}`} type="number" placeholder={t("tradeManager2.price")} value={invalidation} onChange={e => setInvalidation(e.target.value)} />
                 </div>
                 {invalidBreached && <span className="rcp-inv-warn">{t("posCalc.exp.invWarn")}</span>}
               </div>
@@ -714,7 +715,7 @@ function ExperiencedView({ onSwitchMode, onOpenAuth, onOpenUpgrade }: { onSwitch
                   <span className="rcp-tp-lbl">TP{i + 1}</span>
                   <div className="rcp-input-wrap" style={{ flex: 1 }}>
                     <span className="rcp-prefix">$</span>
-                    <input className="rcp-input rcp-input--pfx rcp-input--tp" type="number" placeholder="Price" value={tp.price}
+                    <input className="rcp-input rcp-input--pfx rcp-input--tp" type="number" placeholder={t("tradeManager2.price")} value={tp.price}
                       onChange={e => setTps(p => p.map((x, j) => j === i ? { ...x, price: e.target.value } : x))} />
                   </div>
                   <div className="rcp-input-wrap" style={{ width: 64 }}>

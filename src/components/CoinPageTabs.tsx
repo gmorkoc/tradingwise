@@ -3,6 +3,8 @@
 // Markets · Fundamentals. Everything except Overview
 // renders its own panel in place of the chart (the chart stays mounted).
 import { Fragment, useEffect, useMemo, useState } from "react";
+import { useTranslation, Trans } from "react-i18next";
+import i18n from "../i18n";
 import { coinglass, fetchBn, getCoinGeckoId, COINS, type CandleDataPoint } from "../services/coinglass";
 import { calcEMA, calcRSIArray, calcBB, calcATR } from "../services/indicators";
 import { fetchBrief, type BriefItem } from "./DailyBrief";
@@ -88,26 +90,27 @@ export function CoinPageTabBar({ tab, onChange, onProVision, proVisionOn, hasCyc
   /** Market Cycles only exists for Bitcoin. */
   hasCycles?: boolean;
 }) {
+  const { t } = useTranslation();
   return (
-    <div className="cpt-bar" role="tablist" aria-label="Coin sections">
-      {DESK_TABS.filter((t) => t.id !== "cycles" || hasCycles).map((t) => (
-        <Fragment key={t.id}>
+    <div className="cpt-bar" role="tablist" aria-label={t("coinTabs.coinSections")}>
+      {DESK_TABS.filter((tb) => tb.id !== "cycles" || hasCycles).map((tb) => (
+        <Fragment key={tb.id}>
           <button
             type="button"
             role="tab"
-            aria-selected={tab === t.id}
-            className={`cpt-tab${tab === t.id ? " cpt-tab--active" : ""}`}
-            onClick={() => onChange(t.id)}
+            aria-selected={tab === tb.id}
+            className={`cpt-tab${tab === tb.id ? " cpt-tab--active" : ""}`}
+            onClick={() => onChange(tb.id)}
           >
-            {t.label}
+            {t(`coinTabs.tabs.${tb.id}`)}
           </button>
           {/* ProVision right after Chart: it's the chart's analysis layer. */}
-          {t.id === "overview" && onProVision && (
+          {tb.id === "overview" && onProVision && (
             <button
               type="button"
               className={`cpt-tab cpt-tab--pv${proVisionOn ? " cpt-tab--pv-on" : ""}`}
               aria-pressed={!!proVisionOn}
-              title={proVisionOn ? "Turn ProVision off" : "Turn ProVision on — draws on this chart"}
+              title={proVisionOn ? t("coinTabs.proVisionOff") : t("coinTabs.proVisionOn")}
               onClick={onProVision}
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
@@ -189,7 +192,8 @@ export function CoinPageDesktopSections({ coin }: { coin: string }) {
 export function CoinPagePicker({ coin }: { coin: string }) {
   const [listOpen, setListOpen] = useState(false);
   const [section, setSection] = useState<CoinPageTab | null>(null);
-  const label = (t: CoinPageTab) => COIN_PAGE_TABS.find((x) => x.id === t)?.label ?? "";
+  const { t: tr } = useTranslation();
+  const label = (t: CoinPageTab) => (COIN_PAGE_TABS.some((x) => x.id === t) ? tr(`coinTabs.tabs.${t}`) : "");
   // A section row: scroll to it on the page (after the sheet closes); only
   // if it isn't on the page does it open inside the sheet as before.
   const go = (t: CoinPageTab | PageOnlySection) => {
@@ -226,7 +230,7 @@ export function CoinPagePicker({ coin }: { coin: string }) {
   return (
     <>
       <button type="button" className="cpt-picker cpt-picker--more" onClick={() => setListOpen(true)} aria-haspopup="dialog">
-        More
+        {tr("coinTabs.more")}
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
       </button>
       {/* One sheet with in-sheet navigation: the list, or a section with a
@@ -236,13 +240,13 @@ export function CoinPagePicker({ coin }: { coin: string }) {
         onClose={() => { setListOpen(false); setSection(null); }}
         title={section ? (
           <span className="cps-nav-title">
-            <button type="button" className="cps-back" onClick={() => setSection(null)} aria-label="Back to sections">
+            <button type="button" className="cps-back" onClick={() => setSection(null)} aria-label={tr("coinTabs.backToSections")}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6" /></svg>
             </button>
             <CoinSheetTitle coin={coin} text={`${coinName(coin)} · ${label(section)}`} />
           </span>
-        ) : <CoinSheetTitle coin={coin} text={`Explore ${coinName(coin)}`} />}
-        ariaLabel={section ? `${coinName(coin)} ${label(section)}` : `Explore ${coinName(coin)}`}
+        ) : <CoinSheetTitle coin={coin} text={tr("coinTabs.explore", { name: coinName(coin) })} />}
+        ariaLabel={section ? `${coinName(coin)} ${label(section)}` : tr("coinTabs.explore", { name: coinName(coin) })}
         className={section ? "cpt-sheet" : undefined}
         floating
       >
@@ -251,7 +255,7 @@ export function CoinPagePicker({ coin }: { coin: string }) {
             <CoinPageTabContent tab={section} coin={coin} />
           </div>
         ) : (
-        <div className="cps-list" role="listbox" aria-label="Coin sections">
+        <div className="cps-list" role="listbox" aria-label={tr("coinTabs.coinSections")}>
           {/* Page order: Statistics, Market Cycles (when on the page), News …
               Fundamentals, then Top Traders. */}
           {[
@@ -274,8 +278,8 @@ export function CoinPagePicker({ coin }: { coin: string }) {
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{meta.icon}</svg>
                 </span>
                 <span className="cps-text">
-                  <span className="cps-title">{t.label}</span>
-                  <span className="cps-sub">{meta.sub}</span>
+                  <span className="cps-title">{tr(`coinTabs.tabs.${t.id}`)}</span>
+                  <span className="cps-sub">{tr(`coinTabs.sub.${t.id}`)}</span>
                 </span>
                 <svg className="cps-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18" /></svg>
               </button>
@@ -344,27 +348,28 @@ function NewsTab({ coin }: { coin: string }) {
   // crypto stories); a big featured story with its photo on the left, a
   // headline list on the right.
   const [mode, setMode] = useState<"top" | "latest">("top");
-  if (!items) return <Loading label={`Loading ${name} news…`} />;
+  const { t } = useTranslation();
+  if (!items) return <Loading label={t("coinTabs.news.loading", { name })} />;
   const crypto = (items ?? []).filter((i) => i.category === "crypto");
   const rows = mode === "top"
     ? [...matched, ...others]
     : [...crypto].sort((a, b) => b.pubDate - a.pubDate);
-  if (!rows.length) return <Empty title="No news right now" text="Check back in a bit — headlines refresh every few minutes." />;
+  if (!rows.length) return <Empty title={t("coinTabs.news.emptyTitle")} text={t("coinTabs.news.emptyText")} />;
   const lead = rows.find((r) => r.thumbnail) ?? rows[0];
   const list = rows.filter((r) => r !== lead).slice(0, 6);
   return (
     <div className="cpt-section cnw">
       <div className="cnw-head">
-        <h2 className="cpt-h"><CoinSheetTitle coin={coin} text={`${name} News`} /></h2>
-        <div className="cnw-seg" role="tablist" aria-label="Sort news">
+        <h2 className="cpt-h"><CoinSheetTitle coin={coin} text={t("coinTabs.news.title", { name })} /></h2>
+        <div className="cnw-seg" role="tablist" aria-label={t("coinTabs.news.sortAria")}>
           {(["top", "latest"] as const).map((m) => (
             <button key={m} type="button" role="tab" aria-selected={mode === m} className={`cnw-seg-btn${mode === m ? " cnw-seg-btn--on" : ""}`} onClick={() => setMode(m)}>
-              {m === "top" ? "Top" : "Latest"}
+              {m === "top" ? t("coinTabs.news.top") : t("coinTabs.news.latest")}
             </button>
           ))}
         </div>
       </div>
-      {mode === "top" && !matched.length && <p className="cpt-note">No {name}-specific headlines right now — here's the latest across crypto.</p>}
+      {mode === "top" && !matched.length && <p className="cpt-note">{t("coinTabs.news.noCoinNews", { name })}</p>}
       <div className="cnw-body">
         <a className="cnw-lead" href={lead.url} target="_blank" rel="noreferrer">
           <span className="cnw-lead-img">
@@ -387,10 +392,10 @@ function NewsTab({ coin }: { coin: string }) {
 }
 function timeAgo(ms: number): string {
   const m = Math.max(1, Math.round((Date.now() - ms) / 60000));
-  if (m < 60) return `${m}m ago`;
+  if (m < 60) return i18n.t("coinTabs.ago.m", { n: m });
   const h = Math.round(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.round(h / 24)}d ago`;
+  if (h < 24) return i18n.t("coinTabs.ago.h", { n: h });
+  return i18n.t("coinTabs.ago.d", { n: Math.round(h / 24) });
 }
 
 // ── Technicals: oscillators + moving averages → buy/sell summary ────────
@@ -543,8 +548,8 @@ function verdictOf(rows: TechRow[]) {
   const s = rows.filter((r) => r.signal === "sell").length;
   const n = rows.length - b - s;
   const score = rows.length ? (b - s) / rows.length : 0; // -1 … 1
-  const label = score > 0.5 ? "Strong buy" : score > 0.1 ? "Buy" : score < -0.5 ? "Strong sell" : score < -0.1 ? "Sell" : "Neutral";
-  return { b, s, n, score, label };
+  const labelKey = score > 0.5 ? "strongBuy" : score > 0.1 ? "buy" : score < -0.5 ? "strongSell" : score < -0.1 ? "sell" : "neutral";
+  return { b, s, n, score, label: i18n.t(`coinTabs.verdict.${labelKey}`) };
 }
 const toneOfScore = (score: number): Signal => (score > 0.1 ? "buy" : score < -0.1 ? "sell" : "neutral");
 
@@ -561,7 +566,7 @@ export function technicalsLean(c: CandleDataPoint[]): { score: number; tone: "bu
     label: s === "buy" ? "Lean bullish" : s === "sell" ? "Lean bearish" : "Mixed",
   };
 }
-const sigLabel = (s: Signal) => (s === "buy" ? "Buy" : s === "sell" ? "Sell" : "Neutral");
+const sigLabel = (s: Signal) => i18n.t(`coinTabs.verdict.${s}`);
 
 // ── Signal desk: score + its history, group read-outs, indicator heatmap ──
 function SignalDesk({ data, history }: { data: TechData; history: number[] }) {
@@ -569,8 +574,9 @@ function SignalDesk({ data, history }: { data: TechData; history: number[] }) {
   const osc = verdictOf(data.oscillators), ma = verdictOf(data.mas);
   const tone = toneOfScore(all.score);
   const sc = (s: number) => { const n = Math.round(s * 100); return `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(n)}`; };
+  const { t } = useTranslation();
   const r = data.rsi.v;
-  const rsiWord = r === null ? "unavailable" : r < 30 ? `oversold (${r.toFixed(0)})` : r > 70 ? `overbought (${r.toFixed(0)})` : `neutral (${r.toFixed(0)})`;
+  const rsiWord = r === null ? t("coinTabs.desk.rsiNA") : r < 30 ? t("coinTabs.desk.rsiOversold", { v: r.toFixed(0) }) : r > 70 ? t("coinTabs.desk.rsiOverbought", { v: r.toFixed(0) }) : t("coinTabs.desk.rsiNeutral", { v: r.toFixed(0) });
   const above = data.mas.filter((m) => m.signal === "buy").length;
   // History chart: −1…1 → y; split fill above / below zero.
   const W = 400, H = 120, n = history.length;
@@ -588,28 +594,28 @@ function SignalDesk({ data, history }: { data: TechData; history: number[] }) {
     <div className="sgd">
       <div className="sgd-top">
         <div className="sgd-score">
-          <span className="sgd-kicker">Technical signal</span>
+          <span className="sgd-kicker">{t("coinTabs.desk.kicker")}</span>
           <div className="sgd-score-row">
             <strong className={`sgd-num cpt-tone--${tone}`}>{sc(all.score)}</strong>
             <span className={`sgd-verdict sgd-verdict--${tone}`}>{all.label}</span>
           </div>
           <div className="sgd-votes">
-            <span><b className="cpt-tone--buy">{all.b}</b> buy</span>
-            <span><b>{all.n}</b> neutral</span>
-            <span><b className="cpt-tone--sell">{all.s}</b> sell</span>
+            <span><b className="cpt-tone--buy">{all.b}</b> {t("coinTabs.desk.votesBuy")}</span>
+            <span><b>{all.n}</b> {t("coinTabs.desk.votesNeutral")}</span>
+            <span><b className="cpt-tone--sell">{all.s}</b> {t("coinTabs.desk.votesSell")}</span>
             {delta !== null && (
               <span className="sgd-delta">
-                <b className={delta > 0 ? "cpt-tone--buy" : delta < 0 ? "cpt-tone--sell" : ""}>{delta > 0 ? "▲" : delta < 0 ? "▼" : "•"} {Math.abs(delta)}</b> vs 10 bars ago
+                <b className={delta > 0 ? "cpt-tone--buy" : delta < 0 ? "cpt-tone--sell" : ""}>{delta > 0 ? "▲" : delta < 0 ? "▼" : "•"} {Math.abs(delta)}</b> {t("coinTabs.desk.vsBarsAgo", { n: 10 })}
               </span>
             )}
           </div>
           <div className="sgd-groups">
-            <div><span>Oscillators</span><strong className={`cpt-tone--${toneOfScore(osc.score)}`}>{sc(osc.score)}</strong><em>{osc.label}</em></div>
-            <div><span>Moving averages</span><strong className={`cpt-tone--${toneOfScore(ma.score)}`}>{sc(ma.score)}</strong><em>{ma.label}</em></div>
+            <div><span>{t("coinTabs.oscillators")}</span><strong className={`cpt-tone--${toneOfScore(osc.score)}`}>{sc(osc.score)}</strong><em>{osc.label}</em></div>
+            <div><span>{t("coinTabs.movingAverages")}</span><strong className={`cpt-tone--${toneOfScore(ma.score)}`}>{sc(ma.score)}</strong><em>{ma.label}</em></div>
           </div>
         </div>
         <div className="sgd-hist">
-          <div className="sgd-hist-head"><span>Signal history · last {n} bars</span><span>+100 buy / −100 sell</span></div>
+          <div className="sgd-hist-head"><span>{t("coinTabs.desk.history", { n })}</span><span>{t("coinTabs.desk.histScale")}</span></div>
           <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="sgd-hist-svg" aria-hidden="true">
             <defs>
               <clipPath id="sgd-up"><rect x="0" y="0" width={W} height={H / 2} /></clipPath>
@@ -623,7 +629,7 @@ function SignalDesk({ data, history }: { data: TechData; history: number[] }) {
           </svg>
         </div>
       </div>
-      <div className="sgd-heat" aria-label="Every indicator">
+      <div className="sgd-heat" aria-label={t("coinTabs.desk.everyIndicator")}>
         {tiles.map((t) => (
           <div key={t.k} className={`sgd-tile sgd-tile--${t.s}`} title={`${t.k}: ${t.v} — ${sigLabel(t.s)}`}>
             <span className="sgd-tile-k">{t.k}</span>
@@ -632,7 +638,14 @@ function SignalDesk({ data, history }: { data: TechData; history: number[] }) {
         ))}
       </div>
       <p className="sgd-read">
-        Price is {above >= data.mas.length - above ? `above ${above}` : `below ${data.mas.length - above}`} of {data.mas.length} moving averages · RSI {rsiWord} · MACD {data.macd.line !== null && data.macd.signal !== null && data.macd.line > data.macd.signal ? "above" : "below"} signal · momentum {data.mom.pct >= 0 ? "+" : "−"}{Math.abs(data.mom.pct).toFixed(1)}% over 10 bars.
+        {t("coinTabs.desk.read", {
+          ma: above >= data.mas.length - above
+            ? t("coinTabs.desk.readMaAbove", { n: above, total: data.mas.length })
+            : t("coinTabs.desk.readMaBelow", { n: data.mas.length - above, total: data.mas.length }),
+          rsi: rsiWord,
+          macd: data.macd.line !== null && data.macd.signal !== null && data.macd.line > data.macd.signal ? t("coinTabs.desk.macdAbove") : t("coinTabs.desk.macdBelow"),
+          mom: `${data.mom.pct >= 0 ? "+" : "−"}${Math.abs(data.mom.pct).toFixed(1)}`,
+        })}
       </p>
     </div>
   );
@@ -700,18 +713,19 @@ function Oscillators({ data }: { data: TechData }) {
   const r = data.rsi.v;
   const { k, hi, lo } = data.stoch;
   const h = data.macd.hist;
+  const { t } = useTranslation();
   const hLast = h[h.length - 1] ?? 0, hPrev = h[h.length - 2] ?? hLast;
   const macdCap = hLast >= 0
-    ? Math.abs(hLast) >= Math.abs(hPrev) ? "Bullish and strengthening — bars growing above zero." : "Still bullish, but bars are shrinking."
-    : Math.abs(hLast) >= Math.abs(hPrev) ? "Bearish and strengthening — bars growing below zero." : "Still bearish, but selling pressure is easing.";
+    ? Math.abs(hLast) >= Math.abs(hPrev) ? t("coinTabs.osc.macdBullUp") : t("coinTabs.osc.macdBullFade")
+    : Math.abs(hLast) >= Math.abs(hPrev) ? t("coinTabs.osc.macdBearUp") : t("coinTabs.osc.macdBearFade");
   const closes = data.mom.closes;
   return (
     <div className="tch-cards">
-      <OscCard row={rsiRow} caption={r === null ? "Not enough data." : r < 30 ? "Oversold — sellers may be running out of steam." : r > 70 ? "Overbought — buyers may be stretched." : "Between 30 and 70 — no extreme either way."}>
+      <OscCard row={rsiRow} caption={r === null ? t("coinTabs.osc.rsiNA") : r < 30 ? t("coinTabs.osc.rsiOversold") : r > 70 ? t("coinTabs.osc.rsiOverbought") : t("coinTabs.osc.rsiMid")}>
         <Spark values={data.rsi.series} min={0} max={100} cls="tch-c-violet"
           zones={[{ from: 0, to: 30, cls: "tch-zone-buy" }, { from: 70, to: 100, cls: "tch-zone-sell" }]} lines={[30, 70]} dots={[data.rsi.series.length - 1]} />
       </OscCard>
-      <OscCard row={stochRow} caption={`Price sits ${k.toFixed(0)}% of the way up its 14-bar range.`}>
+      <OscCard row={stochRow} caption={t("coinTabs.osc.stoch", { k: k.toFixed(0) })}>
         <div className="tch-range">
           <div className="tch-range-track">
             <span className="tch-range-zone tch-range-zone--low" />
@@ -719,15 +733,15 @@ function Oscillators({ data }: { data: TechData }) {
             <span className="tch-range-marker" style={{ left: `${Math.min(100, Math.max(0, k))}%` }} />
           </div>
           <div className="tch-range-labels">
-            <span>Low {fmtUsd(lo)}</span>
-            <span>High {fmtUsd(hi)}</span>
+            <span>{t("coinTabs.osc.low", { v: fmtUsd(lo) })}</span>
+            <span>{t("coinTabs.osc.high", { v: fmtUsd(hi) })}</span>
           </div>
         </div>
       </OscCard>
       <OscCard row={macdRow} caption={macdCap}>
         <MacdBars hist={h} />
       </OscCard>
-      <OscCard row={momRow} caption={`${data.mom.pct >= 0 ? "Up" : "Down"} ${Math.abs(data.mom.pct).toFixed(2)}% versus 10 bars ago.`}>
+      <OscCard row={momRow} caption={t(data.mom.pct >= 0 ? "coinTabs.osc.momUp" : "coinTabs.osc.momDown", { v: Math.abs(data.mom.pct).toFixed(2) })}>
         <Spark values={closes} cls={data.mom.pct >= 0 ? "tch-c-up" : "tch-c-down"} dots={closes.length > 10 ? [closes.length - 11, closes.length - 1] : [closes.length - 1]} />
       </OscCard>
     </div>
@@ -738,13 +752,14 @@ function Oscillators({ data }: { data: TechData }) {
 function MaLadder({ px, rows }: { px: number; rows: MaRow[] }) {
   const max = Math.max(0.5, ...rows.map((r) => Math.abs(r.distPct)));
   const above = rows.filter((r) => r.signal === "buy").length;
+  const { t } = useTranslation();
   return (
     <div className="tch-ma">
       <div className="tch-ma-head">
-        <span className="cpt-table-title">Moving averages</span>
-        <span className="tch-ma-sub">Price {fmtUsd(px)} is above <b>{above}</b> of {rows.length}</span>
+        <span className="cpt-table-title">{t("coinTabs.movingAverages")}</span>
+        <span className="tch-ma-sub"><Trans i18nKey="coinTabs.ma.sub" values={{ px: fmtUsd(px), n: above, total: rows.length }} components={{ b: <b /> }} /></span>
       </div>
-      <div className="tch-ma-axis" aria-hidden="true"><span>Price below</span><span>Price above</span></div>
+      <div className="tch-ma-axis" aria-hidden="true"><span>{t("coinTabs.ma.priceBelow")}</span><span>{t("coinTabs.ma.priceAbove")}</span></div>
       <div className="tch-ma-list">
         {rows.map((r) => (
           <div key={r.name} className="tch-ma-row">
@@ -784,6 +799,7 @@ function MtfMatrix({ coin, frame, onPick }: { coin: string; frame: TechFrame; on
     });
     return () => { alive = false; };
   }, [coin]);
+  const { t } = useTranslation();
   const emaPos = (d: TechData, n: number) => {
     const m = d.mas.find((x) => x.name === `EMA (${n})`);
     return m ? <span className={`cpt-tone--${m.signal}`}>{m.distPct >= 0 ? "▲" : "▼"} {Math.abs(m.distPct).toFixed(1)}%</span> : <span className="tch-mtf-na">—</span>;
@@ -791,7 +807,7 @@ function MtfMatrix({ coin, frame, onPick }: { coin: string; frame: TechFrame; on
   return (
     <div className="tch-mtf">
       <div className="tch-mtf-row tch-mtf-row--head">
-        <span>Timeframe</span><span>Oscillators</span><span>Moving avgs</span><span>Summary</span><span>RSI</span><span>vs EMA 20</span><span>vs EMA 50</span>
+        <span>{t("coinTabs.mtf.timeframe")}</span><span>{t("coinTabs.oscillators")}</span><span>{t("coinTabs.mtf.movingAvgs")}</span><span>{t("coinTabs.mtf.summary")}</span><span>RSI</span><span>{t("coinTabs.mtf.vsEma", { n: 20 })}</span><span>{t("coinTabs.mtf.vsEma", { n: 50 })}</span>
       </div>
       {MTF.map((f) => {
         const d = rows[f.id];
@@ -799,9 +815,9 @@ function MtfMatrix({ coin, frame, onPick }: { coin: string; frame: TechFrame; on
           <button key={f.id} type="button" className={`tch-mtf-row${frame === f.id ? " tch-mtf-row--on" : ""}`} onClick={() => onPick(f.id)}>
             <span className="tch-mtf-tf">{f.label}</span>
             {d === undefined ? (
-              <span className="tch-mtf-load">Loading…</span>
+              <span className="tch-mtf-load">{t("coinTabs.loading")}</span>
             ) : d === null ? (
-              <span className="tch-mtf-load">Not enough data</span>
+              <span className="tch-mtf-load">{t("coinTabs.notEnoughData")}</span>
             ) : (
               <>
                 <Pill rows={d.oscillators} />
@@ -821,12 +837,13 @@ function MtfMatrix({ coin, frame, onPick }: { coin: string; frame: TechFrame; on
 // Dense TradingView-style table: every indicator, its value, its action.
 function TechTable({ data }: { data: TechData }) {
   const all = [...data.oscillators, ...data.extras];
+  const { t } = useTranslation();
   return (
     <div className="tch-table">
-      <div className="tch-table-row tch-table-row--head"><span>Indicator</span><span>Value</span><span>Action</span></div>
+      <div className="tch-table-row tch-table-row--head"><span>{t("coinTabs.table.indicator")}</span><span>{t("coinTabs.table.value")}</span><span>{t("coinTabs.table.action")}</span></div>
       {all.map((r) => (
         <div key={r.name} className="tch-table-row">
-          <span className="tch-table-name">{r.name}</span>
+          <span className="tch-table-name">{r.name === "Bollinger width" ? t("coinTabs.table.bbWidth") : r.name}</span>
           <span className="tch-table-val">{r.value}</span>
           {/* Volatility readings have no direction — no action. */}
           {r.name.startsWith("ATR") || r.name === "Bollinger width"
@@ -843,6 +860,7 @@ function KeyLevels({ data }: { data: TechData }) {
   const px = data.px;
   const lv = [...data.pivots, { name: "Price", v: px }].sort((a, b) => b.v - a.v);
   const atr = data.atr;
+  const { t } = useTranslation();
   return (
     <div className="tch-levels">
       <div className="tch-levels-list">
@@ -852,7 +870,7 @@ function KeyLevels({ data }: { data: TechData }) {
           const dist = ((l.v - px) / px) * 100;
           return (
             <div key={l.name} className={`tch-level${isPx ? " tch-level--px" : ""}`}>
-              <span className={`tch-level-name${isPx ? "" : ` cpt-tone--${tone}`}`}>{isPx ? "● Price" : l.name}</span>
+              <span className={`tch-level-name${isPx ? "" : ` cpt-tone--${tone}`}`}>{isPx ? `● ${t("coinTabs.levels.price")}` : l.name === "Pivot" ? t("coinTabs.levels.pivot") : l.name}</span>
               <span className="tch-level-v">{fmtUsd(l.v)}</span>
               <span className="tch-level-d">{isPx ? "" : `${dist >= 0 ? "+" : ""}${dist.toFixed(2)}%`}</span>
             </div>
@@ -861,8 +879,8 @@ function KeyLevels({ data }: { data: TechData }) {
       </div>
       {atr ? (
         <div className="tch-stops">
-          <div><span>Long stop · 1.5 ATR</span><strong className="cpt-tone--sell">{fmtUsd(px - 1.5 * atr)}</strong></div>
-          <div><span>Short stop · 1.5 ATR</span><strong className="cpt-tone--buy">{fmtUsd(px + 1.5 * atr)}</strong></div>
+          <div><span>{t("coinTabs.levels.longStop")}</span><strong className="cpt-tone--sell">{fmtUsd(px - 1.5 * atr)}</strong></div>
+          <div><span>{t("coinTabs.levels.shortStop")}</span><strong className="cpt-tone--buy">{fmtUsd(px + 1.5 * atr)}</strong></div>
         </div>
       ) : null}
     </div>
@@ -877,6 +895,7 @@ function TechnicalsTab({ coin }: { coin: string }) {
   const [data, setData] = useState<ReturnType<typeof technicalsFor> | null>(null);
   const [history, setHistory] = useState<number[]>([]);
   const [err, setErr] = useState(false);
+  const { t } = useTranslation();
   useEffect(() => {
     let alive = true;
     setData(null); setErr(false); setHistory([]);
@@ -899,32 +918,32 @@ function TechnicalsTab({ coin }: { coin: string }) {
   return (
     <div className="cpt-section">
       <div className="cpt-row-head">
-        <h2 className="cpt-h"><CoinSheetTitle coin={coin} text={`${coinName(coin)} Technicals`} /></h2>
-        <div className="cpt-seg" role="tablist" aria-label="Timeframe">
+        <h2 className="cpt-h"><CoinSheetTitle coin={coin} text={t("coinTabs.tech.title", { name: coinName(coin) })} /></h2>
+        <div className="cpt-seg" role="tablist" aria-label={t("coinTabs.mtf.timeframe")}>
           {TECH_FRAMES.map((f) => (
-            <button key={f.id} type="button" role="tab" aria-selected={frame === f.id} className={`cpt-seg-btn${frame === f.id ? " cpt-seg-btn--on" : ""}`} onClick={() => setFrame(f.id)}>{f.label}</button>
+            <button key={f.id} type="button" role="tab" aria-selected={frame === f.id} className={`cpt-seg-btn${frame === f.id ? " cpt-seg-btn--on" : ""}`} onClick={() => setFrame(f.id)}>{t(`coinTabs.frames.${f.id}`)}</button>
           ))}
         </div>
       </div>
-      {err ? <Empty title="Not enough data" text="This coin doesn't have enough candles on this timeframe yet." /> : !data ? <Loading label="Reading indicators…" /> : (
+      {err ? <Empty title={t("coinTabs.notEnoughData")} text={t("coinTabs.tech.notEnoughText")} /> : !data ? <Loading label={t("coinTabs.tech.reading")} /> : (
         <>
           <SignalDesk data={data} history={history} />
-          <span className="cpt-table-title">Across timeframes</span>
+          <span className="cpt-table-title">{t("coinTabs.tech.acrossTf")}</span>
           <MtfMatrix coin={coin} frame={frame} onPick={setFrame} />
-          <span className="cpt-table-title">Oscillators</span>
+          <span className="cpt-table-title">{t("coinTabs.oscillators")}</span>
           <Oscillators data={data} />
           <div className="tch-pro-grid">
             <div>
-              <span className="cpt-table-title">All indicators</span>
+              <span className="cpt-table-title">{t("coinTabs.tech.allIndicators")}</span>
               <TechTable data={data} />
             </div>
             <div>
-              <span className="cpt-table-title">Key levels · classic pivots</span>
+              <span className="cpt-table-title">{t("coinTabs.tech.keyLevels")}</span>
               <KeyLevels data={data} />
             </div>
           </div>
           <MaLadder px={data.px} rows={data.mas} />
-          <p className="cpt-note">Indicator readings, not financial advice.</p>
+          <p className="cpt-note">{t("coinTabs.tech.disclaimer")}</p>
         </>
       )}
     </div>
@@ -936,6 +955,7 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 function SeasonalsTab({ coin }: { coin: string }) {
   const [grid, setGrid] = useState<Map<number, (number | null)[]> | null>(null);
   const [err, setErr] = useState(false);
+  const { t } = useTranslation();
   useEffect(() => {
     let alive = true;
     setGrid(null); setErr(false);
@@ -955,8 +975,10 @@ function SeasonalsTab({ coin }: { coin: string }) {
       .catch(() => { if (alive) setErr(true); });
     return () => { alive = false; };
   }, [coin]);
-  if (err) return <Empty title="No seasonal data" text={`${coinName(coin)} isn't listed on Binance, so we can't build its monthly history.`} />;
-  if (!grid) return <Loading label="Building monthly history…" />;
+  if (err) return <Empty title={t("coinTabs.seasonals.emptyTitle")} text={t("coinTabs.seasonals.emptyText", { name: coinName(coin) })} />;
+  if (!grid) return <Loading label={t("coinTabs.seasonals.building")} />;
+  // Month names in the app's language (MONTHS stays the stable key).
+  const monthName = (i: number) => new Date(Date.UTC(2000, i, 1)).toLocaleString(i18n.language, { month: "short", timeZone: "UTC" });
   const years = [...grid.keys()].sort((a, b) => b - a);
   const avg = MONTHS.map((_, m) => {
     const vals = years.map((y) => grid.get(y)![m]).filter((v): v is number => v !== null);
@@ -965,12 +987,18 @@ function SeasonalsTab({ coin }: { coin: string }) {
   const nowM = new Date().getUTCMonth();
   return (
     <div className="cpt-section">
-      <h2 className="cpt-h"><CoinSheetTitle coin={coin} text={`${coinName(coin)} Seasonals`} /></h2>
-      <p className="cpt-note">Monthly return (open → close) for each year. This month: <strong>{MONTHS[nowM]}</strong> averaged <strong className={avg[nowM] !== null && avg[nowM]! >= 0 ? "cpt-tone--buy" : "cpt-tone--sell"}>{avg[nowM] === null ? "—" : `${avg[nowM]! >= 0 ? "+" : ""}${avg[nowM]!.toFixed(1)}%`}</strong> historically.</p>
+      <h2 className="cpt-h"><CoinSheetTitle coin={coin} text={t("coinTabs.seasonals.title", { name: coinName(coin) })} /></h2>
+      <p className="cpt-note">
+        <Trans
+          i18nKey="coinTabs.seasonals.note"
+          values={{ month: monthName(nowM), avg: avg[nowM] === null ? "—" : `${avg[nowM]! >= 0 ? "+" : ""}${avg[nowM]!.toFixed(1)}%` }}
+          components={{ m: <strong />, v: <strong className={avg[nowM] !== null && avg[nowM]! >= 0 ? "cpt-tone--buy" : "cpt-tone--sell"} /> }}
+        />
+      </p>
       <div className="cpt-heat-wrap">
         <table className="cpt-heat">
           <thead>
-            <tr><th>Year</th>{MONTHS.map((m, i) => <th key={m} className={i === nowM ? "cpt-heat-now" : undefined}>{m}</th>)}</tr>
+            <tr><th>{t("coinTabs.seasonals.year")}</th>{MONTHS.map((m, i) => <th key={m} className={i === nowM ? "cpt-heat-now" : undefined}>{monthName(i)}</th>)}</tr>
           </thead>
           <tbody>
             {years.map((y) => (
@@ -982,7 +1010,7 @@ function SeasonalsTab({ coin }: { coin: string }) {
               </tr>
             ))}
             <tr className="cpt-heat-avg">
-              <th>Avg</th>
+              <th>{t("coinTabs.seasonals.avg")}</th>
               {avg.map((v, i) => <td key={i} style={heatStyle(v)} className={i === nowM ? "cpt-heat-now" : undefined}>{v === null ? "" : `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`}</td>)}
             </tr>
           </tbody>
@@ -1022,13 +1050,14 @@ function MarketsTab({ coin }: { coin: string }) {
     return () => { alive = false; window.clearTimeout(retry); };
   }, [coin, tries]);
   useEffect(() => setTries(0), [coin]);
-  if (!rows) return <Loading label={tries ? "Still loading exchange data…" : "Finding where it trades…"} />;
+  const { t: tr } = useTranslation();
+  if (!rows) return <Loading label={tries ? tr("coinTabs.markets.stillLoading") : tr("coinTabs.markets.finding")} />;
   return (
     <div className="cpt-section">
-      <h2 className="cpt-h"><CoinSheetTitle coin={coin} text={`${coinName(coin)} Markets`} /></h2>
+      <h2 className="cpt-h"><CoinSheetTitle coin={coin} text={tr("coinTabs.markets.title", { name: coinName(coin) })} /></h2>
       <div className="cpt-table-wrap cpt-table-wrap--scroll">
         <table className="cpt-table">
-          <thead><tr><th>#</th><th>Exchange</th><th>Pair</th><th className="cpt-num">Price</th><th className="cpt-num">24h volume</th><th>Trust</th></tr></thead>
+          <thead><tr><th>#</th><th>{tr("coinTabs.markets.exchange")}</th><th>{tr("coinTabs.markets.pair")}</th><th className="cpt-num">{tr("coinTabs.markets.price")}</th><th className="cpt-num">{tr("coinTabs.vol24")}</th><th>{tr("coinTabs.markets.trust")}</th></tr></thead>
           <tbody>
             {rows.map((t, i) => (
               <tr key={`${t.market.name}:${t.base}/${t.target}:${i}`}>
@@ -1042,7 +1071,7 @@ function MarketsTab({ coin }: { coin: string }) {
                 <td>{t.trade_url ? <a href={t.trade_url} target="_blank" rel="noreferrer">{t.base}/{t.target}</a> : `${t.base}/${t.target}`}</td>
                 <td className="cpt-num">{t.last < 1 ? t.last.toPrecision(4) : t.last.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
                 <td className="cpt-num">{fmtUsd(t.converted_volume?.usd ?? null)}</td>
-                <td><span className={`cpt-trust cpt-trust--${t.trust_score ?? "na"}`} aria-label={`Trust ${t.trust_score ?? "unknown"}`} /></td>
+                <td><span className={`cpt-trust cpt-trust--${t.trust_score ?? "na"}`} aria-label={t.trust_score ? tr("coinTabs.markets.trustAria", { v: t.trust_score }) : tr("coinTabs.markets.trustUnknown")} /></td>
               </tr>
             ))}
           </tbody>
@@ -1092,7 +1121,8 @@ function FundamentalsTab({ coin }: { coin: string }) {
     return () => { alive = false; window.clearTimeout(retry); };
   }, [coin, tries]);
   useEffect(() => setTries(0), [coin]);
-  if (!data) return <Loading label={tries ? "Still loading fundamentals…" : "Loading fundamentals…"} />;
+  const { t } = useTranslation();
+  if (!data) return <Loading label={tries ? t("coinTabs.fund.stillLoading") : t("coinTabs.fund.loading")} />;
   const m = data.market_data ?? {};
   const circ = m.circulating_supply ?? null, max = m.max_supply ?? m.total_supply ?? null;
   const pct = circ && max ? Math.min(100, (circ / max) * 100) : null;
@@ -1100,34 +1130,34 @@ function FundamentalsTab({ coin }: { coin: string }) {
   const date = (s?: string) => (s ? new Date(s).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "");
   return (
     <div className="cpt-section">
-      <h2 className="cpt-h"><CoinSheetTitle coin={coin} text={`${coinName(coin)} Fundamentals`} />{data.market_cap_rank ? <span className="cpt-rank">#{data.market_cap_rank}</span> : null}</h2>
+      <h2 className="cpt-h"><CoinSheetTitle coin={coin} text={t("coinTabs.fund.title", { name: coinName(coin) })} />{data.market_cap_rank ? <span className="cpt-rank">#{data.market_cap_rank}</span> : null}</h2>
       <div className="cpt-stats">
-        <Stat label="Market cap" value={fmtUsd(m.market_cap?.usd)} />
-        <Stat label="Fully diluted value" value={fmtUsd(m.fully_diluted_valuation?.usd)} />
-        <Stat label="24h volume" value={fmtUsd(m.total_volume?.usd)} />
-        <Stat label="Volume / market cap" value={m.total_volume?.usd && m.market_cap?.usd ? `${((m.total_volume.usd / m.market_cap.usd) * 100).toFixed(2)}%` : "—"} />
+        <Stat label={t("coinTabs.fund.marketCap")} value={fmtUsd(m.market_cap?.usd)} />
+        <Stat label={t("coinTabs.fund.fdv")} value={fmtUsd(m.fully_diluted_valuation?.usd)} />
+        <Stat label={t("coinTabs.vol24")} value={fmtUsd(m.total_volume?.usd)} />
+        <Stat label={t("coinTabs.fund.volMcap")} value={m.total_volume?.usd && m.market_cap?.usd ? `${((m.total_volume.usd / m.market_cap.usd) * 100).toFixed(2)}%` : "—"} />
       </div>
       <div className="cpt-supply">
         <div className="cpt-supply-head">
-          <span>Circulating supply</span>
+          <span>{t("coinTabs.fund.circ")}</span>
           <strong>{fmtNum(circ)} {coin}</strong>
         </div>
         {pct !== null && (
           <>
             <span className="cpt-supply-bar"><span style={{ width: `${pct}%` }} /></span>
-            <span className="cpt-supply-sub">{pct.toFixed(1)}% of {m.max_supply ? "max" : "total"} supply ({fmtNum(max)})</span>
+            <span className="cpt-supply-sub">{t(m.max_supply ? "coinTabs.fund.ofMax" : "coinTabs.fund.ofTotal", { pct: pct.toFixed(1), n: fmtNum(max) })}</span>
           </>
         )}
       </div>
       <div className="cpt-stats">
-        <Stat label="All-time high" value={fmtUsd(m.ath?.usd)} sub={`${date(m.ath_date?.usd)} · ${m.ath_change_percentage?.usd?.toFixed(1) ?? "—"}% from ATH`} />
-        <Stat label="All-time low" value={fmtUsd(m.atl?.usd)} sub={`${date(m.atl_date?.usd)} · +${m.atl_change_percentage?.usd?.toFixed(0) ?? "—"}% since`} />
+        <Stat label={t("coinTabs.fund.ath")} value={fmtUsd(m.ath?.usd)} sub={t("coinTabs.fund.fromAth", { date: date(m.ath_date?.usd), pct: m.ath_change_percentage?.usd?.toFixed(1) ?? "—" })} />
+        <Stat label={t("coinTabs.fund.atl")} value={fmtUsd(m.atl?.usd)} sub={t("coinTabs.fund.sinceAtl", { date: date(m.atl_date?.usd), pct: m.atl_change_percentage?.usd?.toFixed(0) ?? "—" })} />
       </div>
       {about && (
         <div className="cpt-about">
-          <span className="cpt-table-title">About {data.name}</span>
+          <span className="cpt-table-title">{t("coinTabs.fund.about", { name: data.name })}</span>
           <p>{about.length > 700 ? `${about.slice(0, 700)}…` : about}</p>
-          {data.links?.homepage?.[0] && <a href={data.links.homepage[0]} target="_blank" rel="noreferrer">Official website ↗</a>}
+          {data.links?.homepage?.[0] && <a href={data.links.homepage[0]} target="_blank" rel="noreferrer">{t("coinTabs.fund.website")}</a>}
         </div>
       )}
     </div>

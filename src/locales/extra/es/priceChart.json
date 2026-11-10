@@ -1,0 +1,666 @@
+{
+  "priceChart": {
+    "rangeInCandles": "{{range}} en velas de {{iv}}",
+    "goTo": {
+      "notLoaded": "Los datos del gráfico aún no se han cargado.",
+      "tooOldLong": "Este intervalo solo llega hasta el {{date}}. Elige una fecha posterior o cambia a un intervalo mayor (p. ej. 1D o 1W) para ir más atrás.",
+      "tooOld": "Este intervalo solo llega hasta el {{date}}."
+    },
+    "trial": {
+      "days_one": "{{count}} día",
+      "days_other": "{{count}} días",
+      "underHour": "menos de una hora",
+      "bannerLong": "Prueba gratis de ProVision · quedan {{left}}",
+      "bannerShort": "Prueba gratis · quedan {{left}}",
+      "everyCoinPrice": "Todas las monedas y temporalidades · {{price}}/año",
+      "thenPrice": "luego {{price}}/año",
+      "keepIt": "Mantenerlo",
+      "enjoyingPv": "¿Te gusta ProVision?",
+      "enjoyingIt": "¿Te gusta?",
+      "keepItArrow": "Mantenerlo ›",
+      "left": "quedan {{left}}",
+      "leftThen": "quedan {{left}} · luego {{price}}/año"
+    },
+    "pvErr": {
+      "notEnough": "No hay suficientes velas en este intervalo para ProVision",
+      "signinExpired": "Tu sesión ha caducado; vuelve a iniciar sesión",
+      "reconnecting": "Reconectando…",
+      "tooMany": "Demasiadas solicitudes — reintentando",
+      "server": "Error del servidor {{status}} — reintentando",
+      "unreachable": "No se pudo conectar con ProVision — reintentando"
+    },
+    "zone": {
+      "tooSmall": "Dibuja un área más grande: se necesitan al menos 2 velas dentro de la zona.",
+      "limit": "Has alcanzado el límite diario de análisis con IA.",
+      "failed": "No se pudo analizar la zona",
+      "drag": "Arrastra sobre el gráfico",
+      "cancel": "Cancelar",
+      "explainTip": "Dibuja un área libre en el gráfico y obtén una explicación con IA",
+      "explain": "Explicar zona",
+      "clearTip": "Borrar la zona dibujada",
+      "clear": "Borrar zona"
+    },
+    "promo": {
+      "preview": "Vista previa de ProVision",
+      "strongBuy": "COMPRA FUERTE",
+      "sell": "Vender",
+      "buy": "Comprar",
+      "ghostSub": "Míralo en el gráfico real · 3 días gratis · sin tarjeta",
+      "notNow": "Ahora no",
+      "freeTrial": "Prueba gratis de ProVision",
+      "floatSub": "Señales Pro · 3 días gratis · sin tarjeta",
+      "mobileSub": "3 días gratis · sin tarjeta",
+      "tryFree": "Probar gratis"
+    },
+    "intro": {
+      "preparing": "Preparando ProVision",
+      "s1": "Analizando la tendencia",
+      "s2": "Leyendo el momentum",
+      "s3": "Revisando el flujo de órdenes",
+      "s4": "Alineando temporalidades",
+      "s5": "Calibrando señales"
+    },
+    "strength": {
+      "aria": "Fuerza de la tendencia: alcista {{pct}}%",
+      "bull": "Alcista {{pct}}%",
+      "bear": "Bajista {{pct}}%",
+      "sideways": "Lateral",
+      "spike": "Pico",
+      "eventPaused": "{{name}} · en pausa",
+      "eventIn": "{{name}} en {{time}}",
+      "thin": "Poca liquidez · señales desactivadas",
+      "signals": "Señales: {{src}}"
+    },
+    "live": "EN VIVO",
+    "pv": {
+      "ringAria": "Signal Check {{score}}. Abrir detalles",
+      "verdictAgree": "{{word}} · {{agree}} de {{total}} indicadores coinciden",
+      "ringSub": "ProVision Signal Check · toca para ver detalles",
+      "minimise": "Minimizar a la barra inferior",
+      "title": "ProVision Signal Check",
+      "meterTip": "Fuerza alcista {{n}}/100 — {{state}}",
+      "buyersControl": "dominan los compradores",
+      "sellersControl": "dominan los vendedores",
+      "balanced": "equilibrado, sin lado claro",
+      "even": "igualados",
+      "mini": "Acierto {{rate}}% · {{total}} señales",
+      "pill": "{{word}} · {{agree}} de {{total}}",
+      "live": "en vivo",
+      "howTo": "Cómo usar ProVision",
+      "alertSource": "<s>Señales del gráfico de {{src}}.</s> Los movimientos en este gráfico corto son demasiado pequeños para cubrir comisiones, así que COMPRA/VENTA, la zona, Signal Check y el historial vienen de {{src}}; usa este gráfico para afinar tu entrada.",
+      "alertShort": "<s>Las temporalidades cortas tienen mucho ruido.</s> Aquí los movimientos son demasiado pequeños para cubrir comisiones; usa 15m o más para las señales.",
+      "eventLive": "<s>{{name}} ahora ({{title}}, {{at}}).</s> Es probable que haya movimientos grandes y rápidos; las señales están en pausa hasta las {{resume}}.",
+      "eventSoon": "<s>{{name}} en {{time}}</s> ({{title}}, {{at}}). Espera volatilidad: las señales se pausan desde 30 min antes hasta 1 h después.",
+      "forecast": "Previsión {{f}}.",
+      "forecastPrev": "Previsión {{f}}, anterior {{p}}.",
+      "alertThin": "<s>Señales desactivadas — mercado con poca liquidez.</s> Solo se negociaron unos ${{vol}}M en las últimas 24 h, demasiado poco para señales fiables. Los colores de tendencia y los indicadores de abajo siguen actualizándose.",
+      "alertSpikeUp_one": "<s>Subida repentina</s>, a menudo por noticias. Las señales en contra quedan en pausa durante {{count}} vela más; espera oscilaciones amplias.",
+      "alertSpikeUp_other": "<s>Subida repentina</s>, a menudo por noticias. Las señales en contra quedan en pausa durante {{count}} velas más; espera oscilaciones amplias.",
+      "alertSpikeDown_one": "<s>Caída repentina</s>, a menudo por noticias. Las señales en contra quedan en pausa durante {{count}} vela más; espera oscilaciones amplias.",
+      "alertSpikeDown_other": "<s>Caída repentina</s>, a menudo por noticias. Las señales en contra quedan en pausa durante {{count}} velas más; espera oscilaciones amplias.",
+      "alertRange": "<s>Mercado lateral</s>, sin tendencia clara (Choppiness {{chop}}, ADX {{adx}}).",
+      "rangeBox": "Rango {{lo}} – {{hi}}.",
+      "rangeModeOn": "Modo rango activado: R·BUY cerca del suelo, R·SELL cerca del techo, hasta que el precio rompa.",
+      "rangeWatch": "Atento a un cierre fuera del rango; las señales de rango funcionan en 1h o más.",
+      "stochastic": "Estocástico",
+      "bullishLc": "alcistas",
+      "bearishLc": "bajistas",
+      "mixedLc": "mixto",
+      "holdingOut": "{{list}} aún en contra",
+      "connecting": "conectando…",
+      "flowCap": "Flujo de órdenes · últimas 20 velas",
+      "flowTipReal": "Volumen real de compras vs. ventas a mercado, últimas 20 velas",
+      "flowTipEst": "Estimado a partir del color de las velas, últimas 20 velas",
+      "timeframes": "Temporalidades",
+      "nOfBullish": "{{n}} de {{total}} alcistas",
+      "nOfBearish": "{{n}} de {{total}} bajistas",
+      "sheetTitle": "{{name}} · Signal Check",
+      "rowDesc": {
+        "0": "Precio vs. medias de 20 y 200",
+        "1": "Quién empuja y con qué fuerza",
+        "2": "Precio vs. la nube",
+        "3": "Momentum, últimas 14 velas",
+        "4": "Dónde está el precio dentro de su rango",
+        "5": "Cambio de momentum",
+        "6": "Compras vs. ventas a mercado"
+      }
+    },
+    "stats": {
+      "title": "Estadísticas de {{coin}}",
+      "change": "Cambio {{iv}}",
+      "high": "Máximo {{iv}}",
+      "low": "Mínimo {{iv}}"
+    },
+    "custom": "Personalizado",
+    "customSub": "Elige una fecha o un rango personalizado",
+    "ai": {
+      "f1": "Sentimiento del intervalo y contexto de tendencia",
+      "f2": "Reconocimiento de patrones de velas",
+      "f3": "Puntuación de confianza alcista / bajista",
+      "f4": "Predicciones y perspectivas del próximo movimiento",
+      "upgradeNow": "Mejorar ahora",
+      "ctaSub": "Sesgo de tendencia + patrón de velas para {{coin}} {{iv}}",
+      "analyze": "Analizar",
+      "hide": "Ocultar Lectura de gráfico con IA",
+      "trend": "Tendencia",
+      "pattern": "Patrón"
+    },
+    "km": {
+      "signalDetail": "Detalle de la señal",
+      "loading": "Cargando señales de {{name}}",
+      "chanceBull": "probabilidad alcista",
+      "chanceBear": "probabilidad bajista",
+      "toolsAgree": "{{n}} de {{total}} herramientas coinciden",
+      "gaugeAria": "Alcista {{bull}}%, bajista {{bear}}%",
+      "seeFull": "Ver análisis completo ›",
+      "fullAnalysis": "Análisis completo",
+      "analysis": "Análisis",
+      "pvSignal": "Señal ProVision",
+      "consensus": "Consenso",
+      "partOfPv": "Signal Check forma parte de ProVision: tendencia, 7 indicadores y un historial puntuado.",
+      "tryPv": "Probar ProVision ›",
+      "turnOnPv": "Activar ProVision ›"
+    },
+    "tr": {
+      "title": "Historial",
+      "src_one": "{{chart}} · {{count}} señal",
+      "src_other": "{{chart}} · {{count}} señales",
+      "srcChart": "gráfico de {{src}}",
+      "thisChart": "este gráfico",
+      "paidOff": "Rentable · {{per}} por operación",
+      "lostMoney": "Con pérdidas · {{per}} por operación",
+      "hitRate": "Tasa de acierto",
+      "wonLost": "Ganadas / perdidas",
+      "nOpen": "{{n}} abiertas",
+      "avgWin": "Ganancia media",
+      "avgLoss": "Pérdida media",
+      "winLoss": "Ganancia : pérdida",
+      "winLossTip": "Tamaño medio de las ganancias vs. tamaño medio de las pérdidas",
+      "recentAria": "Señales recientes y sus resultados",
+      "lastN": "Últimas {{n}}",
+      "stillOpen": "aún abierta",
+      "open": "abierta",
+      "howTitle": "Cómo se mide",
+      "howShort": "Cada señal se opera desde su cierre con un stop en su línea de invalidación, tomando beneficios tras un movimiento típico de una vela (o saliendo tras 20 velas), menos 0,1% de comisiones.",
+      "howLong": "Cada señal se opera desde su cierre con un stop en su línea de invalidación que luego se arrastra 3 movimientos típicos de vela por detrás del mejor precio, saliendo cuando la tendencia gira o tras 60 velas, menos 0,1% de comisiones. Ganan menos operaciones, pero las ganadoras corren.",
+      "howRules": "Las señales necesitan que coincidan 5 de 7 indicadores y que la tendencia mayor acompañe; en intradía además deben mantenerse 3 velas con ADX ≥ 20, se omiten los tramos laterales y los rebotes contra picos ⚡, y los mercados con poca liquidez no tienen señales. Resultados pasados solo de este gráfico, no una promesa.",
+      "rangeTitle": "Señales de rango (R·BUY / R·SELL)",
+      "perTrade": "Por operación",
+      "rangeNote": "Con el mercado lateral: compra un rebote en el suelo, vende un rechazo en el techo. Stop justo fuera de la caja, objetivo en el centro del rango, 0,1% de comisiones."
+    },
+    "cns": {
+      "mixed": "Mixto",
+      "lean": {
+        "bull": "Tendencia alcista",
+        "bear": "Tendencia bajista",
+        "neutral": "Mixto"
+      },
+      "reading": "Leyendo…",
+      "turnOn": "Activar",
+      "signals": "Señales",
+      "buySetup": "Setup de compra",
+      "sellSetup": "Setup de venta",
+      "noSetup": "Sin setup",
+      "bullPattern": "Patrón alcista",
+      "bearPattern": "Patrón bajista",
+      "noPattern": "Sin patrón claro",
+      "tapToRun": "Toca para ejecutar",
+      "strongBuyZone": "Zona de compra fuerte",
+      "buyZone": "Zona de compra",
+      "sellZone": "Zona de venta",
+      "strongSellZone": "Zona de venta fuerte",
+      "events": "Eventos",
+      "agent": "Agente",
+      "askWhy": "Preguntar por qué ›",
+      "agentPrompt": "¿Qué dicen las herramientas de coinhintz sobre {{coin}} en el gráfico de {{tf}} ahora mismo, y por qué?"
+    },
+    "ago": {
+      "m": "hace {{n}} min",
+      "h": "hace {{n}} h",
+      "d": "hace {{n}} d"
+    },
+    "whatsNext": "¿Qué sigue para {{name}}?",
+    "seeEveryTool": "Mira lo que dicen todas las herramientas de coinhintz",
+    "tapToSee": "Toca para ver ›",
+    "savePng": "Guardar gráfico como PNG",
+    "c": {
+      "selectInterval": "Seleccionar intervalo",
+      "interval": "Intervalo",
+      "switchToFull": "Volver al gráfico",
+      "switchToCompact": "Predecir",
+      "fullscreen": "Pantalla completa",
+      "fullChart": "Gráfico completo",
+      "bearish": "Bajista",
+      "bullish": "Alcista",
+      "none": "Ninguna",
+      "technicals": "Técnico",
+      "divergence": "Divergencia",
+      "div": "Div",
+      "keyStats": "Estadísticas clave",
+      "tradingVolume24h": "Volumen de negociación 24h",
+      "overview": "Resumen",
+      "circulatingSupply": "Suministro circulante",
+      "about": "Acerca de",
+      "noLink": "Sin enlace",
+      "agentTake": "Agent Ready",
+      "agentThinking": "Leyendo el gráfico…",
+      "agentUnavailable": "No se pudo obtener una opinión; inténtalo más tarde",
+      "stats": "Estadísticas",
+      "low": "Mínimo",
+      "high": "Máximo",
+      "volUsd": "Vol. (USD)",
+      "volCoin": "Vol. ({{coin}})",
+      "style": "Estilo",
+      "allTimeHigh": "Máximo histórico",
+      "totalSupply": "Suministro total",
+      "openInterest": "Interés abierto",
+      "marketCap": "Capitalización de mercado",
+      "fdv": "Capitalización totalmente diluida",
+      "category": "Categoría",
+      "bid": "Compra",
+      "ask": "Venta",
+      "signal": "Señal",
+      "toolbox": "Herramientas de dibujo",
+      "upgrade": "Mejorar",
+      "vol24h": "Vol. 24h",
+      "lastUpdated": "Actualizado",
+      "astroTitle": "Sugerencias astrológicas",
+      "website": "Sitio web",
+      "sourceCode": "Código fuente",
+      "explorers": "Exploradores",
+      "whitepaper": "Whitepaper",
+      "community": "Comunidad",
+      "signalZoneDivSentence": "Señal {{signal}} en {{zone}}, con divergencia {{div}}.",
+      "signalZoneSentence": "Señal {{signal}} en {{zone}}.",
+      "zoneDivSentence": "En {{zone}}, con divergencia {{div}}.",
+      "signalDivSentence": "Señal {{signal}} con divergencia {{div}}.",
+      "zoneSentence": "En {{zone}}.",
+      "signalSentence": "Señal {{signal}}.",
+      "divergenceSentence": "Divergencia {{div}} detectada."
+    },
+    "pill": {
+      "trialEnded": "Tu prueba de <b>ProVision</b> ha terminado",
+      "renew": "Renovar",
+      "lockedOn": "<b>ProVision</b> bloqueado en {{coin}}",
+      "unlock": "Desbloquear",
+      "analyze": "Analiza este gráfico con <b>ProVision</b>"
+    },
+    "dismiss": "Descartar",
+    "under1m": "menos de 1 min",
+    "vol": {
+      "label": "Volumen",
+      "buyersPct": "Compradores {{pct}}%",
+      "sellersPct": "Vendedores {{pct}}%",
+      "detailReal": "Compras vs. ventas reales a mercado en las últimas 20 velas: compra {{buy}}, venta {{sell}}. Un 55% o más en un lado cuenta como alcista o bajista.",
+      "detailEst": "Compras vs. ventas estimadas (por el color de las velas) en las últimas 20 velas: compra {{buy}}, venta {{sell}}. Un 55% o más en un lado cuenta como alcista o bajista."
+    },
+    "notice": {
+      "eventNow": "{{name}} ahora — señales en pausa",
+      "eventIn": "{{name}} en {{time}} — espera volatilidad",
+      "sideways": "Mercado lateral — sin tendencia clara",
+      "signalsFrom": "Señales del gráfico de {{src}}",
+      "shortTf": "Temporalidad corta — mucho ruido",
+      "thin": "Mercado con poca liquidez — movimientos erráticos"
+    },
+    "ts": {
+      "paperTrade": "Paper trading de {{coin}}",
+      "paperTradeSub": "Practica con $100k virtuales, sin riesgo",
+      "indicatorsOn": "{{n}} activos · {{list}}",
+      "noneOn": "Ninguno activo",
+      "aiSub": "Sesgo de tendencia + patrón de velas",
+      "depth": "Perfil de profundidad",
+      "depthSub": "Profundidad del libro de órdenes junto al eje de precios",
+      "gridSub": "Líneas de cuadrícula de fondo en el gráfico",
+      "reset": "Restablecer gráfico",
+      "resetSub": "Volver al zoom y ajustes predeterminados",
+      "predictSub": "Línea de precio en vivo simple, sin indicadores",
+      "drawSub": "Líneas de tendencia, Fibonacci, zonas, pincel y más",
+      "saveImage": "Guardar imagen",
+      "saveSub": "Captura del gráfico actual",
+      "fullscreenSub": "Ampliar el gráfico a toda la pantalla",
+      "dateRangeSub": "Periodo predefinido o rango personalizado",
+      "default": "Predeterminado",
+      "priceScale": "Escala de precios",
+      "priceScaleSub": "Porcentaje, log, autoajuste",
+      "auto": "auto",
+      "priceAlert": "Alerta de precio",
+      "priceAlertSub": "Recibe un aviso cuando {{coin}} alcance un precio",
+      "exitFsSub": "Volver a la página de Trading"
+    },
+    "changeCoin": "Cambiar moneda",
+    "allStats": "Todas las estadísticas",
+    "vol24h": "Vol. 24h",
+    "coinPrice": "Precio de {{name}}",
+    "share": "Compartir",
+    "shareTitle": "Gráfico de precio de {{name}} ({{coin}})",
+    "loadingPrice": "Cargando precio",
+    "tradeCoin": "Operar {{coin}}",
+    "pvToggleOn": "ProVision activado — haz clic para volver al gráfico normal",
+    "pvToggleOff": "ProVision: velas de tendencia, señales de compra/venta y Signal Check en vivo",
+    "metric": {
+      "label": "Métrica",
+      "price": "Precio",
+      "mcap": "Cap. de mercado"
+    },
+    "tabs": {
+      "chart": "Gráfico",
+      "orderbook": "Libro de órdenes",
+      "trades": "Operaciones"
+    },
+    "ohlc": {
+      "o": "A",
+      "h": "Máx",
+      "l": "Mín",
+      "c": "C"
+    },
+    "switchCoin": "Cambiar moneda",
+    "tvTitle": "{{name}} / Dólar estadounidense · {{iv}} · CRIPTO",
+    "vsUsd": "{{name}} / Dólar estadounidense",
+    "sellCaps": "VENDER",
+    "buyCaps": "COMPRAR",
+    "menu": "Menú",
+    "advMenu": {
+      "pvOn": "ProVision: activado",
+      "pvOff": "ProVision: desactivado",
+      "reset": "Restablecer gráfico",
+      "close": "Cerrar"
+    },
+    "switchTo": "Cambiar a {{symbol}}",
+    "moreCoins": "Más monedas",
+    "resetView": "Restablecer vista del gráfico",
+    "fsHint": "Algunas funciones solo están disponibles en pantalla completa",
+    "pvbar": {
+      "lockedOn": "ProVision está bloqueado en {{coin}}",
+      "trialEnded": "Tu prueba de ProVision ha terminado",
+      "tryFree": "Prueba ProVision gratis durante 3 días",
+      "usedCoins": "Ya has usado las {{n}} monedas de hoy. Pásate a ilimitado.",
+      "notIncluded": "Tu cuenta no incluye ProVision en este momento.",
+      "usedCoinsList": "Ya has usado las {{n}} monedas de hoy ({{list}}). Pásate a ilimitado.",
+      "start": "Empezar",
+      "keepFor": "Mantén todas las monedas y temporalidades por {{price}}/año.",
+      "noCard": "Todas las monedas y temporalidades. Sin tarjeta.",
+      "try": "Probar ProVision",
+      "unlock": "Desbloquear ProVision"
+    },
+    "dateRange": "Rango de fechas",
+    "exitFullscreen": "Salir de pantalla completa",
+    "marketData": "Datos de mercado",
+    "unlockStatus": "Desbloquear estado",
+    "unlockDivergence": "Desbloquear divergencia",
+    "coinChart": "Gráfico de {{coin}}",
+    "more": "Más",
+    "aiChartRead": "Lectura de gráfico con IA",
+    "aiRead": "Lectura IA",
+    "hideDepth": "Ocultar perfil de profundidad",
+    "showDepth": "Mostrar perfil de profundidad",
+    "depth": "Profundidad",
+    "tools": "Herramientas",
+    "chartStyle": "Estilo del gráfico",
+    "chartStyleIs": "Estilo del gráfico: {{style}}",
+    "style": {
+      "candle": "Velas",
+      "hollow": "Velas huecas",
+      "line": "Línea",
+      "heikinAshi": "Heikin Ashi"
+    },
+    "allIndicators": "Todos los indicadores",
+    "allIndicatorsOn": "Todos los indicadores · {{n}} activos",
+    "hideGrid": "Ocultar cuadrícula",
+    "showGrid": "Mostrar cuadrícula",
+    "grid": "Cuadrícula",
+    "age": {
+      "new": "Nueva",
+      "years": "{{n}} años",
+      "months": "{{n}} meses"
+    },
+    "ivDesc": {
+      "1sec": "Últimos 30 minutos",
+      "1min": "Últimas 6 horas",
+      "5min": "Últimas 24 horas",
+      "15min": "Últimas 48 horas",
+      "1h": "Unos 7 días",
+      "4h": "Unas 4 semanas",
+      "6h": "Unos 15 días",
+      "1day": "Últimos 90 días",
+      "1week": "Últimas 52 semanas",
+      "1month": "Últimos 24 meses",
+      "all": "Historial completo"
+    },
+    "askAgentPrompt": "¿Puedes analizar este gráfico de {{coin}}?",
+    "ind": {
+      "fib": "Niveles de Fibonacci",
+      "sr": "Soporte / Resistencia",
+      "dayhl": "Máx./Mín. 24H",
+      "zones": "Zonas de compra/venta",
+      "desc": {
+        "bb": "Media de 20 periodos con bandas de ±2 desviaciones estándar: compresiones y rupturas.",
+        "ema20": "Media exponencial rápida: tendencia a corto plazo y soporte en retrocesos.",
+        "ema50": "Media exponencial de medio plazo: la tendencia que siguen la mayoría de swing traders.",
+        "ema200": "Media exponencial de largo plazo: la línea entre mercado alcista y bajista.",
+        "ma20": "Media simple de 20 periodos de los cierres.",
+        "ma50": "Media simple de 50 periodos: tendencia de medio plazo.",
+        "ma200": "Media simple de 200 periodos: la clásica línea de tendencia de largo plazo.",
+        "cme": "Huecos de precio en los futuros de Bitcoin de CME durante los fines de semana; suelen cerrarse.",
+        "fib": "Niveles de retroceso de Fibonacci desde el último máximo y mínimo.",
+        "sr": "Niveles clave de soporte y resistencia detectados en el historial de precios.",
+        "dayhl": "Máximo y mínimo de las últimas 24 horas como líneas en el gráfico.",
+        "zones": "Zonas destacadas donde compradores o vendedores han intervenido antes.",
+        "rsi": "Índice de Fuerza Relativa en su propio panel: por encima de 70 sobrecompra, por debajo de 30 sobreventa.",
+        "macd": "Línea MACD, señal e histograma en su propio panel."
+      }
+    },
+    "placeholder": {
+      "bannerTitle": "Analizando la acción del precio…",
+      "bannerBody": "Procesando las velas recientes para medir el momentum y la fuerza de la tendencia.",
+      "patternName": "Buscando patrones…",
+      "patternSummary": "Revisando las velas recientes en busca de un setup reconocible.",
+      "patternNarrative": "Ejecutando las mismas comprobaciones de patrones de siempre; espera un momento.",
+      "patternNext": "Un momento, el análisis real está en camino."
+    },
+    "ivLabel": {
+      "1sec": "1s (últimos 30 min)",
+      "1min": "1m (últimas 6 horas)",
+      "5min": "5m (últimas 24 horas)",
+      "15min": "15m (últimas 48 horas)",
+      "1h": "1H (~7 días)",
+      "4h": "4H (~4 semanas)",
+      "6h": "6H (~15 días)",
+      "1day": "24H (90 días)",
+      "1week": "1W (52 semanas)",
+      "1month": "1M (24 meses)",
+      "all": "TODO (historial completo)"
+    },
+    "banner": {
+      "noData": {
+        "title": "Datos insuficientes",
+        "body": "No hay suficiente historial de velas para analizar este intervalo."
+      },
+      "upperBand": {
+        "title": "Presionando la banda superior en {{iv}}",
+        "body": "El precio sube un {{pct}}% y presiona la banda superior de Bollinger. El momentum es fuerte, pero el mercado puede estar sobreextendido: es habitual un enfriamiento a corto plazo o una consolidación lateral antes del siguiente tramo alcista."
+      },
+      "lowerBand": {
+        "title": "Probando la banda inferior en {{iv}}",
+        "body": "El precio ha caído un {{absPct}}% y se comprime cerca de la banda inferior de Bollinger. Los vendedores han dominado, pero esta zona suele atraer compradores: atento a un rebote de alivio o a una ruptura confirmada por debajo del soporte."
+      },
+      "strongBuying": {
+        "title": "Fuerte presión compradora en {{iv}}",
+        "body": "{{green}} de las últimas 5 velas cerraron en verde, con el precio subiendo un {{pct}}% en total. Los compradores tienen claramente el control. La tendencia podría extenderse, pero atento a un retroceso hacia la banda media cuando entre la toma de beneficios."
+      },
+      "sustainedSelling": {
+        "title": "Venta sostenida en {{iv}}",
+        "body": "{{red}} de las últimas 5 velas cerraron en rojo, con el precio bajando un {{absPct}}% en total. Dominan los vendedores. Es posible un rebote por sobreventa a corto plazo, pero el camino de menor resistencia sigue siendo bajista hasta que los compradores recuperen el momentum."
+      },
+      "consolidation": {
+        "title": "Consolidación estrecha en {{iv}}",
+        "body": "El precio solo se ha movido un {{pct}}% en este periodo y se comprime cerca de la banda media. El mercado está indeciso: se está gestando una ruptura direccional. Vigila el volumen y las próximas 2–3 velas."
+      },
+      "upwardBias": {
+        "title": "Sesgo alcista en {{iv}}",
+        "body": "El precio sube un {{pct}}% con {{green}} de las últimas 5 velas en verde. La tendencia es alcista pero sin momentum explosivo: probablemente una subida lenta y constante salvo que cambie el sentimiento macro."
+      },
+      "downwardBias": {
+        "title": "Sesgo bajista en {{iv}}",
+        "body": "El precio baja un {{absPct}}% con {{red}} de las últimas 5 velas en rojo. Hay presión bajista, pero no extrema: espera una estabilización cerca de la banda inferior o de un soporte clave antes de hablar de giro."
+      }
+    },
+    "counterTrendBearish": "Señal contra tendencia: el movimiento general sigue siendo bajista. {{next}} Espera a que cambie la tendencia dominante antes de tomarla como entrada larga principal.",
+    "counterTrendBullish": "Señal contra tendencia: el movimiento general sigue siendo alcista. {{next}} Tómala como advertencia más que como señal corta principal.",
+    "patterns": {
+      "threeWhiteSoldiers": {
+        "name": "Tres soldados blancos",
+        "summary": "Tres velas alcistas consecutivas, cada una cerrando más arriba con cuerpos fuertes.",
+        "narrative": "Los creadores de mercado están en plena acumulación: compran cada caída y no dejan ningún margen a los vendedores. Cada vela abre cerca del cierre anterior y amplía las ganancias sin retrocesos relevantes, señal de convicción institucional.",
+        "nextMove": "El momentum favorece claramente la continuación al alza. Busca una ruptura del máximo actual como confirmación. Un retroceso al cuerpo de la vela central es una posible zona de reentrada antes del siguiente tramo alcista."
+      },
+      "threeBlackCrows": {
+        "name": "Tres cuervos negros",
+        "summary": "Tres velas bajistas consecutivas, cada una cerrando más abajo con cuerpos fuertes.",
+        "narrative": "Los vendedores institucionales distribuyen de forma sistemática. Cada rebote se vende: los creadores de mercado impiden cualquier recuperación relevante, lo que sugiere que están posicionados en corto o descargando grandes inventarios sobre compradores minoristas.",
+        "nextMove": "Espera más caídas. Cada rebote hacia la apertura de la vela anterior es una posible entrada en corto. El movimiento probablemente está sobreextendido a corto plazo, así que atento a un breve rebote antes del siguiente tramo bajista."
+      },
+      "morningStar": {
+        "name": "Estrella de la mañana",
+        "summary": "Giro de suelo de tres velas: roja grande → pequeña indecisa → verde grande.",
+        "narrative": "Los creadores de mercado provocaron una clásica caza de stops y luego giraron. La gran vela roja sacó a los largos débiles, la pequeña vela central muestra a los vendedores perdiendo convicción en mínimos y la fuerte vela verde confirma que las instituciones entraron y absorbieron toda la oferta.",
+        "nextMove": "Sesgo alcista. Un cierre por encima del máximo de la estrella de la mañana es el disparador para entradas largas. El mínimo previo de la vela roja actúa ahora como soporte clave: si el precio vuelve y aguanta, es la entrada de mayor probabilidad con riesgo ajustado."
+      },
+      "eveningStar": {
+        "name": "Estrella del atardecer",
+        "summary": "Giro de techo de tres velas: verde grande → pequeña indecisa → roja grande.",
+        "narrative": "Los creadores de mercado distribuyeron inventario en máximos. La vela alcista atrajo a compradores minoristas, la pequeña vela central reveló el agotamiento comprador y la vela bajista confirma que las instituciones descargaron sobre la multitud. Los largos minoristas quedan atrapados.",
+        "nextMove": "Sesgo bajista. Una ruptura por debajo del mínimo de la estrella del atardecer es el disparador para entradas cortas. El máximo previo de la vela verde actúa ahora como resistencia: cualquier rally fallido hacia ese nivel es una señal de distribución."
+      },
+      "bullishEngulfing": {
+        "name": "Envolvente alcista",
+        "summary": "Una gran vela verde envuelve por completo el cuerpo de la vela roja anterior.",
+        "narrative": "Los compradores institucionales entraron con fuerza. Que la vela verde absorba toda la roja anterior indica que los creadores de mercado absorbieron toda la oferta vendedora y empujaron el precio por encima de la apertura. Quienes vendieron en la vela anterior quedan atrapados en corto.",
+        "nextMove": "Alcista. Sus stop-loss están por encima del máximo de la vela envolvente; al saltar, alimentan la subida. Apunta a la siguiente zona de resistencia o al máximo previo. Mantén el largo mientras el precio siga por encima del punto medio de la vela envolvente."
+      },
+      "bearishEngulfing": {
+        "name": "Envolvente bajista",
+        "summary": "Una gran vela roja envuelve por completo el cuerpo de la vela verde anterior.",
+        "narrative": "Los vendedores institucionales aparecieron de repente y arrollaron a los compradores. Que la vela roja absorba toda la verde anterior indica que los creadores de mercado distribuyeron inventario a compradores minoristas que persiguieron la subida. Esos compradores están ahora en pérdidas.",
+        "nextMove": "Bajista. Sus stop-loss por debajo del mínimo de la vela envolvente acelerarán la caída al activarse. Apunta a la siguiente zona de soporte o al mínimo previo. Evita largos hasta que el precio recupere el punto medio de la vela envolvente."
+      },
+      "piercingLine": {
+        "name": "Línea penetrante",
+        "summary": "La vela verde abre por debajo del mínimo de la roja pero cierra por encima de su punto medio.",
+        "narrative": "Los creadores de mercado barrieron por debajo del soporte para activar stop-loss —una clásica toma de liquidez— y luego giraron con fuerza mientras las instituciones absorbían la caída. Todo vendedor que persiguió la ruptura está ahora perdiendo dinero.",
+        "nextMove": "Alcista. El siguiente movimiento probable es volver hacia la parte alta de la vela roja. Si el precio se mantiene por encima del punto medio de la vela penetrante en cualquier retroceso, el giro sigue intacto. Una ruptura de la apertura de la vela roja confirma el patrón."
+      },
+      "darkCloudCover": {
+        "name": "Nube oscura",
+        "summary": "La vela roja abre por encima del máximo de la verde pero cierra por debajo de su punto medio.",
+        "narrative": "Los creadores de mercado aprovecharon el hueco al alza para descargar oferta sobre compradores minoristas que perseguían la ruptura. El rechazo profundo dentro del cuerpo de la vela verde anterior muestra que las instituciones vendieron agresivamente en la fortaleza: un movimiento de distribución de manual.",
+        "nextMove": "Bajista. El siguiente movimiento probable es volver hacia la parte baja de la vela verde. Si el precio no recupera la apertura de la vela de nube oscura en un rebote, se confirma la distribución. Una ruptura del mínimo de la vela verde abre más caídas."
+      },
+      "bullishHarami": {
+        "name": "Harami alcista",
+        "summary": "Una pequeña vela verde completamente dentro del cuerpo de la gran vela roja anterior.",
+        "narrative": "El impulso vendedor se estanca: los bajistas ya no pueden empujar el precio más abajo. Los creadores de mercado podrían estar absorbiendo oferta discretamente dentro del rango de la vela roja anterior, construyendo una base sin llamar la atención.",
+        "nextMove": "Espera a ver la dirección de la ruptura. Un cierre por encima del máximo del harami (apertura de la vela roja anterior) indica que los compradores toman el control. Un cierre por debajo del mínimo del harami (cierre de la vela roja anterior) significa que la tendencia continúa; espera una de estas confirmaciones antes de actuar."
+      },
+      "bearishHarami": {
+        "name": "Harami bajista",
+        "summary": "Una pequeña vela roja completamente dentro del cuerpo de la gran vela verde anterior.",
+        "narrative": "El impulso comprador pierde fuerza: los alcistas ya no pueden extender el movimiento. Los creadores de mercado podrían estar distribuyendo discretamente en la fortaleza dentro del rango de la vela verde anterior, sin provocar un pánico que les obligue a cerrar a peores precios.",
+        "nextMove": "Espera a ver la dirección de la ruptura. Un cierre por debajo del mínimo del harami (apertura de la vela verde anterior) indica que los vendedores toman el control. Un cierre por encima del máximo del harami (cierre de la vela verde anterior) significa que la tendencia se reanuda; espera la confirmación."
+      },
+      "gravestoneDoji": {
+        "name": "Doji lápida",
+        "summary": "El precio subió con fuerza y volvió a la apertura: compradores rechazados en máximos.",
+        "narrative": "Los creadores de mercado subieron el precio para recoger la liquidez de los buy-stops de quienes operan rupturas y luego vendieron agresivamente. La larga mecha superior es un claro rechazo de oferta: las instituciones usaron el FOMO minorista como liquidez de salida.",
+        "nextMove": "Sesgo bajista. Un cierre por debajo del mínimo de la lápida en la siguiente vela es una fuerte señal de venta. El máximo de esta vela es ahora una resistencia clave: los retests fallidos de ese máximo son oportunidades en corto."
+      },
+      "dragonflyDoji": {
+        "name": "Doji libélula",
+        "summary": "El precio cayó con fuerza pero los compradores recuperaron la apertura: vendedores rechazados en mínimos.",
+        "narrative": "Los creadores de mercado barrieron por debajo del soporte para cazar stop-loss y acumular inventario barato, y luego giraron de inmediato. La larga mecha inferior muestra que toda la venta fue absorbida por compradores institucionales: una clásica acumulación tras caza de stops.",
+        "nextMove": "Sesgo alcista. Un cierre por encima del máximo de la libélula en la siguiente vela es una fuerte señal de compra. El mínimo de esta vela actúa ahora como soporte clave: mantenerse por encima en cualquier retroceso es una entrada larga con riesgo ajustado."
+      },
+      "doji": {
+        "name": "Doji",
+        "summary": "Apertura y cierre prácticamente iguales: el mercado está en perfecto equilibrio.",
+        "narrative": "Ni compradores ni vendedores tienen ventaja. Los creadores de mercado absorben órdenes en ambos lados sin comprometerse aún con una dirección. Este empate suele preceder a un movimiento brusco cuando uno de los lados capitula.",
+        "nextMove": "Espera la ruptura. Un cierre por encima del máximo del doji es un disparador alcista; por debajo del mínimo, bajista. Cuanto mayor sea el cuerpo de la siguiente vela en cualquier dirección, más convicción tiene el movimiento; el volumen lo confirma."
+      },
+      "bullishMarubozu": {
+        "name": "Marubozu alcista",
+        "summary": "Sin mechas: los compradores controlaron toda la vela sin titubear.",
+        "narrative": "Presión compradora institucional pura. Los creadores de mercado abrieron y subieron el precio sin permitir retrocesos relevantes: simplemente no había vendedores dispuestos a entrar. Esta agresividad unilateral indica una fuerte demanda en este nivel de precio.",
+        "nextMove": "Muy alcista. La apertura de esta vela actúa ahora como soporte importante: un retroceso a ese nivel es una entrada larga de alta probabilidad. Espera continuación hacia la siguiente resistencia importante, con poca consolidación."
+      },
+      "bearishMarubozu": {
+        "name": "Marubozu bajista",
+        "summary": "Sin mechas: los vendedores controlaron toda la vela sin titubear.",
+        "narrative": "Presión vendedora institucional pura. Los creadores de mercado bajaron el precio de la apertura al cierre sin pausa: los compradores no tuvieron margen para reaccionar. Esta agresividad implacable indica una fuerte oferta en este nivel de precio.",
+        "nextMove": "Muy bajista. La apertura de esta vela actúa ahora como resistencia importante: un rebote a ese nivel es una entrada corta de alta probabilidad. Espera continuación hacia el siguiente soporte importante."
+      },
+      "hammer": {
+        "name": "Martillo",
+        "summary": "La larga mecha inferior muestra que los vendedores fracasaron: los compradores absorbieron toda la oferta.",
+        "narrative": "Los creadores de mercado provocaron un barrido de stop-loss por debajo del soporte. La larga mecha revela que los vendedores empujaron con fuerza, pero las instituciones lo absorbieron todo y recuperaron la apertura. Este movimiento de sacudida elimina a las manos débiles antes de un giro.",
+        "nextMove": "Alcista si la siguiente vela cierra por encima del máximo del martillo. El mínimo de la mecha es ahora un soporte crítico: es donde las instituciones decidieron comprar. Un retest que aguante esa zona es una entrada de alta probabilidad."
+      },
+      "hangingMan": {
+        "name": "Hombre colgado",
+        "summary": "Forma de martillo tras una tendencia alcista: los vendedores empiezan a reaccionar.",
+        "narrative": "A pesar de la recuperación visual, es una advertencia de distribución en máximos. Los creadores de mercado dejaron caer el precio con fuerza, revelando que los vendedores se activan en estos niveles altos. La recuperación oculta una presión vendedora creciente.",
+        "nextMove": "Bajista si la siguiente vela cierra por debajo del mínimo del hombre colgado. El máximo de esta vela es ahora resistencia: atento a un retest fallido de ese nivel, que confirmaría que la distribución está en marcha."
+      },
+      "shootingStar": {
+        "name": "Estrella fugaz",
+        "summary": "La larga mecha superior muestra que los compradores fracasaron: los vendedores absorbieron cada intento de subida.",
+        "narrative": "Los creadores de mercado aprovecharon el pico al alza para descargar inventario sobre traders minoristas que perseguían la ruptura. La larga mecha es prueba de venta institucional en la fortaleza: cada comprador en el máximo pierde dinero de inmediato.",
+        "nextMove": "Bajista si la siguiente vela cierra por debajo del mínimo de la estrella fugaz. El máximo de la mecha es ahora una resistencia fuerte: las entradas cortas en un retest fallido de ese nivel ofrecen una buena relación riesgo/beneficio."
+      },
+      "invertedHammer": {
+        "name": "Martillo invertido",
+        "summary": "Larga mecha superior tras una tendencia bajista: los compradores tantearon niveles más altos desde mínimos.",
+        "narrative": "Los creadores de mercado podrían estar probando la resistencia desde abajo. Los compradores subieron el precio con fuerza antes de que los vendedores recuperaran el control, señal de que el dominio vendedor se debilita. Es un primer indicio de demanda tras una caída.",
+        "nextMove": "Alcista si la siguiente vela cierra por encima del máximo del martillo invertido: eso confirma que los compradores toman el control. Espera esa vela de confirmación antes de actuar; sin ella, el patrón no tiene continuidad."
+      },
+      "insideBar": {
+        "name": "Inside bar (consolidación)",
+        "summary": "La vela actual está completamente dentro del rango de la anterior: se comprime para una ruptura.",
+        "narrative": "Los creadores de mercado absorben órdenes discretamente dentro de un rango estrecho, acumulando energía para un movimiento direccional. Las instituciones prefieren este patrón de compresión antes de comprometerse con una tendencia: mantiene a los minoristas adivinando mientras se posicionan.",
+        "nextMove": "La ruptura por encima del máximo de la vela anterior es alcista; por debajo de su mínimo, bajista. Cuanto mayor sea el cuerpo de la vela de ruptura respecto al inside bar, mayor la convicción. Opera la ruptura, no el inside bar en sí."
+      },
+      "sustainedBullish": {
+        "name": "Momentum alcista sostenido",
+        "summary": "Cinco velas verdes consecutivas: los compradores han dominado sin pausa.",
+        "narrative": "Las instituciones acumulan de forma sistemática. Cada posible retroceso se compra de inmediato: los creadores de mercado no dejan tracción a los vendedores, señal de que quieren el precio más alto antes de que los minoristas participen de lleno.",
+        "nextMove": "El momentum favorece la continuación, pero 5 velas verdes seguidas suelen llevar a una pausa o un pequeño retroceso a corto plazo. Espera una consolidación de 1-2 velas y un cierre de nuevo por encima del máximo previo para la siguiente entrada. La primera vela roja no es un giro: es un reinicio."
+      },
+      "sustainedBearish": {
+        "name": "Momentum bajista sostenido",
+        "summary": "Cinco velas rojas consecutivas: los vendedores han dominado sin pausa.",
+        "narrative": "Las instituciones distribuyen de forma sistemática. Cada intento de rebote se vende: los creadores de mercado impiden cualquier recuperación relevante, señal de que están posicionados en corto o descargando inventario progresivamente.",
+        "nextMove": "El momentum favorece la continuación a la baja, pero 5 velas rojas seguidas suelen producir un rebote a corto plazo. Los cortos deberían gestionar el riesgo y ajustar stops. La primera vela verde no es un giro: es un respiro antes del siguiente tramo bajista."
+      },
+      "noPatternBullish": {
+        "name": "Sin patrón definido — tendencia intacta",
+        "summary": "No hay ninguna formación de velas clásica en las últimas velas, pero la tendencia general sigue siendo alcista.",
+        "narrative": "Ahora mismo no hay un setup de tres velas de manual, pero la estructura del precio sigue favoreciendo a los compradores. Que no haya un patrón definido no significa que no haya dirección: aquí habla la tendencia de fondo.",
+        "nextMove": "Mantente alineado con la tendencia en lugar de esperar un patrón concreto. Un retroceso al soporte es una zona razonable para vigilar la continuación."
+      },
+      "noPatternBearish": {
+        "name": "Sin patrón definido — tendencia intacta",
+        "summary": "No hay ninguna formación de velas clásica en las últimas velas, pero la tendencia general sigue siendo bajista.",
+        "narrative": "Ahora mismo no hay un setup de tres velas de manual, pero la estructura del precio sigue favoreciendo a los vendedores. Que no haya un patrón definido no significa que no haya dirección: aquí habla la tendencia de fondo.",
+        "nextMove": "Mantente alineado con la tendencia en lugar de esperar un patrón concreto. Un rebote hacia la resistencia es una zona razonable para vigilar la continuación a la baja."
+      },
+      "noClearPattern": {
+        "name": "Sin patrón claro",
+        "summary": "No se detecta ninguna formación de velas clásica y la tendencia general está plana ahora mismo.",
+        "narrative": "La acción del precio carece por ahora tanto de un patrón de manual como de un sesgo direccional claro; normalmente significa que el mercado consolida antes de su próximo movimiento real.",
+        "nextMove": "Espera a un patrón reconocible o a una ruptura decidida de este rango antes de inclinarte por una dirección."
+      }
+    },
+    "canvas": {
+      "bullDiv": "Div. alcista",
+      "bearDiv": "Div. bajista"
+    }
+  }
+}

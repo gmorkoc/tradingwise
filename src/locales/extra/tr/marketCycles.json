@@ -1,0 +1,33 @@
+{
+  "marketCycles": {
+    "range": { "30": "30g", "365": "1y", "all": "Tümü" },
+    "title": "Bitcoin Piyasa Döngüleri",
+    "error": "Döngü verileri şu anda yüklenemedi.",
+    "puellStatus": "Puell Multiple Durumu",
+    "undervalued": "Düşük değerli",
+    "overvalued": "Aşırı değerli",
+    "piTitle": "Pi Cycle Top Göstergesi",
+    "topSignal": "Tepe sinyali",
+    "noTopSignal": "Tepe sinyali yok",
+    "rainbowCard": "Rainbow Grafiği",
+    "price": "Fiyat {{v}}",
+    "puellTip": "Günlük madenci geliri ÷ 365 günlük ortalaması. 0.5'in altı döngü diplerini, 4'ün üstü döngü tepelerini işaret etmiştir.",
+    "btcPrice": "Bitcoin Fiyatı",
+    "piTip": "111 günlük ortalamanın 350 günlük ortalamanın 2 katının üstüne çıkması geçmiş döngü tepelerini işaret etmiştir.",
+    "rainbowTitle": "Bitcoin Rainbow Fiyat Grafiği Göstergesi",
+    "rainbowTip": "Bitcoin'in tüm fiyat geçmişine uydurulmuş logaritmik bir eğri; Büyük indirimden Maksimum balona kadar 9 renk bandına bölünmüştür.",
+    "now": "Şu an: {{zone}}",
+    "halving": "{{n}}. Halving",
+    "rainbow": {
+      "0": "Büyük indirim",
+      "1": "AL!",
+      "2": "Biriktir",
+      "3": "Hâlâ ucuz",
+      "4": "HODL!",
+      "5": "Bu bir balon mu?",
+      "6": "FOMO yoğunlaşıyor",
+      "7": "Sat. Cidden, sat!",
+      "8": "Maksimum balon"
+    }
+  }
+}

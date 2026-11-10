@@ -9,6 +9,9 @@
     "remove": "Karşılaştırmadan çıkar",
     "add": "Karşılaştırmaya ekle",
     "rangeAria": "Karşılaştırma aralığı",
-    "loading": "Yükleniyor…"
+    "loading": "Yükleniyor…",
+    "hint": "{{coin}} ile karşılaştırmak için en fazla {{n}} tane seç",
+    "vs": "{{coin}} karşısında {{pct}}",
+    "vsTitle": "{{coin}} ile karşılaştırmalı 24 saatlik değişim"
   }
 }

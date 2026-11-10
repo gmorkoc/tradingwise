@@ -1,0 +1,21 @@
+{
+  "drawingTools": {
+    "tools": {
+      "cursor": "Cursore",
+      "brush": "Pennello libero",
+      "trendline": "Linea di tendenza",
+      "hline": "Linea orizzontale",
+      "vline": "Linea verticale",
+      "rect": "Rettangolo",
+      "fib": "Fibonacci",
+      "text": "Testo",
+      "eraser": "Gomma"
+    },
+    "saveChart": "Salva grafico",
+    "resetView": "Ripristina vista",
+    "magnetOn": "Magnete attivo",
+    "magnetOff": "Magnete disattivato",
+    "clearAll": "Cancella tutto",
+    "labelPrompt": "Testo dell'etichetta:"
+  }
+}

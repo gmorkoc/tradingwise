@@ -1,0 +1,25 @@
+{
+  "contactForm": {
+    "title": "Contattaci",
+    "subtitle": "Leggiamo ogni messaggio.",
+    "close": "Chiudi",
+    "sentTitle": "Messaggio inviato!",
+    "sentBody": "Grazie per averci scritto. Ti risponderemo presto.",
+    "category": "Categoria",
+    "categories": {
+      "bug": "Segnala un bug",
+      "feature": "Richiedi una funzione",
+      "feedback": "Feedback generale",
+      "other": "Altro"
+    },
+    "yourEmail": "La tua email",
+    "emailPlaceholder": "tu@esempio.com",
+    "message": "Messaggio",
+    "messagePlaceholder": "Descrivi il problema o condividi le tue idee...",
+    "sending": "Invio…",
+    "send": "Invia messaggio",
+    "errMessage": "Scrivi un messaggio prima di inviare.",
+    "errEmail": "Inserisci il tuo indirizzo email.",
+    "errGeneric": "Qualcosa è andato storto. Riprova."
+  }
+}

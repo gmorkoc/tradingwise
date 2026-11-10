@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   getPortfolioValueSeries,
   VALUE_PERIODS,
@@ -33,6 +34,7 @@ interface Props {
 }
 
 export function PortfolioValueChart({ holdings, formatCurrency }: Props) {
+  const { t } = useTranslation();
   const [period, setPeriod] = useState<ValuePeriod>("1D");
   const [series, setSeries] = useState<ValuePoint[]>([]);
   const [loading, setLoading] = useState(false);
@@ -89,10 +91,10 @@ export function PortfolioValueChart({ holdings, formatCurrency }: Props) {
           </span>
         ) : (
           <span className="pvc-change pvc-change--empty">
-            {loading ? "Loading…" : "No history available"}
+            {loading ? t("portfolioChart.loading") : t("portfolioChart.noHistory")}
           </span>
         )}
-        <span className="pvc-period-label">{PERIOD_LABEL[period]}</span>
+        <span className="pvc-period-label">{period === "ALL" ? t("portfolioChart.all") : PERIOD_LABEL[period]}</span>
       </div>
 
       <div className="pvc-chart-wrap">
@@ -125,7 +127,7 @@ export function PortfolioValueChart({ holdings, formatCurrency }: Props) {
             className={`pvc-tab${p === period ? " pvc-tab--active" : ""}`}
             onClick={() => setPeriod(p)}
           >
-            {PERIOD_LABEL[p]}
+            {p === "ALL" ? t("portfolioChart.all") : PERIOD_LABEL[p]}
           </button>
         ))}
       </div>

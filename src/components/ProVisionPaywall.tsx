@@ -15,6 +15,7 @@ import { PROVISION_PRICE_ID, redirectToCheckout } from "../services/stripeServic
 import { getProVisionIAPPackage, isIAPAvailable, purchaseProVisionIAP, restoreProVisionIAP, syncIAPEntitlement } from "../services/revenuecat";
 import { useStorePrices } from "../hooks/useStorePrices";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import "../styles/MembershipGate.css";
 import "../styles/PaywallPromo.css";
 import { useAuthFirst } from "../hooks/useAuthFirst";
@@ -22,13 +23,14 @@ import { useAuthFirst } from "../hooks/useAuthFirst";
 // Terms / Privacy pages exist in these languages (same as UpgradeModal).
 const LOCALIZED_LEGAL_LANGS = ["es", "it", "tr"];
 
-const FEATURES: { title: string; text: string; icon: React.ReactNode }[] = [
-  { title: "Trend-painted chart", text: "Candles and an EMA ribbon coloured by trend, so direction is obvious at a glance.", icon: <><path d="M3 17l5-5 4 3 8-8" /><path d="M15 7h5v5" /></> },
-  { title: "Buy / Sell signals", text: "Labels where the trend flips, STRONG signals when every check agrees, take-profit marks.", icon: <><path d="M7 17V7M17 7v10" /><path d="m4 10 3-3 3 3M14 14l3 3 3-3" /></> },
-  { title: "Invalidation zone", text: "Where a signal is proven wrong, with real buy-vs-sell volume.", icon: <><rect x="3" y="8" width="18" height="8" rx="2" /><path d="M7 12h10" /></> },
-  { title: "Live Signal Check", text: "Seven indicators, buyers vs sellers and five timeframes, updating every few seconds.", icon: <><path d="M12 20a8 8 0 1 1 8-8" /><path d="M12 12l4-4" /></> },
-  { title: "Safeguards", text: "Sideways-market detection, news-spike guard and macro-event pauses.", icon: <><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z" /><path d="m9 12 2 2 4-4" /></> },
-  { title: "Honest track record", text: "Every past signal on the chart, scored after fees.", icon: <><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></> },
+// Title/text per key in the "pvPaywall.features" translations.
+const FEATURES: { key: string; icon: React.ReactNode }[] = [
+  { key: "chart", icon: <><path d="M3 17l5-5 4 3 8-8" /><path d="M15 7h5v5" /></> },
+  { key: "signals", icon: <><path d="M7 17V7M17 7v10" /><path d="m4 10 3-3 3 3M14 14l3 3 3-3" /></> },
+  { key: "invalidation", icon: <><rect x="3" y="8" width="18" height="8" rx="2" /><path d="M7 12h10" /></> },
+  { key: "signalCheck", icon: <><path d="M12 20a8 8 0 1 1 8-8" /><path d="M12 12l4-4" /></> },
+  { key: "safeguards", icon: <><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z" /><path d="m9 12 2 2 4-4" /></> },
+  { key: "track", icon: <><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></> },
 ];
 
 interface Props {
@@ -49,11 +51,11 @@ interface Props {
   onRestore?: () => void;
 }
 
-function fmtWhen(ms: number): string {
+function fmtWhen(ms: number, t: TFunction): string {
   const mins = Math.max(1, Math.round((ms - Date.now()) / 60000));
-  if (mins < 60) return `${mins} min`;
+  if (mins < 60) return t("pvPaywall.minutes", { n: mins });
   const h = Math.floor(mins / 60);
-  return `${h}h ${mins % 60}m`;
+  return t("pvPaywall.hoursMinutes", { h, m: mins % 60 });
 }
 
 export function ProVisionPaywall({
@@ -62,24 +64,24 @@ export function ProVisionPaywall({
 }: Props) {
   // App Store price in the user's currency on iOS; $99 elsewhere.
   const PV_PLAN_PRICE = useStorePrices().provision;
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const legalSuffix = LOCALIZED_LEGAL_LANGS.includes(i18n.language) ? `.${i18n.language}` : "";
   const iap = isIAPAvailable();
   const head =
     reason === "pro-limit"
-      ? { kicker: `${PV_PRO_COINS_PER_DAY} of ${PV_PRO_COINS_PER_DAY} coins used today`, title: "Unlimited ProVision" }
+      ? { kicker: t("pvPaywall.kickerLimit", { n: PV_PRO_COINS_PER_DAY }), title: t("pvPaywall.titleUnlimited") }
       : reason === "trial-ended"
-        ? { kicker: "Your free trial has ended", title: "Keep ProVision" }
+        ? { kicker: t("pvPaywall.kickerEnded"), title: t("pvPaywall.titleKeep") }
         : reason === "trial-active"
-          ? { kicker: "Free trial running", title: "Keep ProVision" }
-        : { kicker: `${PV_TRIAL_DAYS} days free`, title: "Try ProVision" };
+          ? { kicker: t("pvPaywall.kickerRunning"), title: t("pvPaywall.titleKeep") }
+        : { kicker: t("pvPaywall.kickerFree", { days: PV_TRIAL_DAYS }), title: t("pvPaywall.titleTry") };
 
   const sub =
     reason === "pro-limit"
-      ? `Pro includes ProVision on ${PV_PRO_COINS_PER_DAY} coins a day${coin ? `, so ${coin} is locked for now` : ""}.${nextFreeAt ? ` A slot frees up in ${fmtWhen(nextFreeAt)}.` : ""}`
+      ? `${coin ? t("pvPaywall.subLimitCoin", { n: PV_PRO_COINS_PER_DAY, coin }) : t("pvPaywall.subLimit", { n: PV_PRO_COINS_PER_DAY })}${nextFreeAt ? ` ${t("pvPaywall.subSlot", { when: fmtWhen(nextFreeAt, t) })}` : ""}`
       : reason === "trial-ended" || reason === "trial-active"
-        ? "Get every coin and timeframe with the ProVision plan."
-        : `Full ProVision on every coin and timeframe for ${PV_TRIAL_DAYS} days. No card needed.`;
+        ? t("pvPaywall.subPlan")
+        : t("pvPaywall.subTrial", { days: PV_TRIAL_DAYS });
 
   return (
     // Same card as the Pro / Elite upgrade popup (BlurGate's .bg-elite-card,
@@ -99,7 +101,7 @@ export function ProVisionPaywall({
               <div className="bg-elite-badge">✦ PROVISION</div>
               <div className="bg-elite-price-wrap">
                 <span className="bg-elite-price">{PV_PLAN_PRICE}</span>
-                <span className="bg-elite-per">/yr</span>
+                <span className="bg-elite-per">{t("pvPaywall.perYear")}</span>
               </div>
             </div>
 
@@ -119,13 +121,13 @@ export function ProVisionPaywall({
             {/* Feature grid */}
             <div className="bg-elite-features">
               {FEATURES.map((f) => (
-                <div key={f.title} className="bg-elite-feature">
+                <div key={f.key} className="bg-elite-feature">
                   <span className="bg-elite-feat-icon">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{f.icon}</svg>
                   </span>
                   <div>
-                    <p className="bg-elite-feat-title">{f.title}</p>
-                    <p className="bg-elite-feat-desc">{f.text}</p>
+                    <p className="bg-elite-feat-title">{t(`pvPaywall.features.${f.key}.title`)}</p>
+                    <p className="bg-elite-feat-desc">{t(`pvPaywall.features.${f.key}.text`)}</p>
                   </div>
                 </div>
               ))}
@@ -134,17 +136,17 @@ export function ProVisionPaywall({
             {/* CTA */}
             {reason === "signin" && (
               <button type="button" className="bg-elite-cta bg-elite-cta--pv" onClick={onSignIn} disabled={busy}>
-                Sign up to start your free trial
+                {t("pvPaywall.ctaSignUp")}
               </button>
             )}
             {reason === "trial-available" && (
               <button type="button" className="bg-elite-cta bg-elite-cta--pv" onClick={onStartTrial} disabled={busy}>
-                {busy ? "Starting…" : `Start ${PV_TRIAL_DAYS}-day free trial`}
+                {busy ? t("pvPaywall.starting") : t("pvPaywall.ctaStartTrial", { days: PV_TRIAL_DAYS })}
               </button>
             )}
             {(reason === "trial-ended" || reason === "trial-active" || reason === "pro-limit") && (
               <button type="button" className="bg-elite-cta bg-elite-cta--pv" onClick={onBuyPlan} disabled={busy}>
-                {busy ? "Opening…" : <>{reason === "trial-ended" ? "Keep ProVision" : "Get ProVision"} — {PV_PLAN_PRICE}/year</>}
+                {busy ? t("pvPaywall.opening") : reason === "trial-ended" ? t("pvPaywall.ctaKeep", { price: PV_PLAN_PRICE }) : t("pvPaywall.ctaGet", { price: PV_PLAN_PRICE })}
               </button>
             )}
             {error && <p className="bg-pv-error" role="alert">{error}</p>}
@@ -152,30 +154,30 @@ export function ProVisionPaywall({
             <p className="bg-card-trust bg-card-trust--split">
               <span>
                 {reason === "signin" || reason === "trial-available"
-                  ? `${PV_TRIAL_DAYS} days free · then ${PV_PLAN_PRICE}/year`
+                  ? t("pvPaywall.trustTrial", { days: PV_TRIAL_DAYS, price: PV_PLAN_PRICE })
                   : iap
                     // App Store: Apple handles billing and refunds.
-                    ? `${PV_PLAN_PRICE}/year, billed via your Apple ID · renews automatically unless cancelled at least 24 hours before the period ends · cancel anytime in Settings`
-                    : "Billed once a year · non-refundable"}
+                    ? t("pvPaywall.trustApple", { price: PV_PLAN_PRICE })
+                    : t("pvPaywall.trustWeb")}
               </span>
               {reason === "pro-limit" ? (
                 <button type="button" className="bg-elite-link" onClick={onUpgradeElite} disabled={busy}>
-                  Or go <span className="bg-elite-link-word">Elite</span>: ProVision included
+                  {t("pvPaywall.orGo")} <span className="bg-elite-link-word">Elite</span>{t("pvPaywall.eliteIncluded")}
                 </button>
               ) : (
-                <span>Signals are tools, not financial advice.</span>
+                <span>{t("pvPaywall.notAdvice")}</span>
               )}
             </p>
             {/* Required on subscription screens (App Store 3.1.2): Terms,
                 Privacy, and on iOS a way to restore an earlier purchase. */}
             <p className="bg-card-trust bg-pv-legal">
-              <a href={`https://coinhintz.io/terms${legalSuffix}.html`} target="_blank" rel="noopener noreferrer">Terms of Use</a>
+              <a href={`https://coinhintz.io/terms${legalSuffix}.html`} target="_blank" rel="noopener noreferrer">{t("upgradeModal.footer.termsLink")}</a>
               {" · "}
-              <a href={`https://coinhintz.io/privacy${legalSuffix}.html`} target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+              <a href={`https://coinhintz.io/privacy${legalSuffix}.html`} target="_blank" rel="noopener noreferrer">{t("upgradeModal.footer.privacyLink")}</a>
               {iap && onRestore && (
                 <>
                   {" · "}
-                  <button type="button" className="bg-pv-restore" onClick={onRestore} disabled={busy}>Restore purchases</button>
+                  <button type="button" className="bg-pv-restore" onClick={onRestore} disabled={busy}>{t("pvPaywall.restore")}</button>
                 </>
               )}
             </p>
@@ -191,6 +193,7 @@ export function ProVisionPaywall({
  * or the chart, and runs the actual trial start / purchase.
  */
 export function ProVisionPaywallHost({ onOpenAuth, onOpenUpgrade }: { onOpenAuth: () => void; onOpenUpgrade: () => void }) {
+  const { t } = useTranslation();
   const { refreshProfile } = useAuth();
   const { setOn, access } = useProVisionGate();
   const [req, setReq] = useState<{ reason: PvLockReason; coin?: string } | null>(null);
@@ -221,12 +224,12 @@ export function ProVisionPaywallHost({ onOpenAuth, onOpenUpgrade }: { onOpenAuth
     setBusy(true); setError(null);
     try {
       const started = await startProVisionTrial();
-      if (!started) throw new Error("The free trial isn't available on this account.");
+      if (!started) throw new Error(t("pvPaywall.errTrialUnavailable"));
       await refreshProfile();
       setOn(true);
       setReq(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't start the trial. Please try again.");
+      setError(e instanceof Error ? e.message : t("pvPaywall.errTrialStart"));
     } finally {
       setBusy(false);
     }
@@ -237,20 +240,20 @@ export function ProVisionPaywallHost({ onOpenAuth, onOpenUpgrade }: { onOpenAuth
     try {
       if (isIAPAvailable()) {
         const found = await getProVisionIAPPackage();
-        if (!found) throw new Error("ProVision isn't available in the App Store yet. Please try again later.");
+        if (!found) throw new Error(t("pvPaywall.errNotInStore"));
         const res = await purchaseProVisionIAP(found.pkg);
         if (res.cancelled) return;
-        if (!res.success) throw new Error(res.error ?? "Purchase failed");
+        if (!res.success) throw new Error(res.error ?? t("pvPaywall.errPurchase"));
         await syncIAPEntitlement();
         await refreshProfile();
         setOn(true);
         setReq(null);
         return;
       }
-      if (!PROVISION_PRICE_ID) throw new Error("ProVision checkout isn't set up yet.");
+      if (!PROVISION_PRICE_ID) throw new Error(t("pvPaywall.errCheckout"));
       await redirectToCheckout(PROVISION_PRICE_ID); // returns via ?payment=success
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong. Please try again.");
+      setError(e instanceof Error ? e.message : t("pvPaywall.errGeneric"));
     } finally {
       setBusy(false);
     }
@@ -260,13 +263,13 @@ export function ProVisionPaywallHost({ onOpenAuth, onOpenUpgrade }: { onOpenAuth
     setBusy(true); setError(null);
     try {
       const res = await restoreProVisionIAP();
-      if (!res.success) throw new Error(res.error ?? "Nothing to restore.");
+      if (!res.success) throw new Error(res.error ?? t("pvPaywall.errNothingRestore"));
       await syncIAPEntitlement();
       await refreshProfile();
       setOn(true);
       setReq(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't restore. Please try again.");
+      setError(e instanceof Error ? e.message : t("pvPaywall.errRestore"));
     } finally {
       setBusy(false);
     }

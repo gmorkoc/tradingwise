@@ -393,7 +393,7 @@ export const ChartAnalyzeModal: React.FC<Props> = ({ isOpen, onClose, onOpenUpgr
                 {images.map(img => (
                   <div key={img.id} className="caz-thumb">
                     <img src={img.previewUrl} alt="" />
-                    <button type="button" className="caz-thumb-remove" onClick={() => removeImage(img.id)} aria-label="Remove image">✕</button>
+                    <button type="button" className="caz-thumb-remove" onClick={() => removeImage(img.id)} aria-label={t("chartAnalyze2.removeImage")}>✕</button>
                   </div>
                 ))}
               </div>

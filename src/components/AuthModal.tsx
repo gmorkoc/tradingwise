@@ -208,7 +208,7 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
       setResendIn(30);
       setCode("");
       setView("verify");
-      if (sendErr) setError(`Couldn't send a new code: ${sendErr}`);
+      if (sendErr) setError(t("authModal2.sendCodeFailed", { error: sendErr }));
     } else if (err) {
       setError(err.toLowerCase().includes("invalid login credentials")
         ? "no_account" : err);
@@ -258,7 +258,7 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
     e.preventDefault();
     const clean = code.replace(/\D/g, "");
     // Supabase's code length is a project setting (currently 8) — accept 6–8.
-    if (clean.length < 6) { setError("Enter the code from the email."); return; }
+    if (clean.length < 6) { setError(t("authModal2.enterCode")); return; }
     setBusy(true); setError("");
     const err = await verifyEmailCode(email, clean);
     if (err === "verified_no_session") {
@@ -267,7 +267,7 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
       return;
     }
     setBusy(false);
-    if (err) setError(/expired|invalid/i.test(err) ? "That code is wrong or has expired. Check the latest email, or send a new code." : err);
+    if (err) setError(/expired|invalid/i.test(err) ? t("authModal2.codeWrong") : err);
     else onClose();
   };
 
@@ -276,11 +276,11 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
   // user doesn't have to enter it again.
   const finishAfterConfirm = async () => {
     setBusy(true); setError("");
-    if (!password) { setBusy(false); setView("login"); setInfo("Email confirmed. Sign in to continue."); return; }
+    if (!password) { setBusy(false); setView("login"); setInfo(t("authModal2.emailConfirmed")); return; }
     const err = await signIn(email, password);
     setBusy(false);
     if (!err) { onClose(); return; }
-    if (err === "verify_email") setError("Not confirmed yet. Enter the code from the email, or open the link in it first.");
+    if (err === "verify_email") setError(t("authModal2.notConfirmed"));
     else setError(err);
   };
 
@@ -289,7 +289,7 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
     setError(""); setInfo("");
     const err = await resendVerification(email);
     if (err) setError(err);
-    else { setInfo("New code sent. Check your inbox (and spam folder)."); setResendIn(30); }
+    else { setInfo(t("authModal2.newCodeSent")); setResendIn(30); }
   };
 
   const handlePasskey = async () => {
@@ -351,7 +351,7 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
             </button>
             {canPasskey && (
               <button className="auth-link-btn auth-welcome-passkey" type="button" onClick={handlePasskey} disabled={busy}>
-                {PASSKEY_ICON} Sign in with a passkey
+                {PASSKEY_ICON} {t("authModal2.passkey")}
               </button>
             )}
             {error && <p className="auth-error">{error}</p>}
@@ -479,7 +479,7 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
             </button>
             {canPasskey && (
               <button className="auth-google auth-passkey" type="button" onClick={handlePasskey} disabled={busy}>
-                {PASSKEY_ICON} Sign in with a passkey
+                {PASSKEY_ICON} {t("authModal2.passkey")}
               </button>
             )}
 
@@ -535,19 +535,19 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
                 </div>
                 {(emailChecking || emailStatus === "available" || emailTaken) && (
                   <span className={`auth-username-status auth-username-status--${emailChecking ? "checking" : emailTaken ? "taken" : "available"}`}>
-                    {emailChecking && "Checking…"}
-                    {!emailChecking && emailStatus === "available" && "✓ Email available"}
+                    {emailChecking && t("authModal2.checking")}
+                    {!emailChecking && emailStatus === "available" && `✓ ${t("authModal2.emailAvailable")}`}
                     {!emailChecking && emailTaken && (emailProvider ? (
-                      <>This email signs in with {emailProvider}.{" "}
+                      <>{t("authModal2.signsInWith", { provider: emailProvider })}{" "}
                         {emailProvider === "Google"
-                          ? <button type="button" className="auth-link-btn" onClick={handleGoogle} disabled={busy}>Continue with Google</button>
+                          ? <button type="button" className="auth-link-btn" onClick={handleGoogle} disabled={busy}>{t("auth.continueWithGoogle")}</button>
                           : appleSignInAvailable
-                            ? <button type="button" className="auth-link-btn" onClick={handleApple} disabled={busy}>Continue with Apple</button>
+                            ? <button type="button" className="auth-link-btn" onClick={handleApple} disabled={busy}>{t("auth.continueWithApple")}</button>
                             : null}
                       </>
                     ) : (
-                      <>This email already has an account.{" "}
-                        <button type="button" className="auth-link-btn" onClick={() => { setError(""); setView("login"); }}>Sign in</button>
+                      <>{t("authModal2.emailHasAccount")}{" "}
+                        <button type="button" className="auth-link-btn" onClick={() => { setError(""); setView("login"); }}>{t("authModal2.signIn")}</button>
                       </>
                     ))}
                   </span>
@@ -579,9 +579,9 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
                 // Email already has an account (password or Google) — no
                 // code is sent for it, so point to signing in instead.
                 <p className="auth-error">
-                  An account with this email already exists.{" "}
-                  <button type="button" className="auth-link-btn" onClick={() => { setError(""); setView("login"); }}>Sign in</button>
-                  {" or "}
+                  {t("authModal2.accountExists")}{" "}
+                  <button type="button" className="auth-link-btn" onClick={() => { setError(""); setView("login"); }}>{t("authModal2.signIn")}</button>
+                  {` ${t("authModal2.or")} `}
                   <button type="button" className="auth-link-btn" onClick={handleGoogle} disabled={busy}>{t("auth.signup.signinWithGoogle")}</button>
                 </p>
               ) : error ? <p className="auth-error">{error}</p> : null}
@@ -616,12 +616,12 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
         {view === "verify" && (
           <>
             <div className="auth-sent-icon">✉️</div>
-            <h2 className="auth-title">Check your email</h2>
+            <h2 className="auth-title">{t("authModal2.verifyTitle")}</h2>
             <p className="auth-sub">
-              We sent a verification code to <strong>{email}</strong>. Enter it below to confirm your account.
+              {t("authModal2.verifySubBefore")} <strong>{email}</strong>{t("authModal2.verifySubAfter")}
             </p>
             <form className="auth-form" onSubmit={handleVerify}>
-              <label className="auth-label">Verification code
+              <label className="auth-label">{t("authModal2.codeLabel")}
                 <input
                   className="auth-input auth-code-input"
                   type="text"
@@ -631,26 +631,26 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
                   maxLength={8}
                   value={code}
                   onChange={e => setCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
-                  placeholder="Code"
+                  placeholder={t("authModal2.codePlaceholder")}
                   required
                   autoFocus={!isPhone}
                 />
               </label>
               {error && <p className="auth-error">{error}</p>}
               {info && <p className="auth-info">{info}</p>}
-              <button className="auth-submit" disabled={busy || code.length < 6}>{busy ? "Confirming…" : "Confirm email"}</button>
+              <button className="auth-submit" disabled={busy || code.length < 6}>{busy ? t("authModal2.confirming") : t("authModal2.confirmEmail")}</button>
             </form>
             <p className="auth-switch">
-              Didn't get it?{" "}
+              {t("authModal2.didntGetIt")}{" "}
               <button type="button" className="auth-link-btn" onClick={handleResend} disabled={resendIn > 0}>
-                {resendIn > 0 ? `Resend code in ${resendIn}s` : "Resend code"}
+                {resendIn > 0 ? t("authModal2.resendIn", { seconds: resendIn }) : t("authModal2.resend")}
               </button>
               {" · "}
-              <button type="button" className="auth-link-btn" onClick={() => setView("signup")}>Use a different email</button>
+              <button type="button" className="auth-link-btn" onClick={() => setView("signup")}>{t("authModal2.differentEmail")}</button>
             </p>
             <p className="auth-switch">
-              Confirmed with the link in the email?{" "}
-              <button type="button" className="auth-link-btn" onClick={finishAfterConfirm} disabled={busy}>Continue</button>
+              {t("authModal2.confirmedWithLink")}{" "}
+              <button type="button" className="auth-link-btn" onClick={finishAfterConfirm} disabled={busy}>{t("authModal2.continue")}</button>
             </p>
           </>
         )}
@@ -682,7 +682,7 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
 
   if (isPhone) {
     return (
-      <BottomSheet open onClose={onClose} title={<CoinHintzLogo variant="nav" />} className="auth-sheet" ariaLabel="Sign in">
+      <BottomSheet open onClose={onClose} title={<CoinHintzLogo variant="nav" />} className="auth-sheet" ariaLabel={t("authModal2.signIn")}>
         <div className="auth-sheet-inner">{body}</div>
       </BottomSheet>
     );
@@ -691,7 +691,7 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
   return (
     <div className="auth-backdrop" ref={backdropRef} onClick={handleBackdrop}>
       <div className="auth-card">
-        <button className="auth-close" onClick={onClose}>✕</button>
+        <button className="auth-close" onClick={onClose} aria-label={t("authModal2.close")}>✕</button>
 
         <div className="auth-logo">
           <CoinHintzLogo variant="nav" />

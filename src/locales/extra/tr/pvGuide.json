@@ -1,0 +1,50 @@
+{
+  "pvGuide": {
+    "title": "ProVision nasıl kullanılır",
+    "seeingH": "Gördüklerin",
+    "bestUsesH": "En iyi kullanımlar",
+    "safeguardsH": "Yerleşik korumalar",
+    "limitsH": "Yine de bilmekte fayda var",
+    "workflowH": "Mantıklı bir çalışma akışı",
+    "gotIt": "Anladım",
+    "onChart": {
+      "ribbon": { "title": "Boyalı şerit", "text": "Mumların arkasında bir hareketli ortalama yelpazesi. Alıcılar kontroldeyken bant yeşile, satıcılar kontroldeyken kırmızıya boyanır — renk değişimleri trendin döndüğü yerlerdir." },
+      "candles": { "title": "Renkli mumlar", "text": "Gerçek bir trend sürerken yeşil veya kırmızı, trend yokken sarı." },
+      "tp": { "title": "TP", "text": "Geçmişteki bir Al veya Sat işleminin kârla kapanacağı yeri gösterir." },
+      "buySell": { "title": "AL / SAT", "text": "Yalnızca 7 kontrolün çoğu aynı yönü gösterdiğinde ve büyük resimdeki trend de aynı yöne baktığında çıkar. 4h altındaki grafiklerde yeni trendin ayrıca 3 mum boyunca sağlam güçle sürmesi gerekir. ✓ işareti kârla biten geçmiş sinyalleri gösterir." },
+      "invalidation": { "title": "Geçersizlik bölgesi", "text": "Parlayan bant ve kesikli çizgi, son sinyalin nerede yanlış çıkacağını Δ Hacim etiketiyle birlikte gösterir." },
+      "spikes": { "title": "⚡ Ani sıçramalar", "text": "Haber benzeri ani mumlar. Yeni bir sıçramaya karşı oynayan sinyaller birkaç mum boyunca atlanır." },
+      "events": { "title": "Etkinlik geri sayımı", "text": "Büyük planlı ABD verileri — Fed kararları, TÜFE, istihdam, GSYİH — bir gün öncesine kadar görünür. Sinyaller her birinin 30 dakika öncesinden bir saat sonrasına kadar durur." },
+      "sideways": { "title": "Yatay etiketi + aralık kutusu", "text": "Fiyat bir aralıkta gezinirken gri bir kutu tavanını ve tabanını işaretler. 4h altındaki grafiklerde trend sinyalleri bekler; 1h ve üzerinde aralık modu, fiyat kırılana kadar tabana yakın R·BUY ve tavana yakın R·SELL ekler." },
+      "thin": { "title": "Sığ piyasa etiketi", "text": "Güvenilir sinyaller için çok az işlem olduğunda görünür. AL/SAT, hacim dönene kadar kapanır." },
+      "signals15m": { "title": "“Sinyaller: 15m” etiketi", "text": "1m ve 5m grafiklerde sinyaller 15m grafikten gelir ve seninkine yerleştirilir; böylece 15m yönünü kısa grafiğin zamanlamasıyla alırsın." }
+    },
+    "bestUses": {
+      "confirm": { "title": "Girmeden önce doğrula", "text": "Önce Sinyal Kontrolü kararına bak. Kontrollerin çoğu bir yönü gösteriyorsa, ters tarafa geçmeden önce iki kez düşün." },
+      "stop": { "title": "Stopunu bir gerekçeyle koy", "text": "Kesikli geçersizlik çizgisi, sinyalin anlamını yitirdiği yeri gösterir. Hazır bir stop seviyesidir ve ona olan mesafe ne büyüklükte pozisyon alacağını söyler." },
+      "trend": { "title": "Trendi anında gör", "text": "Renkli mumlar kararlı hareket eden bir piyasayı gösterir. Griyle dolu bir grafik yönsüz bir piyasadır — çoğu zaman beklemek için iyi bir an." },
+      "stretched": { "title": "Aşırı uzamış hareketleri yakala", "text": "RSI veya Stokastik uç noktadayken güçlü bir trend gücünü yitiriyor olabilir. Oradaki geç girişler ekstra risk taşır." },
+      "money": { "title": "Gerçek parayı takip et", "text": "Δ Hacim, borsadaki gerçek piyasa alış ve satışlarını kullanır. Tek yönlü yoğun hacimle desteklenen bir sinyal, desteksiz olandan daha güçlüdür." },
+      "track": { "title": "Geçmiş performansı kontrol et", "text": "Bir sinyale güvenmeden önce bu grafikteki önceki sinyallerin nasıl gittiğine bak — yalnızca ne sıklıkla kazandıklarına değil, ortalama kazanç ve kayba ve komisyon sonrası işlem başına sonuca da." },
+      "winners": { "title": "Kazananları koştur", "text": "15m ve üzerinde geçmiş performans, stopunu fiyatın arkasından takip ettirir ve trend dönünce çıkar. Daha az ama çok daha büyük kazançlar bekle — kazananları erken kesmek en çok zarar veren şeydir." }
+    },
+    "safeguards": {
+      "tiny": { "title": "1m–5m'de küçük hareketler", "text": "Kısa mumlar komisyondan daha az hareket eder, bu yüzden bu grafikler 15m grafiğin sinyallerini kullanır. 15m yönünü kısa grafiğin zamanlamasıyla alırsın." },
+      "choppy": { "title": "Dalgalı aralıklar", "text": "Fiyat yataya geçince trend sinyalleri kenara çekilir. 1h ve üzerinde aralık modu bunun yerine kutu kenarlarından sekmeleri işler; 1h altında kutuyu işaretler ve kırılımı bekler." },
+      "news": { "title": "Planlı haberler", "text": "Fed kararları, TÜFE, istihdam ve GSYİH bir gün öncesinden işaretlenir ve sinyaller 30 dakika öncesinden bir saat sonrasına kadar durur." },
+      "shocks": { "title": "Ani şoklar", "text": "Aşırı büyük mumlar ⚡ ile işaretlenir ve yeni bir şoka karşı oynayan sinyaller atlanır." },
+      "thin": { "title": "Sığ piyasalar", "text": "Çok az işlem olduğunda sinyaller tahmin yürütmek yerine kapanır." }
+    },
+    "limits": {
+      "headlines": { "title": "Sürpriz manşetler", "text": "Plansız haberler hiçbir grafikte önceden görülemez — pozisyonlarını beklenmedik duruma göre boyutlandır." },
+      "past": { "title": "Geçmiş ≠ gelecek", "text": "Geçmiş performans bu grafiğin yakın geçmişinden gelir. Piyasalar değişir ve küçük örneklemler olduğundan iyi gösterebilir veya yanıltabilir." }
+    },
+    "workflow": {
+      "s1": "Yönünü 4h veya günlük grafikten al.",
+      "s2": "15m ve üzerindeki sinyallere göre hareket et; 1m–5m'de bunlar 15m sinyalleridir, bu yüzden girişini zamanlamak için kısa grafiği kullan.",
+      "s3": "Stopunu geçersizlik çizgisine koy, sonra fiyat lehine ilerledikçe takip ettir.",
+      "s4": "Geçmiş performansın komisyon sonrası kâr ettiğini kontrol et.",
+      "s5": "Kurulumu önce sanal işlemde dene."
+    }
+  }
+}

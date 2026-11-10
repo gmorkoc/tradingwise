@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom";
 import { Capacitor } from "@capacitor/core";
+import { useTranslation } from "react-i18next";
 import { Avatar } from "./Avatar";
 import { useAuth } from "../contexts/AuthContext";
 import { toggleMutedSignalCoin } from "../services/supabase";
@@ -46,23 +47,25 @@ function initials(name: string): string {
   return name.slice(0, 2).toUpperCase();
 }
 
-function confidenceLabel(c: Confidence | undefined): string {
-  if (c === "high") return "High";
-  if (c === "medium") return "Medium";
-  return "Low";
+// Translation key under pushToast.confidence.
+function confidenceKey(c: Confidence | undefined): "high" | "medium" | "low" {
+  if (c === "high") return "high";
+  if (c === "medium") return "medium";
+  return "low";
 }
-
-// Shown on every buy/sell-signal toast, every platform — same posture as
-// the Buy Signals panel's own disclaimer, restated here since this is
-// often the very first place someone sees a signal (a push/toast arrives
-// before they've ever opened the panel itself).
-const INVESTMENT_DISCLAIMER = "For informational purposes only. Not investment advice — all trading decisions are made at your own risk.";
 
 // Rendered once at the app root. pushNotifications.ts dispatches
 // "push-toast" for any push received while the app is in the foreground
 // (the OS banner is suppressed for those — see capacitor.config.ts) so the
 // user still sees something, just in-app instead of a system banner.
 export function PushToast() {
+  const { t } = useTranslation();
+  // Shown on every buy/sell-signal toast, every platform — same posture as
+  // the Buy Signals panel's own disclaimer, restated here since this is
+  // often the very first place someone sees a signal (a push/toast arrives
+  // before they've ever opened the panel itself).
+  const INVESTMENT_DISCLAIMER = t("pushToast.disclaimer");
+  const confidenceLabel = (c: Confidence | undefined) => t(`pushToast.confidence.${confidenceKey(c)}`);
   const { user, profile, refreshProfile } = useAuth();
   const [toast, setToast] = useState<PushToastDetail | null>(null);
   const [logoError, setLogoError] = useState(false);
@@ -180,7 +183,7 @@ export function PushToast() {
   const isBuySignal = data?.type === "buy_signal";
   const direction: Direction = data?.direction ?? "buy";
   const isSell = direction === "sell";
-  const signalLabel = isSell ? "Sell Signal" : "Buy Signal";
+  const signalLabel = isSell ? t("pushToast.sellSignal") : t("pushToast.buySignal");
   const alreadyMuted = !!data?.coin && (profile?.signal_muted_coins ?? []).includes(data.coin);
   // Only the web Realtime path sends the full breakdown — a native push
   // (title/body only) still gets the plain layout further down.
@@ -189,10 +192,10 @@ export function PushToast() {
   const ActionButtons = ({ compact }: { compact?: boolean }) => (
     <div className={`push-toast-actions${compact ? " push-toast-actions--compact" : ""}`} onClick={(e) => e.stopPropagation()}>
       <button type="button" className="push-toast-action-btn" onClick={handleAddToWatchlist} disabled={watchlisted}>
-        {watchlisted ? "✓ Watchlisted" : "+ Watchlist"}
+        {watchlisted ? `✓ ${t("pushToast.watchlisted")}` : `+ ${t("pushToast.watchlist")}`}
       </button>
       <button type="button" className="push-toast-action-btn push-toast-action-btn--mute" onClick={handleMute} disabled={muting || justMuted || alreadyMuted}>
-        {justMuted || alreadyMuted ? "Muted" : `Mute ${data?.coin ?? ""}`}
+        {justMuted || alreadyMuted ? t("pushToast.muted") : t("pushToast.mute", { coin: data?.coin ?? "" })}
       </button>
     </div>
   );
@@ -243,7 +246,7 @@ export function PushToast() {
                 backtested, so it's never framed as "how likely this is
                 right." */}
             <span className={`push-toast-sheet-confidence${confidence === "high" ? " push-toast-sheet-confidence--strong" : ""}`}>
-              {score}/{maxScore} · {confidenceLabel(confidence)} confidence
+              {score}/{maxScore} · {t(`pushToast.confidenceFull.${confidenceKey(confidence)}`)}
             </span>
           </div>
 
@@ -325,7 +328,7 @@ export function PushToast() {
             (see the FCM data payload in buy-signal-scan/index.ts) — no
             room here for the full sentence the rich layouts use, but the
             disclaimer itself still belongs on every platform. */}
-        {isBuySignal && <span className="push-toast-disclaimer push-toast-disclaimer--compact">Not investment advice. Trade at your own risk.</span>}
+        {isBuySignal && <span className="push-toast-disclaimer push-toast-disclaimer--compact">{t("pushToast.disclaimerShort")}</span>}
         {isBuySignal && data?.coin && <ActionButtons compact />}
       </div>
       <button className="push-toast-close" onClick={(e) => { e.stopPropagation(); setToast(null); }}>✕</button>

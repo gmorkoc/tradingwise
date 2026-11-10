@@ -1,0 +1,65 @@
+{
+  "chartBottom": {
+    "tabs": {
+      "toptraders": "En İyi Trader'lar",
+      "positions": "Pozisyonlar",
+      "history": "Geçmiş",
+      "balance": "Bakiye",
+      "performance": "Performans"
+    },
+    "gate": {
+      "signInAccount": "Sanal işlem pozisyonlarını, geçmişini ve performansını görmek için giriş yap.",
+      "signIn": "Giriş yap",
+      "activateText": "Pozisyonları burada takip etmeye başlamak için sanal işlemi etkinleştir.",
+      "activate": "Sanal işlemi etkinleştir",
+      "signInTopTraders": "Hyperliquid'in en iyi trader'larının {{coin}} üzerinde ne tuttuğunu görmek için giriş yap."
+    },
+    "loading": "Yükleniyor…",
+    "noPositions": "Açık pozisyon yok.",
+    "noClosed": "Henüz kapanmış işlem yok.",
+    "col": {
+      "coin": "Coin",
+      "side": "Yön",
+      "size": "Miktar",
+      "entry": "Giriş",
+      "mark": "Mark",
+      "pnl": "K/Z",
+      "margin": "Teminat",
+      "liq": "Tasfiye fiyatı",
+      "tpsl": "TP / SL",
+      "opened": "Açılış",
+      "exit": "Çıkış",
+      "realizedPnl": "Gerçekleşen K/Z",
+      "reason": "Neden",
+      "closed": "Kapanış"
+    },
+    "spot": "Spot",
+    "long": "Long",
+    "short": "Short",
+    "closing": "Kapatılıyor…",
+    "close": "Kapat",
+    "reason": {
+      "manual": "Manuel",
+      "take_profit": "Kâr al",
+      "stop_loss": "Zarar durdur",
+      "liquidation": "Tasfiye edildi"
+    },
+    "stat": {
+      "equity": "Özkaynak",
+      "cash": "Nakit",
+      "inPositions": "Pozisyonlarda (teminat)",
+      "unrealizedPnl": "Gerçekleşmemiş K/Z",
+      "openPositions": "Açık pozisyonlar",
+      "winRate": "Kazanma oranı",
+      "closedTrades": "Kapanan işlemler",
+      "wins": "Kazanç",
+      "losses": "Kayıp"
+    },
+    "filterAria": "En iyi trader'ları filtrele",
+    "filter": {
+      "winners": "Kazananlar",
+      "losers": "Kaybedenler",
+      "all": "Tümü"
+    }
+  }
+}

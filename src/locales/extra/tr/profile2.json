@@ -1,0 +1,34 @@
+{
+  "profile2": {
+    "nav": {
+      "overview": "Genel bakış",
+      "profileInfo": "Profil bilgisi",
+      "security": "Güvenlik",
+      "blocked": "Engellenen kullanıcılar",
+      "notifications": "Bildirimler",
+      "activity": "Etkinlik",
+      "danger": "Tehlikeli bölge"
+    },
+    "close": "Kapat",
+    "planUsage": "Plan ve kullanım",
+    "showPassword": "Şifreyi göster",
+    "hidePassword": "Şifreyi gizle",
+    "blocked": {
+      "title": "Engellenen kullanıcılar",
+      "sub": "Engellenen hesaplar Canlı Sohbet akışınızda görünmez ve onları etiketleyemezsiniz.",
+      "empty": "Henüz kimseyi engellemediniz."
+    },
+    "whaleActivity": {
+      "label": "Balina hareketleri",
+      "desc": "Uygulamadayken büyük bir BTC transferi zincir üstünde hareket ettiğinde bir bildirim bandı."
+    },
+    "strategyAlerts": {
+      "label": "Strateji uyarıları",
+      "desc": "Devreye aldığınız stratejilerden biri her tetiklendiğinde bir push bildirimi."
+    },
+    "deleteAccount": "Hesabı sil",
+    "deleteDesc": "Hesabınızı ve tüm verilerinizi kalıcı olarak kaldırın.",
+    "deleteFailed": "Hesap silinemedi",
+    "notAuthenticated": "Giriş yapılmamış"
+  }
+}

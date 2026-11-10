@@ -1,0 +1,14 @@
+{
+  "topCrypto": {
+    "filters": { "all": "Tüm coinler", "watchlist": "İzleme Listesi", "gainers": "Kazananlar", "losers": "Kaybedenler", "trending": "Trend" },
+    "title": "En Büyük Kripto Paralar",
+    "coinsByMcap": "Piyasa değerine göre {{n}} coin",
+    "emptyWatchlist": "İzleme listenizde henüz coin yok — eklemek için herhangi bir coinde ☆ simgesine dokunun.",
+    "cols": { "rank": "Sıra", "name": "Ad", "price": "Fiyat", "last7": "Son 7 Gün", "mcap": "Piyasa Değeri", "vol": "Hacim (24s)" },
+    "removeWatch": "{{name}} izleme listesinden çıkar",
+    "addWatch": "{{name}} izleme listesine ekle",
+    "range": "{{from}}–{{to}} / {{total}}",
+    "prevPage": "Önceki sayfa",
+    "nextPage": "Sonraki sayfa"
+  }
+}

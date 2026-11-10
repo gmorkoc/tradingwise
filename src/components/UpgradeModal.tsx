@@ -109,12 +109,8 @@ function FeatureIcon({ text }: { text: string }) {
   );
 }
 
-// One-line pitch under each plan name (fallbacks for the locale keys).
-const PLAN_TAGLINES: Record<string, string> = {
-  free:  "Explore the markets and practice trading.",
-  pro:   "AI insights and signals for active traders.",
-  elite: "Unlimited AI plus your own trading agent.",
-};
+// One-line pitch under each plan name: upgradeModal.plans.<id>.tagline when
+// a locale has it, else upgradeModal2.taglines.<id>.
 
 // Feature locale keys exclusive to each tier (used for "you'll lose" confirmation
 // list). Elite no longer has its own feature set — pro now includes everything
@@ -289,7 +285,7 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
     if (iap) {
       const iapPlan = iapPlans.find(p => p.tier === plan.id);
       if (!iapPlan) {
-        setError("This plan isn't available for purchase right now. Please try again shortly.");
+        setError(t("upgradeModal2.planUnavailable"));
         return;
       }
       setLoading(plan.id);
@@ -361,8 +357,8 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
         const { isUpgrade, scheduledAt, paymentSucceeded } = await upgradePlan(confirm.priceId!);
         if (isUpgrade && paymentSucceeded === false) {
           setDone({
-            message: "Payment failed — your plan was not upgraded.",
-            sub:     "Please update your payment method in billing settings and try again.",
+            message: t("upgradeModal2.paymentFailed"),
+            sub:     t("upgradeModal2.paymentFailedSub"),
           });
         } else if (isUpgrade) {
           setDone({
@@ -403,14 +399,14 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
     setLoading("restore");
     setError("");
     const result = await restorePurchases();
-    if (!result.success) { setLoading(null); setError(result.error ?? "Nothing to restore."); return; }
+    if (!result.success) { setLoading(null); setError(result.error ?? t("upgradeModal2.nothingToRestore")); return; }
     const sync = await syncIAPEntitlement();
     if (!sync.tier && result.tier) await waitForTier(user!.id, result.tier);
     await refreshProfile();
     setLoading(null);
     setDone({
-      message: "Purchases restored",
-      sub: `Your ${result.tier === "elite" ? "Elite" : "Pro"} subscription is active again.`,
+      message: t("upgradeModal2.restored"),
+      sub: t("upgradeModal2.restoredSub", { plan: result.tier === "elite" ? "Elite" : "Pro" }),
     });
   };
 
@@ -447,7 +443,7 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
   return (
     <div className="upgrade-backdrop" onClick={backdropClick}>
       <div className="upgrade-card">
-        <button className="upgrade-close" onClick={closeOrBack}>
+        <button className="upgrade-close" onClick={closeOrBack} aria-label={(confirm || done) ? t("upgradeModal2.back") : t("upgradeModal2.close")}>
           {(confirm || done) ? "←" : "✕"}
         </button>
 
@@ -598,7 +594,7 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
                     {/* Name + one-line pitch */}
                     <div className="upgrade-plan-head">
                       <div className="upgrade-plan-label" style={{ color: plan.color }}>{planLabel}</div>
-                      <p className="upgrade-plan-tagline">{t(`upgradeModal.plans.${plan.id}.tagline`, PLAN_TAGLINES[plan.id])}</p>
+                      <p className="upgrade-plan-tagline">{t(`upgradeModal.plans.${plan.id}.tagline`, { defaultValue: t(`upgradeModal2.taglines.${plan.id}`) })}</p>
                     </div>
 
                     {/* Price, with the action right under it */}
@@ -660,12 +656,14 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
                         list's heading instead of a bullet. */}
                     <div className="upgrade-plan-divider" aria-hidden="true" />
                     {(() => {
-                      const inherits = planFeatures[0]?.startsWith("Everything in") ? planFeatures[0] : null;
+                      // Every paid plan's first feature is its "Everything in X" line
+                      // (worded differently per language, so not matched by text).
+                      const inherits = plan.id !== "free" && planFeatures[0] ? planFeatures[0] : null;
                       const items = inherits ? planFeatures.slice(1) : planFeatures;
                       return (
                         <>
                           <p className="upgrade-plan-includes">
-                            {inherits ? `${inherits.split(" — ")[0]}, plus:` : "Includes:"}
+                            {inherits ? t("upgradeModal2.plus", { base: inherits.split(" — ")[0] }) : t("upgradeModal2.includes")}
                           </p>
                           <ul className="upgrade-plan-features">
                             {inherits && inherits.includes(" — ") && (
@@ -707,12 +705,12 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
             <p className="upgrade-footer">
               {isPaid
                 ? (iap
-                    ? <button className="upgrade-manage-link" onClick={handleManageBilling}>Manage in App Store</button>
+                    ? <button className="upgrade-manage-link" onClick={handleManageBilling}>{t("upgradeModal2.manageAppStore")}</button>
                     : <>{t("upgradeModal.footer.proratedNote")}<button className="upgrade-manage-link" onClick={handleManageBilling} disabled={loading === "portal"}>{loading === "portal" ? t("upgradeModal.footer.loadingPortal") : t("upgradeModal.footer.manageBilling")}</button></>)
                 : t("upgradeModal.footer.cancelAnytime")
               }{iap ? t("upgradeModal.footer.securePaymentApple") : t("upgradeModal.footer.securePayment")}
               {/* Plain-text trust note (was its own icon row above the cards). */}
-              {!isPaid && " · Instant access"}
+              {!isPaid && ` · ${t("upgradeModal2.instantAccess")}`}
               {/* Refund note and the subscription terms on the same line,
                   not their own paragraphs. */}
               {" · "}{t("upgradeModal.footer.noRefundNote")}
@@ -735,7 +733,7 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
                 this app has no visibility to drive that flow itself. */}
             {isPaid && iap && (
               <p className="upgrade-footer upgrade-footer--cancel">
-                Cancel or change your plan any time in the App Store's subscription settings.
+                {t("upgradeModal2.cancelInAppStore")}
               </p>
             )}
             {isPaid && !iap && (
@@ -765,13 +763,13 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
             )}
             {!isPaid && iap && (
               <p className="upgrade-footer upgrade-footer--cancel">
-                Already subscribed on this Apple ID?{" "}
+                {t("upgradeModal2.alreadySubscribed")}{" "}
                 <button
                   className="upgrade-manage-link"
                   onClick={handleRestorePurchases}
                   disabled={loading === "restore"}
                 >
-                  {loading === "restore" ? t("upgradeModal.cta.loading") : "Restore purchases"}
+                  {loading === "restore" ? t("upgradeModal.cta.loading") : t("upgradeModal2.restorePurchases")}
                 </button>
               </p>
             )}

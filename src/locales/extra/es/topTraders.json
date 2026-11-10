@@ -1,0 +1,29 @@
+{
+  "topTraders": {
+    "justNow": "justo ahora",
+    "agoM": "hace {{n}} min",
+    "agoH": "hace {{n}} h",
+    "chart": "Gráfico",
+    "trader": "Trader",
+    "pnl": "PnL no realizado",
+    "value": "Valor de la posición",
+    "entry": "Entrada",
+    "liq": "Liquidación",
+    "liqSortTip": "Ordena por distancia a la liquidación",
+    "funding": "Financiación",
+    "acct": "Valor de la cuenta",
+    "openOnHl": "Abrir este trader en Hyperliquid",
+    "loading": "Cargando top traders…",
+    "unavailable": "Los datos de top traders aún no están disponibles.",
+    "none": {
+      "all": "No hay posiciones de top traders en {{coin}} ahora mismo.",
+      "winners": "No hay posiciones ganadoras de top traders en {{coin}} ahora mismo.",
+      "losers": "No hay posiciones perdedoras de top traders en {{coin}} ahora mismo."
+    },
+    "range": "{{from}}–{{to}} de {{total}}",
+    "rangeEmpty": "0 de 0",
+    "foot": "Top traders de Hyperliquid por PnL de 30 días · actualizado {{ago}}",
+    "prev": "Página anterior",
+    "next": "Página siguiente"
+  }
+}

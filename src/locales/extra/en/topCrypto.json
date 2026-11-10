@@ -1,0 +1,14 @@
+{
+  "topCrypto": {
+    "filters": { "all": "All coins", "watchlist": "Watchlist", "gainers": "Winners", "losers": "Losers", "trending": "Trending" },
+    "title": "Top Cryptocurrencies",
+    "coinsByMcap": "{{n}} coins by market capitalization",
+    "emptyWatchlist": "No coins in your watchlist yet — tap ☆ on any coin to add it.",
+    "cols": { "rank": "Rank", "name": "Name", "price": "Price", "last7": "Last 7 Days", "mcap": "Market Cap", "vol": "Volume (24h)" },
+    "removeWatch": "Remove {{name}} from watchlist",
+    "addWatch": "Add {{name}} to watchlist",
+    "range": "{{from}}–{{to}} of {{total}}",
+    "prevPage": "Previous page",
+    "nextPage": "Next page"
+  }
+}

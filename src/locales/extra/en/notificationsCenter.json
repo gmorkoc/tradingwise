@@ -1,0 +1,14 @@
+{
+  "notificationsCenter": {
+    "title": "Notifications",
+    "sub": "Buy/sell signals, price alerts, strategy alerts & news",
+    "markAllRead": "Mark all read",
+    "close": "Close",
+    "loading": "Loading…",
+    "empty": "No notifications yet — buy/sell signals, price alerts, strategy alerts and news will show up here.",
+    "now": "now",
+    "minsAgo": "{{n}}m ago",
+    "hoursAgo": "{{n}}h ago",
+    "daysAgo": "{{n}}d ago"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "orderBook2": {
+    "close": "Kapat",
+    "hide": "Emir defterini gizle",
+    "recentTrades": "Son işlemler",
+    "expand": "Genişlet",
+    "precision": "Hassasiyet",
+    "exchange": "Borsa",
+    "priceUsd": "Fiyat (USD)",
+    "amountCoin": "Miktar ({{coin}})",
+    "totalUsd": "Toplam (USD)",
+    "spread": "Spread",
+    "time": "Zaman"
+  }
+}

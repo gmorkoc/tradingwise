@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { createChart, IChartApi, ISeriesApi, ColorType, CandlestickSeries, HistogramSeries } from "lightweight-charts";
 import { coinglass } from "../services/coinglass";
 import { CookingLoader } from "./CookingLoader";
@@ -33,6 +34,7 @@ interface Props {
 // managed to reproduce the iOS scroll/blank-canvas bug on, despite
 // extensive testing against PriceChart.tsx's version of it.
 export function AgentChartModal({ coin, initialInterval, onClose }: Props) {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -138,8 +140,8 @@ export function AgentChartModal({ coin, initialInterval, onClose }: Props) {
               OrderBookProfileModal's own exit button, which pairs its
               icon with an explicit "Exit" label). A plain, unambiguous ✕
               plus text removes any doubt it's tappable and what it does. */}
-          <button className="acm-exit" onClick={onClose} aria-label="Close">
-            <span className="acm-exit-label">Close</span>
+          <button className="acm-exit" onClick={onClose} aria-label={t("agentChartModal.close")}>
+            <span className="acm-exit-label">{t("agentChartModal.close")}</span>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
               <path d="M18 6L6 18M6 6l12 12" />
             </svg>
@@ -169,7 +171,7 @@ export function AgentChartModal({ coin, initialInterval, onClose }: Props) {
             visible={true}
           />
           {loading && <div className="acm-overlay"><CookingLoader /></div>}
-          {!loading && error && <div className="acm-overlay">No data available</div>}
+          {!loading && error && <div className="acm-overlay">{t("agentChartModal.noData")}</div>}
         </div>
       </div>
     </div>

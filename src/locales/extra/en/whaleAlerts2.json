@@ -1,0 +1,12 @@
+{
+  "whaleAlerts2": {
+    "unmute": "Unmute whale alerts",
+    "mute": "Mute whale alerts",
+    "soundOff": "Sound off",
+    "soundOn": "Sound on",
+    "viewTx": "View transaction",
+    "dismissNext": "Dismiss and show next",
+    "dismiss": "Dismiss",
+    "snoozeAria": "Snooze whale alerts for 1 hour"
+  }
+}

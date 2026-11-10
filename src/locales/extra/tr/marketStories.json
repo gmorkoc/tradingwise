@@ -1,0 +1,23 @@
+{
+  "marketStories": {
+    "eyebrow": { "usFed": "ABD Fed", "cryptoOdds": "Kripto olasılıkları" },
+    "live": "Canlı",
+    "yes": "Evet",
+    "readMore": "Devamını oku",
+    "volume": "{{value}} hacim",
+    "volume24h": "{{value}} 24s hacim",
+    "movers": {
+      "topGainer": "En çok yükselen · 24s",
+      "topLoser": "En çok düşen · 24s",
+      "gainer": "Yükselen · 24s",
+      "loser": "Düşen · 24s"
+    },
+    "ariaStories": "Piyasa hikayeleri",
+    "previous": "Önceki",
+    "next": "Sonraki",
+    "carouselPosition": "Karusel konumu",
+    "goTo": "{{total}} içinden {{n}}. öğeye git",
+    "autoPlay": "Otomatik oynat",
+    "ago": { "m": "{{n}}dk", "h": "{{n}}sa", "d": "{{n}}g" }
+  }
+}

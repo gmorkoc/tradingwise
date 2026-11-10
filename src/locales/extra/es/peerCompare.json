@@ -9,6 +9,9 @@
     "remove": "Quitar de la comparación",
     "add": "Añadir a la comparación",
     "rangeAria": "Rango de comparación",
-    "loading": "Cargando…"
+    "loading": "Cargando…",
+    "hint": "Elige hasta {{n}} para comparar con {{coin}}",
+    "vs": "{{pct}} vs {{coin}}",
+    "vsTitle": "Cambio en 24 h comparado con {{coin}}"
   }
 }

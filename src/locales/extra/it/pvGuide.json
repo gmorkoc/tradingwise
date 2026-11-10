@@ -1,0 +1,50 @@
+{
+  "pvGuide": {
+    "title": "Come usare ProVision",
+    "seeingH": "Cosa stai vedendo",
+    "bestUsesH": "Usi migliori",
+    "safeguardsH": "Protezioni integrate",
+    "limitsH": "Da sapere comunque",
+    "workflowH": "Un flusso di lavoro sensato",
+    "gotIt": "Ho capito",
+    "onChart": {
+      "ribbon": { "title": "Nastro colorato", "text": "Un ventaglio di medie mobili dietro le candele. La banda si colora di verde quando comandano gli acquirenti e di rosso quando comandano i venditori: i cambi di colore indicano dove gira il trend." },
+      "candles": { "title": "Candele colorate", "text": "Verdi o rosse quando è in corso un vero trend, gialle quando non c'è." },
+      "tp": { "title": "TP", "text": "Indica dove un Acquisto o una Vendita passati avrebbero chiuso in profitto." },
+      "buySell": { "title": "ACQUISTA / VENDI", "text": "Compare solo quando la maggior parte delle 7 verifiche concorda e il trend di fondo punta nella stessa direzione. Sui grafici sotto le 4h il nuovo trend deve anche reggere per 3 candele con forza solida. Una ✓ indica i segnali passati chiusi in profitto." },
+      "invalidation": { "title": "Zona di invalidazione", "text": "La banda luminosa e la linea tratteggiata mostrano dove l'ultimo segnale verrebbe invalidato, con il suo Δ Volume." },
+      "spikes": { "title": "⚡ Picchi", "text": "Candele improvvise, da notizia. I segnali che scommettono contro un picco recente vengono saltati per alcune candele." },
+      "events": { "title": "Conto alla rovescia eventi", "text": "I grandi dati USA programmati — decisioni della Fed, CPI, occupazione, PIL — compaiono fino a un giorno prima. I segnali si fermano da 30 minuti prima fino a un'ora dopo ciascuno." },
+      "sideways": { "title": "Etichetta laterale + box di range", "text": "Quando il prezzo si muove in un range, un box grigio ne segna soffitto e pavimento. I segnali di trend si fermano sui grafici sotto le 4h; da 1h in su, la modalità range aggiunge R·BUY vicino al pavimento e R·SELL vicino al soffitto finché il prezzo non rompe." },
+      "thin": { "title": "Etichetta mercato sottile", "text": "Compare quando si scambia troppo poco per segnali affidabili. ACQUISTA/VENDI si disattivano finché il volume non torna." },
+      "signals15m": { "title": "Etichetta “Segnali: 15m”", "text": "Sui grafici a 1m e 5m, i segnali arrivano dal grafico a 15m e vengono posizionati sul tuo, così hai la direzione dei 15m con il timing del grafico breve." }
+    },
+    "bestUses": {
+      "confirm": { "title": "Conferma prima di entrare", "text": "Guarda prima il verdetto della verifica segnali. Quando la maggior parte delle verifiche punta in una direzione, pensaci due volte prima di prendere il lato opposto." },
+      "stop": { "title": "Metti lo stop con un motivo", "text": "La linea tratteggiata di invalidazione indica dove il segnale smette di avere senso. È un livello di stop già pronto, e la distanza ti dice quanto grande deve essere la posizione." },
+      "trend": { "title": "Vedi il trend all'istante", "text": "Le candele colorate mostrano un mercato che si muove con decisione. Un grafico pieno di grigio è un mercato senza direzione: spesso un buon momento per aspettare." },
+      "stretched": { "title": "Individua i movimenti tirati", "text": "Un trend forte con RSI o Stocastico a un estremo potrebbe esaurirsi. Le entrate tardive lì comportano un rischio extra." },
+      "money": { "title": "Segui i soldi veri", "text": "Il Δ Volume usa gli acquisti e le vendite a mercato reali dell'exchange. Un segnale sostenuto da un forte volume a senso unico è più solido di uno senza." },
+      "track": { "title": "Controlla lo storico", "text": "Prima di fidarti di un segnale, guarda com'è andata con quelli passati su questo grafico: non solo quanto spesso hanno vinto, ma vincita media vs perdita e il risultato per operazione dopo le commissioni." },
+      "winners": { "title": "Lascia correre i profitti", "text": "Da 15m in su, lo storico sposta lo stop dietro al prezzo ed esce quando il trend gira. Aspettati meno vincite ma molto più grandi: chiudere presto i profitti è ciò che fa più male." }
+    },
+    "safeguards": {
+      "tiny": { "title": "Movimenti minimi su 1m–5m", "text": "Le candele brevi si muovono meno delle commissioni, quindi questi grafici usano i segnali del 15m. Hai la direzione dei 15m con il timing del grafico breve." },
+      "choppy": { "title": "Range instabili", "text": "I segnali di trend si fanno da parte quando il prezzo va laterale. Da 1h in su, la modalità range opera invece i rimbalzi sui bordi del box; sotto 1h segna il box e attende una rottura." },
+      "news": { "title": "Notizie programmate", "text": "Decisioni della Fed, CPI, occupazione e PIL vengono segnalati fino a un giorno prima, e i segnali si fermano da 30 minuti prima a un'ora dopo." },
+      "shocks": { "title": "Shock improvvisi", "text": "Le candele fuori scala sono segnate con ⚡, e i segnali che scommettono contro uno shock recente vengono saltati." },
+      "thin": { "title": "Mercati sottili", "text": "Quando si scambia troppo poco, i segnali si disattivano invece di tirare a indovinare." }
+    },
+    "limits": {
+      "headlines": { "title": "Notizie a sorpresa", "text": "Le notizie non programmate non si vedono arrivare su nessun grafico: dimensiona le posizioni per l'imprevisto." },
+      "past": { "title": "Passato ≠ futuro", "text": "Lo storico viene dal passato recente di questo grafico. I mercati cambiano, e i campioni piccoli possono abbellire o ingannare." }
+    },
+    "workflow": {
+      "s1": "Prendi la direzione dal grafico a 4h o giornaliero.",
+      "s2": "Agisci sui segnali da 15m in su; su 1m–5m sono i segnali dei 15m, quindi usa il grafico breve per il timing dell'entrata.",
+      "s3": "Metti lo stop sulla linea di invalidazione, poi spostalo man mano che il prezzo va a tuo favore.",
+      "s4": "Verifica che lo storico sia in profitto dopo le commissioni.",
+      "s5": "Prova prima la configurazione in Paper Trading."
+    }
+  }
+}

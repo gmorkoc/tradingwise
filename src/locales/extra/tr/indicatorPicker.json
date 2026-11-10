@@ -1,0 +1,113 @@
+{
+  "indicatorPicker": {
+    "title": "Göstergeler",
+    "close": "Kapat",
+    "back": "Geri",
+    "search": "Ara",
+    "searchAria": "Gösterge ara",
+    "clear": "Temizle",
+    "personal": "Kişisel",
+    "favorites": "Favoriler",
+    "onChart": "Grafikte",
+    "buildWithAi": "YZ ile oluştur",
+    "buildNew": "YZ ile yeni bir tane oluştur",
+    "buildSub": "Bir gösterge tarif et — YZ onu grafiğin için oluştursun",
+    "builtIn": "Yerleşik",
+    "allIndicators": "Tüm göstergeler",
+    "yourIndicators": "Göstergelerin",
+    "resultsFor": "“{{q}}” için sonuçlar",
+    "clearAll": "Tümünü kaldır",
+    "clearAllCount": "Tümünü kaldır ({{count}})",
+    "saved_one": "{{count}} kayıtlı",
+    "saved_other": "{{count}} kayıtlı",
+    "nOn": "{{count}} açık",
+    "nIndicators_one": "{{count}} gösterge",
+    "nIndicators_other": "{{count}} gösterge",
+    "edit": "Düzenle",
+    "editWithAi": "YZ ile düzenle",
+    "delete": "Sil",
+    "deleteConfirm": "“{{name}}” silinsin mi?",
+    "addFav": "Favorilere ekle",
+    "removeFav": "Favorilerden çıkar",
+    "kind": {
+      "all": "Tümü",
+      "overlay": "Fiyat üzerinde",
+      "pane": "Ayrı panel"
+    },
+    "col": {
+      "name": "Ad",
+      "type": "Tür",
+      "category": "Kategori"
+    },
+    "empty": {
+      "noMatch": "“{{q}}” ile eşleşen gösterge yok.",
+      "fav": "Bir göstergeyi burada tutmak için yıldızla (★).",
+      "on": "Grafikte henüz bir şey yok.",
+      "mine": "Henüz YZ göstergesi yok — bir tane yapmak için YZ ile oluştur'u kullan.",
+      "nothing": "Burada bir şey yok."
+    },
+    "mineAbout": {
+      "title": "Göstergelerim nedir?",
+      "about": "YZ'ye tarif ederek oluşturduğun göstergeler. Yerleşik olanlar gibi her grafikte çalışırlar. Birini sade bir dille değiştirmek için Düzenle'yi kullan ya da sil."
+    },
+    "about": {
+      "all": {
+        "title": "Göstergeler nasıl çalışır?",
+        "about": "Bu grafikte kullanılabilen tüm göstergeler. Eklemek için bir satıra tıkla, kaldırmak için tekrar tıkla. Üst katman göstergeleri fiyatın üzerine çizilir; panel göstergeleri grafiğin altında kendi alanını alır. En çok kullandıklarını yıldızla, Favoriler altında bul."
+      },
+      "fav": {
+        "title": "Favoriler nedir?",
+        "about": "Yıldızladığın göstergeler, hızlı erişim için burada tutulur. Eklemek için herhangi bir göstergenin yanındaki ☆ işaretine tıkla."
+      },
+      "on": {
+        "title": "Grafiğinde neler var?",
+        "about": "Şu anda bu grafikte çizili olan her şey. Kaldırmak için bir satıra tıkla ya da Tümünü kaldır'ı kullan."
+      }
+    },
+    "cats": {
+      "movingAverages": {
+        "name": "Hareketli Ortalamalar",
+        "question": "Hareketli ortalamalar nedir?",
+        "about": "Alttaki trendi göstermek için fiyatı yumuşatırlar. Yükselen bir ortalamanın üzerindeki fiyat yükselişe, düşen bir ortalamanın altındaki fiyat düşüşe işaret eder. Hızlı ortalamalar (EMA 9/20) dönüşlere çabuk tepki verir; yavaş olanlar (100/200) uzun vadeli destek ve direnç görevi görür. Hızlı ve yavaş ortalamanın kesişimleri klasik trend değişimi sinyalleridir."
+      },
+      "trend": {
+        "name": "Trend",
+        "question": "Trend göstergeleri neyi gösterir?",
+        "about": "Piyasanın hangi yöne gittiğini ve bu hareketin ne kadar güçlü olduğunu söylerler. Trendde kalmak, zayıfladığını fark etmek ve iz süren stop koymak için kullan — örn. Parabolic SAR noktaları trend dönünce taraf değiştirir, Ichimoku bulutu ise trendi, momentumu ve desteği tek görünümde gösterir."
+      },
+      "momentum": {
+        "name": "Momentum",
+        "question": "Momentum nedir?",
+        "about": "Fiyatın ne kadar hızlı hareket ettiğini ve bu itişin hızlanıp hızlanmadığını ölçerler. Aşırı alım ve aşırı satım durumlarını işaretlerler; uyumsuzluklar — fiyat yeni zirve yaparken momentumun yapmaması — çoğu zaman bir dönüşü fiyatta görünmeden önce haber verir."
+      },
+      "oscillators": {
+        "name": "Osilatörler",
+        "question": "Osilatörler nasıl çalışır?",
+        "about": "Her biri kendi panelinde, sabit seviyeler arasında ya da sıfır etrafında salınırlar. Uç değerler geri dönmesi muhtemel aşırı gerilmiş hareketlere işaret eder; sıfır çizgisini geçmek yön değişimini doğrular. En iyi yatay piyasalarda ve bir trend aracıyla birlikte teyit olarak çalışırlar."
+      },
+      "volatility": {
+        "name": "Volatilite",
+        "question": "Volatilite sana ne söyler?",
+        "about": "Fiyatın hangi yöne değil, ne kadar hareket ettiğini gösterirler. Bantlar ve kanallar hareketli piyasalarda genişler, büyük hareketlerden önce daralır (bir 'sıkışma'). ATR tabanlı araçlar, normal bir dalgalanmanın seni işlemden atmaması için stop ve pozisyon boyutlandırmaya yardımcı olur."
+      },
+      "volume": {
+        "name": "Hacim",
+        "question": "Hacim neden önemli?",
+        "about": "Her hareketin arkasındaki paraya bakarlar. Artan hacimle yükselen fiyat kararlı bir harekettir; azalan hacimle yükselen fiyat şüphelidir. VWAP bugün ödenen ortalama fiyatı gösterir — birçok trader'ın etrafında alıp sattığı bir adil değer çizgisi."
+      },
+      "levelsZones": {
+        "name": "Seviyeler ve Bölgeler",
+        "question": "Seviyeler ve bölgeler nedir?",
+        "about": "Önemli fiyatları grafiğe çizerler: destek ve direnç, Fibonacci düzeltmeleri, günün en yüksek ve en düşük seviyesi ve CME boşlukları. Fiyat çoğu zaman bu noktalarda tepki verir — girişler, hedefler ve stop yerleşimi için faydalıdır."
+      },
+      "smartMoney": {
+        "name": "Smart Money",
+        "question": "Smart Money nedir?",
+        "about": "Büyük oyuncuların muhtemelen nerede alıp sattığını izlemek için kullanılan kavramlar: order block'lar, fair-value gap'ler, yapı kırılımları ve yeniden testler, ayrıca mum formasyonları ve Wyckoff evreleri. Fiyatın devam etmeden önce yeniden ziyaret etme eğiliminde olduğu bölgeleri öne çıkarırlar."
+      },
+      "mine": {
+        "name": "Göstergelerim"
+      }
+    }
+  }
+}

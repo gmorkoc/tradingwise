@@ -1,0 +1,13 @@
+{
+  "pvOverlay": {
+    "invalidation": "GEÇERSİZLİK",
+    "deltaVolume": "Δ Hacim",
+    "est": "(tahmini)",
+    "rangeCeiling": "ARALIK TAVANI",
+    "rangeFloor": "ARALIK TABANI",
+    "strongBuy": "GÜÇLÜ AL",
+    "strongSell": "GÜÇLÜ SAT",
+    "buy": "Al",
+    "sell": "Sat"
+  }
+}
