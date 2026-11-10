@@ -2887,3 +2887,17 @@ html:not([data-theme="light"]) .ptc-stats .ptc-stat {
   border-color: color-mix(in srgb, var(--color-text) 14%, transparent);
   box-shadow: none;
 }
+
+/* Desktop: no side padding on the promo; the hero no longer needs to
+   pull out past it. */
+@media (min-width: 901px) {
+  html .ptc-card--activating .ptc-activate {
+    padding-left: 0;
+    padding-right: 0;
+  }
+  html .ptc-card--activating .ptc-hero {
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
