@@ -7,6 +7,7 @@ import { useAIQuota } from "../hooks/useAIQuota";
 import { useAuth } from "../contexts/AuthContext";
 import { AIQuotaWall } from "./AIQuotaWall";
 import { PaywallPromo } from "./PaywallPromo";
+import { BottomSheet } from "./BottomSheet";
 import "../styles/ChartAnalyzeModal.css";
 
 interface Props {
@@ -98,7 +99,6 @@ export const ChartAnalyzeModal: React.FC<Props> = ({ isOpen, onClose, onOpenUpgr
   const { t } = useTranslation();
   const { isPaid, used, limit } = useAIQuota();
   const { user, profile, profileLoading } = useAuth();
-  const backdropRef = useRef<HTMLDivElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const libraryInputRef = useRef<HTMLInputElement>(null);
 
@@ -282,26 +282,22 @@ export const ChartAnalyzeModal: React.FC<Props> = ({ isOpen, onClose, onOpenUpgr
     setError("");
   };
 
-  const handleBackdrop = (e: React.MouseEvent) => {
-    if (e.target === backdropRef.current) onClose();
-  };
-
+  // The shared bottom sheet, opened at full height on phones (a centred
+  // popup on desktop). Its header carries the title and close button.
   return (
-    <div className="caz-overlay" ref={backdropRef} onClick={handleBackdrop}>
-      <div className={`caz-panel${!isPaid ? " caz-panel--gated" : ""}`} role="dialog" aria-modal="true">
-        {isPaid ? (
-          <div className="caz-header">
-            <div>
-              <h2 className="caz-title">{t("chartAnalyze.title", "Chart Analyzer")}</h2>
-              <p className="caz-subtitle">{t("chartAnalyze.subtitle", "Snap or upload a chart and get a real technical read, powered by AI.")}</p>
-            </div>
-            <button className="caz-close" onClick={onClose} aria-label="Close">✕</button>
-          </div>
-        ) : (
-          // Gated: no white header strip at all — the promo card below
-          // fills the entire panel edge to edge, title/badges included,
-          // and this floats directly on top of it instead.
-          <button className="caz-close caz-close--floating" onClick={onClose} aria-label="Close">✕</button>
+    <BottomSheet
+      open
+      onClose={onClose}
+      title={t("chartAnalyze.title", "Chart Analyzer")}
+      ariaLabel={t("chartAnalyze.title", "Chart Analyzer")}
+      className="caz-sheet"
+      bodyClassName="caz-sheet-body"
+      desktopModal
+      startFull
+    >
+      <div className={`caz-panel caz-panel--sheet${!isPaid ? " caz-panel--gated" : ""}`}>
+        {isPaid && (
+          <p className="caz-subtitle caz-subtitle--sheet">{t("chartAnalyze.subtitle", "Snap or upload a chart and get a real technical read, powered by AI.")}</p>
         )}
 
         <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={handleFileInput} />
@@ -454,6 +450,6 @@ export const ChartAnalyzeModal: React.FC<Props> = ({ isOpen, onClose, onOpenUpgr
           </div>
         )}
       </div>
-    </div>
+    </BottomSheet>
   );
 };

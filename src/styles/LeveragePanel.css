@@ -264,6 +264,14 @@
   border-radius: 0 0 20px 20px;
   background: transparent;
 }
+/* In the shared bottom sheet: the sheet gives the frame and 16px padding. */
+.lev-sheet-body .leverage-panel {
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+@media (min-width: 901px) { .bs-sheet.lev-sheet { max-width: 480px; } }
 
 @media (max-width: 768px) {
   .leverage-row { flex-direction: column; align-items: flex-start; }

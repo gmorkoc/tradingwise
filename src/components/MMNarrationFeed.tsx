@@ -69,7 +69,7 @@ export function MMNarrationFeed({ entries, loading }: { entries: MMFeedEntry[]; 
           {ordered.map((entry, i) => (
             <div
               key={entry.id}
-              className={`mm-narr-row${i === 0 && isNewest ? " mm-narr-row--new" : ""}`}
+              className={`mm-narr-row ${badgeClass(entry).replace("mm-narr-badge--", "mm-narr-row--")}${i === 0 && isNewest ? " mm-narr-row--new" : ""}`}
             >
               <div className="mm-narr-row-top">
                 <span className="mm-narr-time">

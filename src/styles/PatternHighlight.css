@@ -1,0 +1,76 @@
+/* Candle Insights: highlight of the detected candle pattern on the chart. */
+.ph {
+  --ph: #94a3b8;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 6;
+  overflow: hidden;
+}
+.ph--up { --ph: #22c55e; }
+.ph--down { --ph: #ef4444; }
+
+.ph-box {
+  position: absolute;
+  border: 1.5px solid var(--ph);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--ph) 10%, transparent);
+  animation: ph-in 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.2) both, ph-glow 1.8s 0.45s ease-in-out infinite;
+}
+@keyframes ph-in {
+  from { opacity: 0; transform: scale(1.6); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes ph-glow {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ph) 45%, transparent); }
+  50%      { box-shadow: 0 0 0 6px color-mix(in srgb, var(--ph) 0%, transparent), 0 0 18px color-mix(in srgb, var(--ph) 35%, transparent); }
+}
+
+.ph-label {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  width: max-content;
+  max-width: min(260px, 80%);
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--color-surface, #fff);
+  border: 1px solid color-mix(in srgb, var(--ph) 45%, transparent);
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.16);
+  pointer-events: auto;
+  animation: ph-label-in 0.3s 0.2s ease both;
+}
+.ph-label--below { transform: translate(-50%, 0); }
+@keyframes ph-label-in {
+  from { opacity: 0; margin-top: 6px; }
+  to   { opacity: 1; margin-top: 0; }
+}
+html:not([data-theme="light"]) .ph-label { background: #1a1d26; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45); }
+
+.ph-label-head { display: flex; align-items: center; gap: 6px; }
+.ph-label-name { font-size: 0.8rem; font-weight: 800; color: var(--color-text); }
+.ph-label-tag { font-size: 0.66rem; font-weight: 700; color: var(--ph); }
+.ph-label-x,
+.ph-label-x:hover {
+  all: unset;
+  margin-left: auto;
+  padding: 0 2px 0 8px;
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.ph-label-desc {
+  margin: 3px 0 0;
+  font-size: 0.68rem;
+  line-height: 1.4;
+  color: var(--color-text-secondary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ph-box, .ph-label { animation: none; }
+}
+
+/* The card is now a button. */
+.cw-signal-card--tap { cursor: pointer; transition: border-color 0.15s ease; -webkit-tap-highlight-color: transparent; }
+.cw-signal-card--on { border-color: color-mix(in srgb, var(--ph-card, #3b82f6) 60%, transparent) !important; }
+.cw-signal-card-hint { font-size: 0.66rem; font-weight: 600; color: var(--color-text-muted); }

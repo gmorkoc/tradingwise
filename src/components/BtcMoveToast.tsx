@@ -18,9 +18,11 @@ interface Props {
   /** A price move or a whale transfer — both use this one toast. */
   alert: BtcMoveAlert | WhaleToastAlert | null;
   onDismiss: () => void;
+  /** ✕ button only (falls back to onDismiss) — whale alerts snooze here. */
+  onClose?: () => void;
 }
 
-export function BtcMoveToast({ alert, onDismiss }: Props) {
+export function BtcMoveToast({ alert, onDismiss, onClose }: Props) {
   const [visible, setVisible] = useState(false);
   const [progress, setProgress] = useState(100);
   const [dragY, setDragY] = useState(0);
@@ -168,7 +170,10 @@ export function BtcMoveToast({ alert, onDismiss }: Props) {
         {/* Close */}
         <button
           className="btc-toast-close"
-          onClick={(e) => { e.stopPropagation(); dismiss(); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (onClose) { setVisible(false); onClose(); } else dismiss();
+          }}
           aria-label="Dismiss"
         >✕</button>
       </div>

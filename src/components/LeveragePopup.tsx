@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { LeveragePanel } from "./LeveragePanel";
+import { BottomSheet } from "./BottomSheet";
 import { ZoneResult } from "./PriceChart.types";
 import "../styles/LeveragePanel.css";
 
@@ -26,15 +27,18 @@ export const LeveragePopup: React.FC<LeveragePopupProps> = ({
 
   if (!isOpen) return null;
 
+  // Shared bottom sheet: full height on phones, centred popup on desktop.
   return (
-    <div className="lev-popup-overlay" onClick={onClose}>
-      <div className="lev-popup-panel" onClick={(e) => e.stopPropagation()}>
-        <div className="lev-popup-header">
-          <span className="lev-popup-title">{t("leverage.title")}</span>
-          <button className="lev-popup-close" onClick={onClose} aria-label={t("common.close")}>✕</button>
-        </div>
-        <LeveragePanel currentPrice={currentPrice} zone={zone} coin={coin} hideHeader />
-      </div>
-    </div>
+    <BottomSheet
+      open
+      onClose={onClose}
+      title={t("leverage.title")}
+      className="lev-sheet"
+      bodyClassName="bs-body--pad lev-sheet-body"
+      desktopModal
+      startFull
+    >
+      <LeveragePanel currentPrice={currentPrice} zone={zone} coin={coin} hideHeader />
+    </BottomSheet>
   );
 };

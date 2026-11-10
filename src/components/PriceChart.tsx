@@ -2595,6 +2595,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const [pvBase, setPvBase] = useState<PvResult | null>(null);
   // Server refused (Pro's 3 coins used up on another device, trial ended…).
   const [pvServerLocked, setPvServerLocked] = useState(false);
+  // Why the read isn't showing (failed call / empty result) — null when fine.
+  const [pvError, setPvError] = useState<string | null>(null);
   // ProVision yearly price: App Store price on iOS, $99 on the web.
   const pvPrice = useStorePrices().provision;
   // Banner reason: the app's own check, or the server's refusal (Pro limit).
@@ -2661,7 +2663,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const pvCalcKey = `${coin}|${interval}|${chartGeneration}|${pvHtfCandles ? pvHtfCandles.length : 0}`;
   const pvLastKey = useRef("");
   useEffect(() => {
-    if (!pvActive) { setPvBase(null); setPvServerLocked(false); pvLastKey.current = ""; return; }
+    if (!pvActive) { setPvBase(null); setPvServerLocked(false); setPvError(null); pvLastKey.current = ""; return; }
     if (pvShortSec && !pvHtfCandles) return; // wait for the 15m candles
     const keyChanged = pvLastKey.current !== pvCalcKey;
     const wait = keyChanged ? 0 : Math.max(0, 3000 - (Date.now() - pvLastCalc.current));
@@ -2679,15 +2681,48 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       pvLastCalc.current = Date.now();
       pvLastKey.current = pvCalcKey;
       fetchProVision(coin, merged, pvShortSec && pvHtfCandles ? { candles: pvHtfCandles, shortSec: pvShortSec } : undefined)
-        .then((r) => { if (alive) { setPvBase(r); setPvServerLocked(false); } })
-        .catch((e) => {
+        .then((r) => {
           if (!alive) return;
+          setPvBase(r);
+          setPvServerLocked(false);
+          // Server answered but had nothing to read (too little history).
+          setPvError(r ? null : "Not enough candles on this interval for ProVision");
+        })
+        .catch(async (e) => {
+          if (!alive) return;
+          // 401 = the server didn't accept the sign-in (expired session),
+          // NOT a plan problem. Refresh the session once and let the next
+          // run retry; if that fails, ask to sign in again instead of
+          // showing the "locked / upgrade" banner to a paying user.
+          if (e instanceof ProVisionLockedError && e.reason === "signin") {
+            console.warn("[ProVision] sign-in rejected by server — refreshing session");
+            const { error: refreshErr } = await supabase.auth.refreshSession();
+            if (!alive) return;
+            setPvBase(null);
+            setPvServerLocked(false);
+            if (refreshErr) setPvError("Your sign-in expired — please sign in again");
+            else { setPvError("Reconnecting…"); pvLastKey.current = ""; }
+            return;
+          }
           if (e instanceof ProVisionLockedError) {
+            console.warn("[ProVision] server refused access:", e.message);
             setPvBase(null);
             setPvServerLocked(true);
+            setPvError(null);
             // Refresh the allowance so the banner shows the right coins.
             window.dispatchEvent(new Event("provision-coins-change"));
+            return;
           }
+          // Anything else (rate limit, server error, network) used to be
+          // swallowed, leaving "Reading…" up forever. Say so, log the
+          // server's reply, and keep retrying (this effect re-runs on the
+          // next live candle update).
+          const res = (e as { context?: Response })?.context;
+          let detail = "";
+          try { detail = res ? (await res.clone().json())?.error ?? "" : ""; } catch { /* not JSON */ }
+          const status = res?.status;
+          console.warn("[ProVision] read failed", status ?? "", detail || (e as Error)?.message || e);
+          setPvError(status === 429 ? "Too many requests — retrying" : status ? `Server error ${status} — retrying` : "Couldn't reach ProVision — retrying");
         });
     }, wait);
     return () => { alive = false; clearTimeout(id); };
@@ -7257,7 +7292,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             </strong>
             <span className="chart-tv-pvbar-sub">
               {pvBannerReason === "pro-limit"
-                ? `You've used today's ${pvGate.access.usedCoins.length} coins. Go unlimited.`
+                ? (pvGate.access.usedCoins.length
+                  ? `You've used today's ${pvGate.access.usedCoins.length} coins. Go unlimited.`
+                  // Server said no but no coins were used: not a daily-limit case.
+                  : "Your account doesn't include ProVision right now.")
                 : pvBannerReason === "trial-ended" ? `Keep every coin and timeframe for ${pvPrice}/year.` : "Every coin and timeframe. No card needed."}
             </span>
             <span className="chart-tv-pvbar-cta">
@@ -9372,7 +9410,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           } else {
             items.push({
               id: "pv", name: "ProVision", tone: null, pos: null,
-              label: pvActive ? "Reading…" : "Turn on",
+              label: pvActive ? (pvError ?? "Reading…") : "Turn on",
               onClick: pvActive ? undefined : () => pvGate.toggle(coin),
             });
           }
@@ -9550,7 +9588,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               </strong>
               <span>
                 {pvBannerReason === "pro-limit"
-                  ? `You've used today's ${pvGate.access.usedCoins.length} coins (${pvGate.access.usedCoins.join(", ")}). Go unlimited.`
+                  ? (pvGate.access.usedCoins.length
+                    ? `You've used today's ${pvGate.access.usedCoins.length} coins (${pvGate.access.usedCoins.join(", ")}). Go unlimited.`
+                    : "Your account doesn't include ProVision right now.")
                   : pvBannerReason === "trial-ended" ? `Keep every coin and timeframe for ${pvPrice}/year.` : "Every coin and timeframe. No card needed."}
               </span>
             </span>

@@ -429,3 +429,31 @@ html:not([data-theme="light"]) .caz-panel::before {
   .caz-body { gap: 18px; }
   .caz-pick-btn { padding: 16px 18px; }
 }
+
+/* Inside the shared bottom sheet: no popup frame of its own — the sheet
+   gives the background, rounded top, title and close; it also scrolls. */
+html .caz-panel.caz-panel--sheet,
+html:not([data-theme="light"]) .caz-panel.caz-panel--sheet {
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  max-width: none;
+  max-height: none;
+  overflow: visible;
+  animation: none;
+}
+html .caz-panel.caz-panel--sheet::before { display: none; }
+.caz-panel--sheet .caz-body,
+.caz-panel--sheet .caz-result { overflow: visible; padding-left: 0; padding-right: 0; }
+.caz-panel--sheet .caz-subtitle--sheet { margin: 0 0 4px; }
+/* 16px on both sides and at the bottom. The sheet itself already clears
+   the status bar / Dynamic Island (full height) and the home indicator. */
+.bs-sheet.caz-sheet .bs-body.caz-sheet-body { padding: 4px 16px 16px; }
+@media (min-width: 901px) {
+  .bs-sheet.caz-sheet .bs-body.caz-sheet-body { padding: 4px 20px 20px; }
+}
+/* Desktop popup: same width the old modal had. */
+@media (min-width: 901px) {
+  .bs-sheet.caz-sheet { max-width: 560px; }
+}

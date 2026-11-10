@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { BottomSheet } from "./BottomSheet";
 import "../styles/TutorialPage.css";
 
 interface Props { onClose: () => void; }
@@ -776,14 +777,18 @@ export const TutorialPage: React.FC<Props> = ({ onClose }) => {
   const handleTab = (i: number) => { setActiveTab(i); setSlideIndex(0); };
   const handleLevel = (l: "beginner" | "advanced") => { setLevel(l); setSlideIndex(0); };
 
+  // Shared bottom sheet: full height on phones, centred popup on desktop.
   return (
-    <div className="tutorial-overlay" onClick={onClose}>
-      <div className="tutorial-page" onClick={(e) => e.stopPropagation()}>
-
-        <div className="tutorial-header">
-          <h2 className="tutorial-title">Trading Tutorials</h2>
-          <button className="tutorial-close" onClick={onClose}>✕</button>
-        </div>
+    <BottomSheet
+      open
+      onClose={onClose}
+      title="Trading Tutorials"
+      className="tutorial-sheet"
+      bodyClassName="bs-body--pad"
+      desktopModal
+      startFull
+    >
+      <div className="tutorial-page tutorial-page--sheet">
 
         {/* Topic tabs */}
         <div className="tutorial-tabs">
@@ -859,6 +864,6 @@ export const TutorialPage: React.FC<Props> = ({ onClose }) => {
 
         </div>
       </div>
-    </div>
+    </BottomSheet>
   );
 };

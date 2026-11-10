@@ -96,6 +96,10 @@
 .bs-body {
   padding: 4px 0 16px;
 }
+/* Full pages shown in a sheet (Tools screens, Chart Analyzer): 16px on the
+   sides and bottom. Safe areas are handled by the sheet itself. */
+.bs-body.bs-body--pad { padding: 4px 16px 16px; }
+@media (min-width: 901px) { .bs-body.bs-body--pad { padding: 4px 20px 20px; } }
 .bs-header-extra { margin-top: 10px; touch-action: auto; }
 @media (prefers-reduced-motion: reduce) {
   .bs-backdrop, .bs-sheet { animation: none; }

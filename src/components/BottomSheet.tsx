@@ -24,15 +24,17 @@ interface Props {
   /** Phones: a floating card resting just above the bottom nav (Daily
    *  News look) instead of an edge-to-edge sheet; the nav stays visible. */
   floating?: boolean;
+  /** Phones: open straight at full height (dragging down closes it). */
+  startFull?: boolean;
 }
 
-export function BottomSheet({ open, onClose, title, children, className, bodyClassName, ariaLabel, desktopModal, headerExtra, floating }: Props) {
+export function BottomSheet({ open, onClose, title, children, className, bodyClassName, ariaLabel, desktopModal, headerExtra, floating, startFull }: Props) {
   const sheetRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ startY: number } | null>(null);
   // Dragged up to full screen (phones). Resets each time it opens.
-  const [full, setFull] = useState(false);
-  useEffect(() => { if (!open) setFull(false); }, [open]);
+  const [full, setFull] = useState(!!startFull);
+  useEffect(() => { setFull(!!startFull); }, [open, startFull]);
   if (!open) return null;
 
   // Drag the header: up past 60px → full screen; down past 90px → back to
@@ -60,7 +62,7 @@ export function BottomSheet({ open, onClose, title, children, className, bodyCla
     sheet.style.transition = "";
     sheet.style.transform = "";
     if (dy < -60 && !full) setFull(true);
-    else if (dy > 90) { if (full) setFull(false); else onClose(); }
+    else if (dy > 90) { if (full && !startFull) setFull(false); else onClose(); }
   };
 
   return ReactDOM.createPortal(

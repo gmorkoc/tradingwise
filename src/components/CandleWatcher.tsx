@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo } from "react";
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo } from "react";
 import { Capacitor } from "@capacitor/core";
 import { Filesystem, Directory } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
@@ -18,6 +18,10 @@ import { useChartIndicators, useIndicatorSelection } from "../hooks/useChartIndi
 import { useLiveKline } from "../hooks/useLiveKline";
 import { getIndicatorDef } from "../services/customIndicators";
 import { RoundedCandleOverlay } from "./DrawingOverlay";
+import { PatternHighlight } from "./PatternHighlight";
+import { ChartPatternOverlay } from "./ChartPatternOverlay";
+import { addPriceAlert, hasPriceAlert, removePriceAlert, PRICE_ALERTS_EVENT } from "../services/priceAlertStore";
+import { detectChartPatterns, type PBar, type ChartPattern } from "../utils/chartPatterns";
 import { ChartDrawingTools, Drawing } from "./ChartDrawingTools";
 import "../styles/CandleWatcher.css";
 
@@ -55,7 +59,7 @@ interface Indicators {
   bbPct: number | null;          // 0–1 where price sits in band
   bbUpper: number | null;
   bbLower: number | null;
-  volRatio: number | null;       // current vol / 20-period avg
+  volRatio: number | null;       // last closed candle's vol / 20-period avg
   ema20: number | null;
   ema50: number | null;
   ema200: number | null;
@@ -367,7 +371,10 @@ function buildIndicators(candles: CandleDataPoint[]): Indicators {
     bbPct:      bb?.pct ?? null,
     bbUpper:    bb?.upper ?? null,
     bbLower:    bb?.lower ?? null,
-    volRatio:   calcVolRatio(candles),
+    // Last finished candle vs the 20 before it — the live candle has only
+    // just started trading, so it read as e.g. "0.01× normal" right after
+    // every candle opened.
+    volRatio:   calcVolRatio(candles.slice(0, -1)),
     ema20:      ema20arr[ema20arr.length - 1] ?? null,
     ema50:      ema50arr[ema50arr.length - 1] ?? null,
     ema200:     ema200arr[ema200arr.length - 1] ?? null,
@@ -462,6 +469,63 @@ function detectPattern(candles: CandleDataPoint[]): Pattern {
     desc: bull0
       ? "Buyers closed higher than they opened — upward pressure is present this candle"
       : "Sellers pushed price below the open — downward pressure is present this candle",
+  };
+}
+
+// ── Candle pattern scan (Overview "Candle Patterns" card) ─────────────────────
+// Runs detectPattern over every closed candle, finds the newest named
+// pattern, and checks how that same pattern played out earlier on this
+// coin + interval: did price move its way HIT_AHEAD candles later?
+
+const GENERIC_PATTERNS = new Set(["Bullish Candle", "Bearish Candle", "Insufficient data"]);
+const HIT_AHEAD = 3;
+const LATEST_WINDOW = 10; // only report a pattern from the last 10 closed candles
+const MIN_SAMPLES = 5;    // fewer past cases than this → no hit rate
+
+interface CandlePatternScan {
+  pattern: Pattern;
+  candlesAgo: number;            // 1 = the last closed candle
+  hits: number | null;           // null for neutral patterns / too few samples
+  samples: number;
+  avgMovePct: number | null;     // average close-to-close move HIT_AHEAD candles later
+  times: number[];               // the candles that form the pattern, oldest first
+}
+
+// How many candles each pattern is made of (default 1).
+const PATTERN_SIZE: Record<string, number> = {
+  "Morning Star": 3, "Evening Star": 3, "Three White Soldiers": 3, "Three Black Crows": 3,
+  "Bullish Engulfing": 2, "Bearish Engulfing": 2, "Inside The Candle": 2,
+};
+
+function scanCandlePatterns(candles: CandleDataPoint[]): CandlePatternScan | null {
+  // The last candle is still forming — only judge closed ones.
+  const closed = candles.slice(0, -1);
+  if (closed.length < 3) return null;
+  const found: Array<{ i: number; p: Pattern }> = [];
+  for (let i = 2; i < closed.length; i++) {
+    const p = detectPattern(closed.slice(i - 2, i + 1));
+    if (!GENERIC_PATTERNS.has(p.name)) found.push({ i, p });
+  }
+  // Neutral ones (doji, inside bar, spinning top) print almost every few
+  // candles — prefer the newest bullish/bearish one in the window.
+  const recent = found.filter(f => closed.length - 1 - f.i < LATEST_WINDOW);
+  const last = [...recent].reverse().find(f => f.p.type !== "neutral") ?? recent[recent.length - 1];
+  if (!last) return null;
+
+  // Earlier cases of the same pattern that have HIT_AHEAD candles after them.
+  const past = found.filter(f => f.p.name === last.p.name && f.i + HIT_AHEAD < closed.length);
+  const moves = past.map(f => (closed[f.i + HIT_AHEAD].close - closed[f.i].close) / closed[f.i].close * 100);
+  const enough = moves.length >= MIN_SAMPLES;
+  const hits = enough && last.p.type !== "neutral"
+    ? moves.filter(m => (last.p.type === "bullish" ? m > 0 : m < 0)).length
+    : null;
+  return {
+    pattern: last.p,
+    candlesAgo: closed.length - last.i,
+    hits,
+    samples: moves.length,
+    avgMovePct: enough ? moves.reduce((a, b) => a + b, 0) / moves.length : null,
+    times: closed.slice(last.i + 1 - (PATTERN_SIZE[last.p.name] ?? 1), last.i + 1).map(c => c.time as number),
   };
 }
 
@@ -831,7 +895,266 @@ function generateForecastCandles(
 
 interface EWPivot { time: UTCTimestamp; price: number; label: string; pivotType: "high" | "low" }
 interface EWProjection { label: string; price: number; color: string; isMain: boolean }
-interface EWResult { pattern: "impulse" | "corrective" | "none"; direction: "bullish" | "bearish" | "unknown"; pivots: EWPivot[]; currentWave: string; description: string; complete: boolean; projections: EWProjection[]; projectionPath: Array<{ time: UTCTimestamp; value: number }>; invalidation: number | null }
+// Which of the 5 Elliott shapes this is. Impulse = classic 5-wave; diagonal =
+// 5 waves inside a wedge (wave 4 overlaps wave 1); zigzag / flat /
+// expanded-flat = the A-B-C corrections; triangle = A-B-C-D-E.
+type EWSubtype = "impulse" | "diagonal" | "zigzag" | "flat" | "expanded-flat" | "triangle";
+type EWPoint = { time: UTCTimestamp; value: number };
+interface EWResult {
+  pattern: "impulse" | "corrective" | "none";
+  direction: "bullish" | "bearish" | "unknown";
+  pivots: EWPivot[];
+  currentWave: string;
+  description: string;
+  complete: boolean;
+  projections: EWProjection[];
+  projectionPath: EWPoint[];
+  invalidation: number | null;
+  subtype?: EWSubtype;
+  /** Display name, e.g. "Zig-Zag", "Contracting Triangle". */
+  name?: string;
+  /** Triangle / diagonal boundary lines, drawn on the chart. */
+  trendlines?: [EWPoint[], EWPoint[]];
+}
+
+type EWSwing = { price: number; time: UTCTimestamp; type: "high" | "low" };
+
+const ewAlternates = (ps: EWSwing[]) => ps.every((p, i) => i === 0 || p.type !== ps[i - 1].type);
+const ewFmt = (p: number) => "$" + p.toLocaleString("en-US", { maximumFractionDigits: p < 10 ? 4 : 0 });
+// Value of the line through a and b at time t (for boundary lines).
+const ewLineAt = (a: EWSwing, b: EWSwing, t: number) => a.price + (b.price - a.price) * (t - a.time) / (b.time - a.time || 1);
+
+/** Names a finished A-B-C by how far B retraced wave A. */
+function classifyABC(q0: EWSwing, qa: EWSwing, qb: EWSwing, qc: EWSwing): { subtype: EWSubtype; name: string } | null {
+  if (!ewAlternates([q0, qa, qb, qc])) return null;
+  const s = q0.type === "high" ? 1 : -1;          // flip so the correction always "falls"
+  const lenA = (q0.price - qa.price) * s;
+  const lenC = (qb.price - qc.price) * s;
+  if (lenA <= 0 || lenC <= 0) return null;
+  const rB = (qb.price - qa.price) * s / lenA;    // B as a share of A
+  const cPastA = (qa.price - qc.price) * s > 0;
+  if (rB >= 0.2 && rB < 0.8 && cPastA) return { subtype: "zigzag", name: "Zig-Zag" };
+  if (rB >= 0.8 && rB <= 1.05 && lenC >= lenA * 0.9 && lenC <= lenA * 1.7) return { subtype: "flat", name: "Flat" };
+  if (rB > 1.05 && rB <= 1.4 && cPastA) return { subtype: "expanded-flat", name: "Expanded Flat" };
+  return null;
+}
+
+/** Ending diagonal: 5 waves inside a wedge where wave 4 overlaps wave 1. */
+function detectDiagonal(ps: EWSwing[], now: UTCTimestamp, nowPrice: number, toEW: (p: EWSwing, l: string) => EWPivot): EWResult | null {
+  if (ps.length !== 6 || !ewAlternates(ps)) return null;
+  const bull = ps[0].type === "low";
+  const s = bull ? 1 : -1;
+  const [p0, p1, p2, p3, p4, p5] = ps.map(p => p.price * s);
+  const w1 = p1 - p0, w2 = p1 - p2, w3 = p3 - p2, w4 = p3 - p4, w5 = p5 - p4;
+  const wedge = p2 > p0 && p3 > p1 && p4 > p2 && p5 > p3;   // highs and lows both trend
+  const overlap = p4 < p1;                                   // allowed only in diagonals
+  const contracting = w1 > w3 && w3 > w5 && w2 > w4;
+  const expanding = w1 < w3 && w3 < w5 && w2 < w4;
+  const r2 = w2 / w1, r4 = w4 / w3;
+  if (!wedge || !overlap || (w3 < w1 && w3 < w5) || !(contracting || expanding)) return null;
+  if (r2 < 0.3 || r2 > 0.95 || r4 < 0.3 || r4 > 0.95) return null;
+
+  const [q0, q1, q2, q3, q4, q5] = ps;
+  const kind = contracting ? "Contracting" : "Expanding";
+  const avgDur = Math.round((q5.time - q0.time) / 5);
+  const col = bull ? ["#fca5a5", "#ef4444", "#f87171"] : ["#86efac", "#22c55e", "#4ade80"];
+  return {
+    pattern: "impulse", subtype: "diagonal", name: `${kind} Diagonal`,
+    direction: bull ? "bullish" : "bearish", complete: true, currentWave: "5",
+    description: `${kind} ${bull ? "rising" : "falling"} wedge (ending diagonal) — trend exhausted, sharp reversal toward ${ewFmt(q2.price)} expected`,
+    pivots: [toEW(q0, "0"), toEW(q1, "1"), toEW(q2, "2"), toEW(q3, "3"), toEW(q4, "4"), toEW(q5, "5")],
+    trendlines: [
+      [{ time: q1.time, value: q1.price }, { time: q5.time, value: ewLineAt(q1, q3, q5.time) }],
+      [{ time: q2.time, value: q2.price }, { time: q5.time, value: ewLineAt(q2, q4, q5.time) }],
+    ],
+    projections: [
+      { label: "W4", price: q4.price, color: col[0], isMain: false },
+      { label: "W2", price: q2.price, color: col[1], isMain: true },
+      { label: "Start", price: q0.price, color: col[2], isMain: false },
+    ],
+    projectionPath: [
+      { time: now, value: nowPrice },
+      { time: (now + avgDur) as UTCTimestamp, value: q2.price },
+      { time: (now + avgDur * 2) as UTCTimestamp, value: q0.price },
+    ],
+    // A new extreme past wave 5 means the wedge isn't finished.
+    invalidation: q5.price,
+  };
+}
+
+/** Contracting triangle: A-B-C-D-E, each leg smaller, lines converging. */
+function detectTriangle(ps: EWSwing[], now: UTCTimestamp, nowPrice: number, toEW: (p: EWSwing, l: string) => EWPivot): EWResult | null {
+  if (ps.length !== 6 || !ewAlternates(ps)) return null;
+  // Wave A falls in an uptrend triangle (and rises in a downtrend one); the
+  // breakout ("thrust") after E goes the trend's way.
+  const thrustUp = ps[0].type === "high";
+  const s = thrustUp ? 1 : -1;
+  const [t0, a, b, c, d, e] = ps.map(p => p.price * s);
+  const highsFall = b < t0 && d < b;
+  const lowsRise = c > a && e > c;
+  if (!highsFall || !lowsRise) return null;
+  const legs = [t0 - a, b - a, b - c, d - c, d - e];
+  for (let i = 1; i < legs.length; i++) {
+    const r = legs[i] / legs[i - 1];
+    if (r < 0.3 || r > 0.98) return null;   // every leg shorter than the last
+  }
+
+  const [q0, qa, qb, qc, qd, qe] = ps;
+  const widest = Math.abs(q0.price - qa.price);
+  const avgDur = Math.round((qe.time - q0.time) / 5);
+  const dir = thrustUp ? 1 : -1;
+  const col = thrustUp ? ["#86efac", "#22c55e"] : ["#fca5a5", "#ef4444"];
+  return {
+    pattern: "corrective", subtype: "triangle", name: "Contracting Triangle",
+    direction: thrustUp ? "bullish" : "bearish", complete: true, currentWave: "E",
+    description: `Contracting triangle (A-B-C-D-E) complete — ${thrustUp ? "upside" : "downside"} breakout expected`,
+    pivots: [toEW(q0, "0"), toEW(qa, "A"), toEW(qb, "B"), toEW(qc, "C"), toEW(qd, "D"), toEW(qe, "E")],
+    trendlines: [
+      [{ time: qb.time, value: qb.price }, { time: qe.time, value: ewLineAt(qb, qd, qe.time) }],
+      [{ time: qa.time, value: qa.price }, { time: qe.time, value: ewLineAt(qa, qc, qe.time) }],
+    ],
+    projections: [
+      { label: "Thrust 61.8%", price: qe.price + dir * widest * 0.618, color: col[0], isMain: false },
+      { label: "Thrust 100%", price: qe.price + dir * widest, color: col[1], isMain: true },
+    ],
+    projectionPath: [
+      { time: now, value: nowPrice },
+      { time: (now + avgDur * 2) as UTCTimestamp, value: qe.price + dir * widest },
+    ],
+    // Breaking past E the wrong way means the triangle failed.
+    invalidation: qe.price,
+  };
+}
+
+// ── Elliott tab: plain-language story ────────────────────────────────────────
+// Written so a beginner gets it: staircase (impulse), spring (triangle),
+// tired runner (finished trend). One place for all the wording.
+
+const EW_TARGET_NAMES: Record<string, string> = {
+  "A 38.2%": "Pullback — small (38%)", "A 61.8%": "Pullback — typical (62%)", "Full 100%": "Pullback — all the way back",
+  "W4 38.2%": "Rest ends — small", "W4 50%": "Rest ends — typical", "W4 61.8%": "Rest ends — deep", "W5 proj": "Last step target",
+  "W5 0.618× W1": "Last step — short (0.6× step 1)", "W5 equal (1.0)": "Last step — same size as step 1",
+  "W5 target (1.618)": "Last step — long (1.6× step 1)", "W5 ext (2.618)": "Last step — stretched (2.6× step 1)",
+  "Rev 38.2%": "Turn — first stop", "Rev 61.8%": "Turn — typical", "Rev 100%": "Turn — all the way back",
+  "Thrust 61.8%": "Pop — small", "Thrust 100%": "Pop — full size",
+  "W4": "Wave 4 level", "W2": "Wave 2 level", "Start": "Where it started",
+};
+
+/**
+ * Where the count expects price to END UP (net), not the next little swing.
+ * Wave 4 is only a small counter-trend rest before wave 5 continues the
+ * trend, so its net call is the trend's direction — calling it "next move
+ * up" inside a bearish count read as a contradiction.
+ */
+function ewNextUp(ew: EWResult): boolean {
+  const b = ew.direction === "bullish";
+  if (ew.subtype === "triangle") return b;                 // breakout goes with the trend
+  if (ew.pattern === "impulse") return !ew.complete ? b : !b; // waves 4/5 continue; finished 5 reverses
+  return !b;                                               // finished A-B-C reverses
+}
+
+/** Short label for the expected path, e.g. "small bounce, then down". */
+function ewNextLabel(ew: EWResult): string {
+  const b = ew.direction === "bullish";
+  if (ew.pattern === "impulse" && !ew.complete && ew.currentWave === "4")
+    return `small ${b ? "dip" : "bounce"}, then ${b ? "up" : "down"}`;
+  return ewNextUp(ew) ? "up" : "down";
+}
+
+function ewKidStory(ew: EWResult): { rows: Array<{ label: string; desc: string; up: boolean; pct: string; price: number }>; what: string; next: string } {
+  const $ = (n?: number | null) => (n == null ? "—" : ewFmt(n));
+  const P = ew.pivots;
+  const bull = ew.direction === "bullish";
+  const go = bull ? "up" : "down";
+  const st = ew.subtype;
+  const proj = (l: string) => ew.projections.find(p => p.label === l)?.price;
+  const main = ew.projections.find(p => p.isMain)?.price;
+  // Targets price has already reached since the last swing (projectionPath
+  // starts at the current price) — say so instead of pretending they're ahead.
+  const nowPrice = ew.projectionPath[0]?.value;
+  const lastSwing = P[P.length - 1]?.price;
+  // The immediate swing (wave 4's rest goes against the trend) — that's the
+  // way the listed wave-4 levels sit from the last swing.
+  const nextUp = ew.pattern === "impulse" && !ew.complete && ew.currentWave === "4" ? !bull : ewNextUp(ew);
+  const hit = nowPrice == null || lastSwing == null ? [] : ew.projections.filter(p =>
+    nextUp ? p.price > lastSwing && p.price <= nowPrice : p.price < lastSwing && p.price >= nowPrice);
+  const progressTxt = !hit.length ? ""
+    : hit.length === ew.projections.filter(p => (nextUp ? p.price > lastSwing! : p.price < lastSwing!)).length
+      ? ` Price is already at ${$(nowPrice)} — every target here has been reached, so this pattern has mostly played out.`
+      : ` Price is already at ${$(nowPrice)}, past ${$(hit.reduce((f, p) => (nextUp ? (p.price > f ? p.price : f) : (p.price < f ? p.price : f)), hit[0].price))}.`;
+  const breakTxt = (up: boolean) => progressTxt +
+    (ew.invalidation != null ? ` If price ${up ? "climbs above" : "drops below"} ${$(ew.invalidation)}, this reading is wrong.` : "");
+  // How much of the previous leg leg i took back, in %.
+  const share = (i: number) => {
+    const prevLeg = i >= 2 ? Math.abs(P[i - 1].price - P[i - 2].price) : 0;
+    return prevLeg ? Math.round(Math.abs(P[i].price - P[i - 1].price) / prevLeg * 100) : 0;
+  };
+  const corrDown = ew.direction === "bearish";          // which way an A-B-C moved
+  const cPastA = P.length >= 4 && (corrDown ? P[3].price < P[1].price : P[3].price > P[1].price);
+
+  const rows = P.slice(1).map((p, k) => {
+    const i = k + 1, prev = P[k], L = p.label;
+    let desc = "";
+    if (st === "triangle") {
+      desc = ({ A: "First swing", B: "Smaller swing back", C: "Smaller again", D: "Even smaller", E: "Tiniest swing — squeeze almost done" } as Record<string, string>)[L] ?? "";
+    } else if (ew.pattern === "impulse") {
+      desc = ({
+        "1": `First push ${go}`,
+        "2": `Took a breather — gave back ${share(i)}% of wave 1`,
+        // Wave 3 can't be the shortest, but may be a bit shorter than wave 1.
+        "3": st === "diagonal" ? `Push ${go}, a bit weaker`
+          : P.length > 3 && Math.abs(P[3].price - P[2].price) >= Math.abs(P[1].price - P[0].price) ? `Biggest push ${go}` : `Strong push ${go}`,
+        "4": st === "diagonal" ? "Breather — dipped into wave 1's zone" : `Another breather — gave back ${share(i)}% of wave 3`,
+        "5": st === "diagonal" ? `Last, tired push ${go}` : `Last push ${go}`,
+      } as Record<string, string>)[L] ?? "";
+    } else {
+      desc = ({
+        A: "First move against the trend",
+        B: `${corrDown ? "Bounced back" : "Dipped back"} ${share(i)}% of A`,
+        C: cPastA ? "Last move — went past A" : "Last move — stopped near A",
+      } as Record<string, string>)[L] ?? "";
+    }
+    return { label: /^\d$/.test(L) ? `W${L}` : L, desc, up: p.price > prev.price, pct: Math.abs((p.price - prev.price) / prev.price * 100).toFixed(1) + "%", price: p.price };
+  });
+
+  const stairs = `Think of price walking ${go} a staircase in 5 steps: 3 big steps and 2 small rests.`;
+  let what = "", next = "";
+  if (st === "triangle") {
+    what = "Price is bouncing between two lines that keep getting closer — like squeezing a spring. Each swing (A to E) is smaller than the one before.";
+    next = `A squeezed spring pops. This one is expected to pop ${go}, about as far as the triangle was wide — toward ${$(main)}.` + breakTxt(!bull);
+  } else if (st === "diagonal") {
+    what = `Price went ${go} in 5 steps, but each step had less energy — squeezed into a wedge (the two dashed lines on the chart). That's how a trend runs out of gas.`;
+    next = `Wedges often snap the other way, fast — usually at least back to wave 2 (${$(proj("W2"))}), passing wave 4 (${$(proj("W4"))}) on the way. It can go all the way back to where the wedge started, ${$(proj("Start"))}.` + breakTxt(bull);
+  } else if (ew.pattern === "impulse" && ew.complete) {
+    what = `${stairs} All 5 steps are done — like a runner after a race, the move is tired.`;
+    next = `After 5 steps, price usually rests the other way in 3 moves (A, B, C), often giving back 38–62% of the whole move: about ${$(proj("A 38.2%"))} to ${$(proj("A 61.8%"))}. A deep rest can go all the way back to ${$(proj("Full 100%"))}.` + breakTxt(bull);
+  } else if (ew.pattern === "impulse" && ew.currentWave === "5") {
+    what = `${stairs} Steps 1 to 4 are done. Now price is taking its last step ${go} (wave 5).`;
+    // Wave 3 was the big one → step 5 is usually about as long as step 1;
+    // otherwise step 5 is often the long one (see the detector).
+    const eqMain = ew.projections.find(p => p.isMain)?.label === "W5 equal (1.0)";
+    next = (eqMain
+      ? `Step 3 was the big one, so the last step is often about the same size as step 1 — around ${$(main)}.`
+      : `Step 3 wasn't extra big, so the last step may be the long one — around ${$(main)}.`)
+      + " Last steps can stop early, so be careful near these prices." + breakTxt(!bull);
+  } else if (ew.pattern === "impulse" && ew.currentWave === "4") {
+    what = `${stairs} Steps 1, 2 and 3 are done — the big step ended at ${$(P[P.length - 1]?.price)}. Now price is taking its second rest (wave 4), moving ${bull ? "down" : "up"} a little.`;
+    // Deep levels that would break the wave-1 rule are already removed.
+    const w4 = ew.projections.filter(p => p.label.startsWith("W4")).map(p => p.price);
+    const w4Txt = w4.length > 1 ? `between ${$(w4[0])} and ${$(w4[w4.length - 1])}` : w4.length ? `around ${$(w4[0])}` : "soon";
+    next = `This rest usually ends ${w4Txt}. After that, one last step ${go} (wave 5) toward ${$(proj("W5 proj"))} is expected.` + breakTxt(!bull);
+  } else if (ew.pattern === "corrective") {
+    const cg = corrDown ? "down" : "up", back = corrDown ? "up" : "down";
+    if (st === "flat")
+      what = `After a trend, price took a sideways break in 3 moves: ${cg} (A), back ${back} almost to where it started (B), then ${cg} again to about where A ended (C). A sideways break means the main trend is still strong.`;
+    else if (st === "expanded-flat")
+      what = `Price took a tricky break in 3 moves: ${cg} (A), then ${back} even past where it started (B) to fool one side, then ${cg} past A (C) to fool the other. That trick often marks the end of the break.`;
+    else
+      what = `After a trend, price took a quick, sharp break in 3 moves: ${cg} (A), a small ${corrDown ? "bounce" : "dip"} (B), then ${cg} again${cPastA ? " past A" : ""} (C). That break looks finished.`;
+    next = `Price is now expected to turn ${back}, often winning back 38–62% of the break: about ${$(proj("Rev 38.2%"))} to ${$(proj("Rev 61.8%"))}. A strong turn can go all the way back to ${$(proj("Rev 100%"))}.` + breakTxt(!corrDown);
+  }
+  return { rows, what, next };
+}
 
 function detectElliottWaves(candles: CandleDataPoint[]): EWResult {
   const empty: EWResult = { pattern: "none", direction: "unknown", pivots: [], currentWave: "—", description: "Insufficient data", complete: false, projections: [], projectionPath: [], invalidation: null };
@@ -876,7 +1199,7 @@ function detectElliottWaves(candles: CandleDataPoint[]): EWResult {
 
   if (filt.length < 4) return empty;
 
-  const toEW = (p: Pivot, label: string): EWPivot => ({ time: p.time, price: p.price, label, pivotType: p.type });
+  const toEW = (p: EWSwing, label: string): EWPivot => ({ time: p.time, price: p.price, label, pivotType: p.type });
 
   // Fibonacci scoring (lower = better fit to ideal ratios)
   const fibDev = (actual: number, ideal: number) => Math.abs(actual - ideal);
@@ -929,12 +1252,15 @@ function detectElliottWaves(candles: CandleDataPoint[]): EWResult {
          + fibDev(w5/w1, 1.0) * 0.5;
   }
 
-  // Scan last 14 pivots for best-scoring complete 5-wave
+  // Best-scoring complete 5-wave whose wave 5 is the latest swing (or the
+  // one before it, i.e. wave A has just started). Older counts are stale —
+  // the "correction expected" has already played out (it used to look back
+  // 14 swings and report a months-old count as current).
   const SCORE_THRESHOLD = 1.8;
   let bestBullIdx = -1, bestBullScore = Infinity;
   let bestBearIdx = -1, bestBearScore = Infinity;
 
-  for (let s = Math.max(0, filt.length - 14); s <= filt.length - 6; s++) {
+  for (let s = Math.max(0, filt.length - 7); s <= filt.length - 6; s++) {
     const ps = filt.slice(s, s + 6);
     if (validBull(ps)) { const sc = scoreBull(ps); if (sc < bestBullScore) { bestBullScore = sc; bestBullIdx = s; } }
     if (validBear(ps)) { const sc = scoreBear(ps); if (sc < bestBearScore) { bestBearScore = sc; bestBearIdx = s; } }
@@ -944,14 +1270,16 @@ function detectElliottWaves(candles: CandleDataPoint[]): EWResult {
     const [p0,p1,p2,p3,p4,p5] = filt.slice(bestBullIdx, bestBullIdx + 6);
     const total = p5.price - p0.price;
     const avgDur = Math.round((p5.time - p0.time) / 5);
-    const aT = p5.price - total*0.618, bT = aT + (p5.price-aT)*0.5, cT = aT - (p5.price-aT)*0.618;
+    // Path matches the text: A to the 38.2% level, B halfway back, C ends
+    // at the typical 61.8% retrace (the old C formula overshot to 100%+).
+    const aT = p5.price - total*0.382, bT = aT + (p5.price-aT)*0.5, cT = p5.price - total*0.618;
     return { pattern:"impulse", direction:"bullish", complete:true, currentWave:"5",
       description:`Bullish 5-wave complete — correction expected (score ${bestBullScore.toFixed(2)})`,
       pivots:[toEW(p0,"0"),toEW(p1,"1"),toEW(p2,"2"),toEW(p3,"3"),toEW(p4,"4"),toEW(p5,"5")],
       projections:[
         { label:"A 38.2%", price: p5.price-total*0.382, color:"#fcd34d", isMain:false },
         { label:"A 61.8%", price: p5.price-total*0.618, color:"#f97316", isMain:true },
-        { label:"C = A",   price: p5.price-total*1.0,   color:"#ef4444", isMain:false },
+        { label:"Full 100%", price: p5.price-total*1.0,   color:"#ef4444", isMain:false },
       ],
       projectionPath:[
         { time: now, value: nowPrice },
@@ -968,14 +1296,16 @@ function detectElliottWaves(candles: CandleDataPoint[]): EWResult {
     const [p0,p1,p2,p3,p4,p5] = filt.slice(bestBearIdx, bestBearIdx + 6);
     const total = p0.price - p5.price;
     const avgDur = Math.round((p5.time - p0.time) / 5);
-    const aT = p5.price+total*0.618, bT = aT-(aT-p5.price)*0.5, cT = aT+(aT-p5.price)*0.618;
+    // Path matches the text: A to the 38.2% level, B halfway back, C ends
+    // at the typical 61.8% retrace (the old C formula overshot to 100%+).
+    const aT = p5.price+total*0.382, bT = aT-(aT-p5.price)*0.5, cT = p5.price+total*0.618;
     return { pattern:"impulse", direction:"bearish", complete:true, currentWave:"5",
       description:`Bearish 5-wave complete — correction expected (score ${bestBearScore.toFixed(2)})`,
       pivots:[toEW(p0,"0"),toEW(p1,"1"),toEW(p2,"2"),toEW(p3,"3"),toEW(p4,"4"),toEW(p5,"5")],
       projections:[
         { label:"A 38.2%", price: p5.price+total*0.382, color:"#86efac", isMain:false },
         { label:"A 61.8%", price: p5.price+total*0.618, color:"#22c55e", isMain:true },
-        { label:"C = A",   price: p5.price+total*1.0,   color:"#16a34a", isMain:false },
+        { label:"Full 100%", price: p5.price+total*1.0,   color:"#16a34a", isMain:false },
       ],
       projectionPath:[
         { time: now, value: nowPrice },
@@ -988,6 +1318,13 @@ function detectElliottWaves(candles: CandleDataPoint[]): EWResult {
       invalidation: p5.price };
   }
 
+  // Diagonal (wedge) and triangle — both end at the latest swing.
+  const last6 = filt.slice(-6);
+  const diag = detectDiagonal(last6, now, nowPrice, toEW);
+  if (diag) return diag;
+  const tri = detectTriangle(last6, now, nowPrice, toEW);
+  if (tri) return tri;
+
   // In-progress: wave 4 complete → wave 5 forming (5 pivots)
   if (filt.length >= 5) {
     const [p0,p1,p2,p3,p4] = filt.slice(-5);
@@ -999,18 +1336,21 @@ function detectElliottWaves(candles: CandleDataPoint[]): EWResult {
           r2>=0.2 && r2<=0.99 && r4>=0.1 && r4<=0.75 && w3>=w1*0.8) {
         const avgDur = Math.round((p4.time-p0.time)/4);
         const t618=p4.price+w1*0.618, t100=p4.price+w1, t162=p4.price+w1*1.618, t262=p4.price+w1*2.618;
+        // Guideline: when wave 3 was extended (>1.618× wave 1), wave 5
+        // tends to equal wave 1; otherwise wave 5 is the one that stretches.
+        const w3ext = w3 > w1 * 1.618;
         return { pattern:"impulse", direction:"bullish", complete:false, currentWave:"5",
           description:"Wave 4 complete — wave 5 forming",
           pivots:[toEW(p0,"0"),toEW(p1,"1"),toEW(p2,"2"),toEW(p3,"3"),toEW(p4,"4")],
           projections:[
-            { label:"W5 min (0.618)",  price:t618, color:"#c4b5fd", isMain:false },
-            { label:"W5 equal (1.0)",  price:t100, color:"#a78bfa", isMain:false },
-            { label:"W5 target (1.618)", price:t162, color:"#7c3aed", isMain:true },
+            { label:"W5 0.618× W1",   price:t618, color:"#c4b5fd", isMain:false },
+            { label:"W5 equal (1.0)",  price:t100, color:"#a78bfa", isMain:w3ext },
+            { label:"W5 target (1.618)", price:t162, color:"#7c3aed", isMain:!w3ext },
             { label:"W5 ext (2.618)",  price:t262, color:"#ddd6fe", isMain:false },
           ],
           projectionPath:[
             { time: now, value: nowPrice },
-            { time: (now+avgDur) as UTCTimestamp, value: t162 },
+            { time: (now+avgDur) as UTCTimestamp, value: w3ext ? t100 : t162 },
           ],
           // A break back below the wave-4 low means wave 5 never
           // materialized — the impulse count is dead.
@@ -1025,18 +1365,19 @@ function detectElliottWaves(candles: CandleDataPoint[]): EWResult {
           r2>=0.2 && r2<=0.99 && r4>=0.1 && r4<=0.75 && w3>=w1*0.8) {
         const avgDur = Math.round((p4.time-p0.time)/4);
         const t618=p4.price-w1*0.618, t100=p4.price-w1, t162=p4.price-w1*1.618, t262=p4.price-w1*2.618;
+        const w3ext = w3 > w1 * 1.618;   // see the bullish case
         return { pattern:"impulse", direction:"bearish", complete:false, currentWave:"5",
           description:"Wave 4 complete — wave 5 forming",
           pivots:[toEW(p0,"0"),toEW(p1,"1"),toEW(p2,"2"),toEW(p3,"3"),toEW(p4,"4")],
           projections:[
-            { label:"W5 min (0.618)",  price:t618, color:"#c4b5fd", isMain:false },
-            { label:"W5 equal (1.0)",  price:t100, color:"#a78bfa", isMain:false },
-            { label:"W5 target (1.618)", price:t162, color:"#7c3aed", isMain:true },
+            { label:"W5 0.618× W1",   price:t618, color:"#c4b5fd", isMain:false },
+            { label:"W5 equal (1.0)",  price:t100, color:"#a78bfa", isMain:w3ext },
+            { label:"W5 target (1.618)", price:t162, color:"#7c3aed", isMain:!w3ext },
             { label:"W5 ext (2.618)",  price:t262, color:"#ddd6fe", isMain:false },
           ],
           projectionPath:[
             { time: now, value: nowPrice },
-            { time: (now+avgDur) as UTCTimestamp, value: t162 },
+            { time: (now+avgDur) as UTCTimestamp, value: w3ext ? t100 : t162 },
           ],
           // A break back above the wave-4 high means wave 5 never
           // materialized — the impulse count is dead.
@@ -1048,14 +1389,22 @@ function detectElliottWaves(candles: CandleDataPoint[]): EWResult {
   // In-progress: wave 3 complete → wave 4 retracing (4 pivots)
   if (filt.length >= 4) {
     const [p0,p1,p2,p3] = filt.slice(-4);
+    // Four swings read either as waves 0-1-2-3 or as an A-B-C. A flat's B
+    // (>80% retrace) or a zig-zag whose C isn't extended (<1.2× A) fits the
+    // correction better — real wave 3s are usually extended.
+    const abcAlt = classifyABC(p0, p1, p2, p3);
+    const preferABC = !!abcAlt && (abcAlt.subtype !== "zigzag" || Math.abs(p3.price - p2.price) < Math.abs(p1.price - p0.price) * 1.2);
     // Bullish
-    if (p0.type==="low"&&p1.type==="high"&&p2.type==="low"&&p3.type==="high") {
+    if (!preferABC && p0.type==="low"&&p1.type==="high"&&p2.type==="low"&&p3.type==="high") {
       const w1=p1.price-p0.price, w3=p3.price-p2.price;
       const r2=(p1.price-p2.price)/w1;
       if (p2.price>p0.price && p3.price>p1.price && r2>=0.2 && r2<=0.99 && w3>=w1*0.8) {
         const avgDur = Math.round((p3.time-p0.time)/3);
         const t382=p3.price-w3*0.382, t5=p3.price-w3*0.5, t618=p3.price-w3*0.618;
-        const w5proj = t382 + w1;
+        // Wave 5 ≈ wave 1; when that wouldn't even pass wave 3's high (wave 3
+        // was extended), use the other guideline: 0.618 × the whole 0→3 move.
+        const w5eq = t382 + w1;
+        const w5proj = w5eq > p3.price ? w5eq : t382 + (p3.price - p0.price) * 0.618;
         return { pattern:"impulse", direction:"bullish", complete:false, currentWave:"4",
           description:"Wave 3 complete — wave 4 retracement expected",
           pivots:[toEW(p0,"0"),toEW(p1,"1"),toEW(p2,"2"),toEW(p3,"3")],
@@ -1064,7 +1413,8 @@ function detectElliottWaves(candles: CandleDataPoint[]): EWResult {
             { label:"W4 50%",   price:t5,     color:"#f59e0b", isMain:true },
             { label:"W4 61.8%", price:t618,   color:"#d97706", isMain:false },
             { label:"W5 proj",  price:w5proj, color:"#a78bfa", isMain:false },
-          ],
+          // A wave-4 level inside wave 1's range would break the rule below.
+          ].filter(p => !p.label.startsWith("W4") || p.price > p1.price),
           projectionPath:[
             { time: now, value: nowPrice },
             { time: (now+avgDur) as UTCTimestamp, value: t382 },
@@ -1076,13 +1426,16 @@ function detectElliottWaves(candles: CandleDataPoint[]): EWResult {
       }
     }
     // Bearish
-    if (p0.type==="high"&&p1.type==="low"&&p2.type==="high"&&p3.type==="low") {
+    if (!preferABC && p0.type==="high"&&p1.type==="low"&&p2.type==="high"&&p3.type==="low") {
       const w1=p0.price-p1.price, w3=p2.price-p3.price;
       const r2=(p2.price-p1.price)/w1;
       if (p2.price<p0.price && p3.price<p1.price && r2>=0.2 && r2<=0.99 && w3>=w1*0.8) {
         const avgDur = Math.round((p3.time-p0.time)/3);
         const t382=p3.price+w3*0.382, t5=p3.price+w3*0.5, t618=p3.price+w3*0.618;
-        const w5proj = t382 - w1;
+        // Same as the bullish case: never project a wave 5 that fails to
+        // make a new low past wave 3.
+        const w5eq = t382 - w1;
+        const w5proj = w5eq < p3.price ? w5eq : t382 - (p0.price - p3.price) * 0.618;
         return { pattern:"impulse", direction:"bearish", complete:false, currentWave:"4",
           description:"Wave 3 complete — wave 4 retracement expected",
           pivots:[toEW(p0,"0"),toEW(p1,"1"),toEW(p2,"2"),toEW(p3,"3")],
@@ -1091,7 +1444,7 @@ function detectElliottWaves(candles: CandleDataPoint[]): EWResult {
             { label:"W4 50%",   price:t5,     color:"#f59e0b", isMain:true },
             { label:"W4 61.8%", price:t618,   color:"#d97706", isMain:false },
             { label:"W5 proj",  price:w5proj, color:"#a78bfa", isMain:false },
-          ],
+          ].filter(p => !p.label.startsWith("W4") || p.price < p1.price),
           projectionPath:[
             { time: now, value: nowPrice },
             { time: (now+avgDur) as UTCTimestamp, value: t382 },
@@ -1103,12 +1456,15 @@ function detectElliottWaves(candles: CandleDataPoint[]): EWResult {
       }
     }
 
-    // A-B-C corrective
+    // A-B-C corrective — named Zig-Zag / Flat / Expanded Flat by how far
+    // B retraced A (zig-zag < 80%, flat ≈ 80–105%, expanded flat > 105%).
     const [q0,qa,qb,qc] = filt.slice(-4);
-    if (q0.type==="high"&&qa.type==="low"&&qb.type==="high"&&qc.type==="low" && qb.price<q0.price && qc.price<qa.price) {
+    const abc = classifyABC(q0, qa, qb, qc);
+    if (abc && q0.type==="high") {
       const drop=q0.price-qc.price, avgDur=Math.round((qc.time-q0.time)/3);
       return { pattern:"corrective", direction:"bearish", complete:true, currentWave:"C",
-        description:"Bearish A-B-C complete — expect bullish reversal",
+        subtype: abc.subtype, name: abc.name,
+        description:`Bearish ${abc.name} (A-B-C) complete — expect bullish reversal`,
         pivots:[toEW(q0,"0"),toEW(qa,"A"),toEW(qb,"B"),toEW(qc,"C")],
         projections:[
           { label:"Rev 38.2%", price:qc.price+drop*0.382, color:"#86efac", isMain:false },
@@ -1124,10 +1480,11 @@ function detectElliottWaves(candles: CandleDataPoint[]): EWResult {
         // the "bullish reversal expected" call is wrong.
         invalidation: qc.price };
     }
-    if (q0.type==="low"&&qa.type==="high"&&qb.type==="low"&&qc.type==="high" && qb.price>q0.price && qc.price>qa.price) {
+    if (abc && q0.type==="low") {
       const rise=qc.price-q0.price, avgDur=Math.round((qc.time-q0.time)/3);
       return { pattern:"corrective", direction:"bullish", complete:true, currentWave:"C",
-        description:"Bullish A-B-C complete — expect bearish reversal",
+        subtype: abc.subtype, name: abc.name,
+        description:`Bullish ${abc.name} (A-B-C) complete — expect bearish reversal`,
         pivots:[toEW(q0,"0"),toEW(qa,"A"),toEW(qb,"B"),toEW(qc,"C")],
         projections:[
           { label:"Rev 38.2%", price:qc.price-rise*0.382, color:"#fca5a5", isMain:false },
@@ -1600,7 +1957,7 @@ async function getMMAnalysis(
   const ema50rel  = ind.ema50 != null ? (last.close > ind.ema50 ? `ABOVE $${ind.ema50.toFixed(2)} ✓` : `BELOW $${ind.ema50.toFixed(2)} ✗`) : "N/A";
   const ew = detectElliottWaves(candles);
   const ewLabel = ew.pattern !== "none"
-    ? `${ew.pattern === "impulse" ? "Impulse" : "Corrective"} ${ew.direction} — ${ew.description}${ew.invalidation != null ? ` (invalidated on a break of $${ew.invalidation.toFixed(2)})` : ""}`
+    ? `${ew.name ?? (ew.pattern === "impulse" ? "Impulse" : "Corrective")} ${ew.direction} — ${ew.description}${ew.invalidation != null ? ` (invalidated on a break of $${ew.invalidation.toFixed(2)})` : ""}`
     : "No clear pattern detected";
 
   const prompt = `You are an elite crypto market analyst specializing in reading market maker (MM) and institutional order flow from raw candlestick action. Your job: decode what smart money is doing on this ${intervalLabel} chart of ${coin}/USD and predict the next move with conviction.
@@ -1724,6 +2081,154 @@ async function fetchMTFBiases(coin: string): Promise<MTFBias[]> {
   });
 }
 
+/** First "$12,345.67" in a sentence (AI scenario text → its price level). */
+function firstPrice(s: string): number | null {
+  const m = s.match(/\$\s?([\d,]+(?:\.\d+)?)/);
+  const v = m ? parseFloat(m[1].replace(/,/g, "")) : NaN;
+  return Number.isFinite(v) && v > 0 ? v : null;
+}
+
+// ── Today's read ─────────────────────────────────────────────────────────────
+// One line at the top of Live Signals that reconciles the signals:
+// "right now" = this chart's chart pattern + Elliott next move + a fresh
+// candle pattern; "bigger picture" = the 4H / 1D / 1W trends. When they
+// disagree it says so ("short-term down, bigger picture up").
+
+type ReadDir = "up" | "down" | "flat";
+interface TodaysRead {
+  headline: string;                                  // e.g. "Bounce inside a downtrend"
+  line: string;                                      // one-sentence summary
+  tone: ReadDir | "mixed";
+  why: Array<{ text: string; dir: ReadDir }>;        // one plain sentence per signal
+  watch: string;                                     // levels that confirm / change the view
+  momentum: string | null;                           // RSI + volume context
+  /** One-tap price alerts for the levels above (direction from the current price). */
+  alerts: Array<{ price: number; direction: "above" | "below"; why: string }>;
+}
+
+/** One plain sentence for what the Elliott count expects. */
+function ewWhy(ew: EWResult): string {
+  const b = ew.direction === "bullish";
+  const proj = (l: string) => ew.projections.find(p => p.label === l)?.price;
+  const main = ew.projections.find(p => p.isMain)?.price;
+  const $ = (n?: number) => (n == null ? "—" : ewFmt(n));
+  if (ew.subtype === "triangle") return `Elliott: price is coiling in a triangle; the usual break is ${b ? "up" : "down"}, toward ${$(main)}.`;
+  if (ew.subtype === "diagonal") return `Elliott: a tired wedge ${b ? "up" : "down"} looks finished — a sharp ${b ? "drop" : "bounce"} back toward ${$(proj("W2"))} is common next.`;
+  if (ew.pattern === "impulse" && ew.complete) return `Elliott: 5 waves ${b ? "up" : "down"} look finished — a ${b ? "pullback" : "bounce"} toward ${$(proj("A 38.2%"))}–${$(proj("A 61.8%"))} is common next.`;
+  if (ew.pattern === "impulse" && ew.currentWave === "5") return `Elliott: the last leg ${b ? "up" : "down"} (wave 5) is underway, often reaching ${$(main)}.`;
+  if (ew.pattern === "impulse" && ew.currentWave === "4") return `Elliott: price is in a small ${b ? "dip" : "bounce"} (wave 4) inside a move ${b ? "up" : "down"}; one more leg ${b ? "up" : "down"} toward ${$(proj("W5 proj"))} is expected after it.`;
+  const down = ew.direction === "bearish";
+  return `Elliott: a 3-wave ${ew.name ? ew.name.toLowerCase() + " " : ""}${down ? "pullback" : "bounce"} looks finished — a turn ${down ? "up" : "down"} toward ${$(proj("Rev 38.2%"))}–${$(proj("Rev 61.8%"))} is common next.`;
+}
+
+function buildTodaysRead(o: {
+  candle: CandlePatternScan | null; chart: ChartPattern | null; ew: EWResult | null; mtf: MTFBias[];
+  ind: Indicators | null; price: number | null;
+}): TodaysRead | null {
+  const $ = (n: number) => ewFmt(n);
+  const why: TodaysRead["why"] = [];
+  let s = 0, w = 0;
+  // A chart pattern carries the most weight (more so once confirmed), then
+  // the Elliott count's net call, then a candle pattern from the last 3 candles.
+  if (o.chart) {
+    const c = o.chart, d = c.bias === "bullish" ? 1 : -1, wt = c.status === "breakout" ? 2 : 1.5;
+    s += d * wt; w += wt;
+    why.push({ dir: d > 0 ? "up" : "down", text: c.status === "breakout"
+      ? `${c.name}: price already broke ${d > 0 ? "up" : "down"} through ${$(c.trigger)} — the usual move points toward ${$(c.target)}.`
+      : `${c.name} forming: a close ${d > 0 ? "above" : "below"} ${$(c.trigger)} would point toward ${$(c.target)}.` });
+  }
+  if (o.ew && o.ew.pattern !== "none") {
+    const up = ewNextUp(o.ew);
+    s += up ? 1 : -1; w += 1;
+    why.push({ dir: up ? "up" : "down", text: ewWhy(o.ew) });
+  }
+  if (o.candle && o.candle.pattern.type !== "neutral" && o.candle.candlesAgo <= 3) {
+    const k = o.candle, d = k.pattern.type === "bullish" ? 1 : -1;
+    s += d; w += 1;
+    const ago = k.candlesAgo === 1 ? "on the last candle" : `${k.candlesAgo} candles ago`;
+    const record = k.hits !== null ? ` On this chart it worked ${k.hits} of ${k.samples} times.` : "";
+    why.push({ dir: d > 0 ? "up" : "down", text: `${k.pattern.name} ${ago} — a ${d > 0 ? "bullish" : "bearish"} candle signal.${record}` });
+  }
+  const short: ReadDir | null = w === 0 ? null : s / w >= 0.34 ? "up" : s / w <= -0.34 ? "down" : "flat";
+
+  const htf = o.mtf.filter(b => ["4H", "1D", "1W"].includes(b.label));
+  let big: ReadDir | null = null;
+  if (htf.length) {
+    const sc = htf.reduce((a, b) => a + (b.bias === "bullish" ? 1 : b.bias === "bearish" ? -1 : 0), 0) / htf.length;
+    big = sc >= 0.5 ? "up" : sc <= -0.5 ? "down" : "flat";
+    const all = htf.every(b => b.bias === htf[0].bias);
+    why.unshift({ dir: big, text: big === "flat"
+      ? `Bigger trend is mixed: ${htf.map(b => `${b.label} ${b.bias === "bullish" ? "up" : b.bias === "bearish" ? "down" : "flat"}`).join(", ")}.`
+      : `Bigger trend is ${big}${all ? ` on ${htf.map(b => b.label).join(", ")}` : " on most higher timeframes"} — price is ${big === "up" ? "above" : "below"} its 20- and 50-candle averages${all ? " on each" : ""}.` });
+  }
+  if (short === null && big === null) return null;
+
+  // Headline + one-line summary. One short-term signal → softer wording.
+  const st = `${w < 1.5 ? "leaning " : ""}${short}`;
+  let headline: string, line: string, tone: TodaysRead["tone"];
+  if (short && short !== "flat" && big && big !== "flat") {
+    if (short === big) { tone = short; headline = `Leaning ${short}`; line = "This chart and the bigger trend point the same way."; }
+    else {
+      tone = "mixed";
+      headline = short === "down" ? "Dip inside an uptrend" : "Bounce inside a downtrend";
+      line = `Short-term ${st}, bigger picture ${big}. Moves against the bigger trend are often short-lived, so the key question is whether this ${short === "down" ? "dip" : "bounce"} stalls or breaks through.`;
+    }
+  } else if (short && short !== "flat") {
+    tone = short; headline = `Short-term ${st}`;
+    line = big === null ? "The bigger-timeframe trend hasn't loaded yet." : "The bigger timeframes don't agree with each other, so this is a short-term read only.";
+  } else if (big && big !== "flat") {
+    tone = big; headline = `Trend ${big}, no clear short-term signal`;
+    line = short === "flat" ? "The short-term signals point in different directions, so the bigger trend is the main guide for now." : "Nothing on this chart stands out right now; the bigger trend is the main guide.";
+  } else {
+    tone = "flat"; headline = "Mixed — no clear edge";
+    line = "The signals point in different directions. A clean break of a key level is usually the next clue.";
+  }
+
+  // What to watch: nearest support/resistance, plus the price that would
+  // cancel the strongest short-term signal.
+  const sup = o.ind?.support[0], res = o.ind?.resistance[0];
+  const cancel = o.chart ? o.chart.invalidation : o.ew && o.ew.pattern !== "none" ? o.ew.invalidation : null;
+  const lean: ReadDir = tone === "mixed" ? (big as ReadDir) : tone;
+  let watch = "";
+  if (sup != null && res != null) {
+    watch = `Nearest levels: support ${$(sup)}, resistance ${$(res)}. `;
+    if (tone === "mixed")
+      watch += short === "up"
+        ? `If the bounce clears ${$(res)}, it has room to run; if it fails there, the downtrend usually takes over again.`
+        : `If the dip holds ${$(sup)}, the uptrend usually resumes; a break below it would make this more than a dip.`;
+    else if (lean === "down") watch += `A break below ${$(sup)} would add confirmation to the move down.`;
+    else if (lean === "up") watch += `A break above ${$(res)} would add confirmation to the move up.`;
+    else watch += `A clean break of either level is the next clue.`;
+  }
+  // Mixed reads already name both outcomes; only clear leans get a cancel level.
+  if (cancel != null && (tone === "up" || tone === "down"))
+    watch += ` ${tone === "down" ? "A move above" : "A move below"} ${$(cancel)} would cancel the ${o.chart ? "chart pattern" : "Elliott count"}.`;
+
+  // Momentum context.
+  let momentum: string | null = null;
+  const rsi = o.ind?.rsi, vol = o.ind?.volRatio;
+  if (rsi != null) {
+    const r = Math.round(rsi);
+    const rsiTxt = r >= 70 ? `RSI ${r} is overbought — buyers may be stretched` : r <= 30 ? `RSI ${r} is oversold — sellers may be stretched`
+      : r < 45 ? `RSI ${r} is on the weak side` : r > 55 ? `RSI ${r} is on the strong side` : `RSI ${r} is neutral`;
+    const volTxt = vol == null ? "" : vol < 0.6 ? `; volume is light (${vol.toFixed(2)}× normal), so moves may lack follow-through`
+      : vol > 1.5 ? `; volume is heavy (${vol.toFixed(2)}× normal), so there's strong participation` : "";
+    momentum = `${rsiTxt}${volTxt}.`;
+  }
+  // Alert suggestions for each level named above; skip any price is already at.
+  const alerts: TodaysRead["alerts"] = [];
+  const addAlert = (lvl: number | null | undefined, why: string) => {
+    if (lvl == null || o.price == null || Math.abs(lvl - o.price) < o.price * 0.0005) return;
+    if (alerts.some(a => Math.abs(a.price - lvl) < lvl * 0.0005)) return;
+    alerts.push({ price: lvl, direction: lvl > o.price ? "above" : "below", why });
+  };
+  addAlert(sup, "support break");
+  addAlert(res, "resistance break");
+  if (tone === "up" || tone === "down") addAlert(cancel, `cancels the ${o.chart ? "chart pattern" : "Elliott count"}`);
+
+  return { headline, line, tone, why, watch: watch.trim(), momentum, alerts };
+}
+
 function getMTFSummary(biases: MTFBias[]): {
   htfBias: "bullish" | "bearish" | "neutral";
   ltfBias: "bullish" | "bearish" | "neutral";
@@ -1740,26 +2245,34 @@ function getMTFSummary(biases: MTFBias[]): {
   const htfBias = toBias(score(htf));
   const ltfBias = toBias(score(ltf));
 
+  // "All" only when every timeframe really agrees (a 2-of-3 higher-timeframe
+  // majority used to be reported as "all timeframes").
+  const allSame = biases.length > 0 && biases.every(b => b.bias === biases[0].bias) ? biases[0].bias : null;
+  if (allSame === "bullish" || allSame === "bearish") {
+    const up = allSame === "bullish";
+    return { htfBias, ltfBias, direction: up ? "long" : "short",
+      explanation: `All ${biases.length} timeframes are trending ${up ? "up" : "down"}: on each one, price is ${up ? "above" : "below"} its 20- and 50-candle averages. ${up ? "Buyers" : "Sellers"} are in control at every level.` };
+  }
   if (htfBias === "bullish" && ltfBias === "bullish")
     return { htfBias, ltfBias, direction: "long",
-      explanation: "All timeframes bullish — strong buy setup. The trend is clear at every level. Enter longs, trail your stop." };
+      explanation: "Most timeframes are trending up, including the 1H. The bigger picture favors buyers." };
   if (htfBias === "bearish" && ltfBias === "bearish")
     return { htfBias, ltfBias, direction: "short",
-      explanation: "All timeframes bearish — strong sell setup. Trend is clear on every level. Short rallies, avoid longs." };
+      explanation: "Most timeframes are trending down, including the 1H. The bigger picture favors sellers." };
   if (htfBias === "bullish" && ltfBias === "bearish")
     return { htfBias, ltfBias, direction: "long",
-      explanation: "HTF uptrend + LTF pullback = buy-the-dip setup. Don't short — wait for the lower timeframe to turn bullish for your entry." };
+      explanation: "The bigger timeframes are trending up, but the 1H is dipping. In an uptrend, dips like this often get bought — many traders wait for the 1H to turn back up." };
   if (htfBias === "bearish" && ltfBias === "bullish")
     return { htfBias, ltfBias, direction: "short",
-      explanation: "HTF downtrend + LTF bounce = counter-trend rally. This 1H bounce is a shorting opportunity, not a buy. The 4H+ structure wins." };
+      explanation: "The bigger timeframes are trending down, but the 1H is bouncing. In a downtrend, bounces like this often fade — many traders wait for the 1H to turn back down." };
   if (htfBias === "bullish")
     return { htfBias, ltfBias, direction: "long",
-      explanation: "HTF structure is bullish. Lower timeframes are mixed — wait for the 1H to turn bullish before entering a long." };
+      explanation: "The bigger timeframes lean up; the 1H has no clear direction yet." };
   if (htfBias === "bearish")
     return { htfBias, ltfBias, direction: "short",
-      explanation: "HTF structure is bearish. Lower timeframes are mixed — wait for the 1H to confirm the sell before entering a short." };
+      explanation: "The bigger timeframes lean down; the 1H has no clear direction yet." };
   return { htfBias, ltfBias, direction: "wait",
-    explanation: "No clear trend across timeframes. Choppy market — reduce size or stay flat until higher timeframes align." };
+    explanation: "No clear trend across timeframes — price is mostly going sideways. The picture usually gets clearer once the bigger timeframes line up." };
 }
 
 // ── Trade Wizard ─────────────────────────────────────────────────────────────
@@ -1991,9 +2504,22 @@ function IndicatorStat({
 // ── Main component ────────────────────────────────────────────────────────────
 
 export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpenUpgrade, onReady, visible = true, ticker, onOpenCoinPicker }) => {
-  const { tier } = useAuth();
+  const { tier, user, profile } = useAuth();
+  // Re-render "Today's read" alert buttons after one is added/removed.
+  const [, setAlertTick] = useState(0);
+  useEffect(() => {
+    const bump = () => setAlertTick(t => t + 1);
+    window.addEventListener(PRICE_ALERTS_EVENT, bump);
+    return () => window.removeEventListener(PRICE_ALERTS_EVENT, bump);
+  }, []);
   const isPaid = hasAccess(tier, "pro");
   const [intervalIdx, setIntervalIdx] = useState(2);  // default 4h
+  // Candle Patterns card tapped → highlight the pattern on the chart.
+  // Hidden again when the coin or interval changes.
+  const [patternFocus, setPatternFocus] = useState(false);
+  // Chart Pattern card tapped → draw the pattern on the chart.
+  const [chartPatternFocus, setChartPatternFocus] = useState(false);
+  useEffect(() => { setPatternFocus(false); setChartPatternFocus(false); }, [coin, intervalIdx]);
   // Sliding highlight behind the active interval pill — same measure-the-
   // active-item-and-animate-a-transform technique as PriceChart.tsx's own
   // FsSlidingOptions (mobile dock interval/style picker), reimplemented
@@ -2187,6 +2713,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   const ema50Ref         = useRef<ISeriesApi<"Line", any> | null>(null);
   const elliottSeriesRef     = useRef<ISeriesApi<"Line", any> | null>(null);
   const elliottProjSeriesRef = useRef<ISeriesApi<"Line", any> | null>(null);
+  const elliottTrendSeriesRef = useRef<ISeriesApi<"Line", any>[]>([]);
   const elliottPriceLinesRef = useRef<IPriceLine[]>([]);
   const elliottResultRef     = useRef<EWResult | null>(null);
   const showElliottRef       = useRef(false);
@@ -2341,6 +2868,9 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     cwLineSeriesRef.current = chart.addSeries(LineSeries, { color: "#6366f1", lineWidth: 2, priceLineVisible: false, lastValueVisible: false, visible: false });
     const elliott      = chart.addSeries(LineSeries, { color: "#8b5cf6", lineWidth: 4, lineStyle: 0, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
     const elliottProj  = chart.addSeries(LineSeries, { color: "#8b5cf6", lineWidth: 3, lineStyle: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+    // Triangle / diagonal boundary lines (the two converging lines).
+    elliottTrendSeriesRef.current = [0, 1].map(() =>
+      chart.addSeries(LineSeries, { color: "rgba(139,92,246,0.7)", lineWidth: 1, lineStyle: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, visible: false }));
 
     chartRef.current           = chart;
     elliottSeriesRef.current   = elliott;
@@ -2855,6 +3385,13 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
       }
     }
 
+    // Triangle / diagonal boundary lines
+    elliottTrendSeriesRef.current.forEach((s, i) => {
+      const line = ew.trendlines?.[i];
+      s.setData(line ? line.map(p => ({ time: p.time as any, value: p.value })) : []);
+      s.applyOptions({ visible: ewVisible && !!line });
+    });
+
     // Clear old price lines
     elliottPriceLinesRef.current.forEach(pl => { try { elliottSeriesRef.current?.removePriceLine(pl); } catch {} });
     elliottPriceLinesRef.current = [];
@@ -3108,6 +3645,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
 
     elliottSeriesRef.current?.applyOptions({ visible: next });
     elliottProjSeriesRef.current?.applyOptions({ visible: next });
+    elliottTrendSeriesRef.current.forEach((s, i) => s.applyOptions({ visible: next && !!elliottResultRef.current?.trendlines?.[i] }));
 
     // Wave-number markers are computed inside feedChart (reading
     // showElliottRef, not this state) — re-run it now so they actually
@@ -3458,6 +3996,9 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   // MTF biases — pro+ only
   useEffect(() => {
     if (!isPaid) return;
+    // Clear first so nothing (Today's read, the MTF panel) shows the
+    // previous coin's trends while the new ones load.
+    setMtfBiases([]);
     fetchMTFBiases(coin as string).then(setMtfBiases).catch(() => {});
     setWizardIntent(null);
     setPredData(null);
@@ -3700,6 +4241,40 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   indRef.current = ind;
   macroCtxRef.current = macroCtx;
   const pattern = candles.length >= 3  ? detectPattern(candles)   : null;
+  const patternScan = candles.length >= 4 ? scanCandlePatterns(candles) : null;
+  // Classic chart patterns (H&S, double tops, triangles, wedges, flags) on
+  // closed candles only — re-run only when a candle closes, not every tick.
+  const closedKey = candles.length > 1 ? `${coin}|${intervalIdx}|${candles.length}|${candles[candles.length - 2].time}` : "";
+  const chartPatterns = useMemo(
+    () => (closedKey ? detectChartPatterns(candles.slice(0, -1) as PBar[]) : []),
+    [closedKey], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const chartPattern = chartPatterns[0] ?? null;
+  const toggleChartPatternFocus = () => {
+    if (chartPatternFocus || !chartPattern) { setChartPatternFocus(false); return; }
+    setChartPatternFocus(true);
+    const all = candlesRef.current;
+    const first = all.findIndex(c => (c.time as number) >= chartPattern.startTime);
+    if (first >= 0) chartRef.current?.timeScale().setVisibleLogicalRange({ from: Math.max(0, first - 15), to: all.length + 6 });
+    if (!cwDesktop) chartContainerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+  const patternTimesKey = patternScan?.times.join(",") ?? "";
+  // Stable array per pattern so the highlight doesn't re-measure every tick.
+  const patternTimes = useMemo(() => (patternTimesKey ? patternTimesKey.split(",").map(Number) : null), [patternTimesKey]);
+
+  // Tap the card: zoom the chart onto the pattern (with some lead-in) and
+  // show the highlight; tap again to hide it.
+  const togglePatternFocus = () => {
+    if (patternFocus || !patternScan) { setPatternFocus(false); return; }
+    setPatternFocus(true);
+    const all = candlesRef.current;
+    const first = all.findIndex(c => (c.time as number) === patternScan.times[0]);
+    if (first >= 0) {
+      chartRef.current?.timeScale().setVisibleLogicalRange({ from: Math.max(0, first - 40), to: all.length + 4 });
+    }
+    // Phones: the chart sits above the cards — bring it into view.
+    if (!cwDesktop) chartContainerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
 
   const rsiStatus = (): "bull" | "bear" | "neutral" | "warn" => {
     if (ind?.rsi == null) return "neutral";
@@ -3769,9 +4344,98 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
         <span className="cw-feed-live-dot" />
         <span className="cw-signal-cards-title">Live Signals</span>
       </div>
+      {!loading && (() => {
+        const read = buildTodaysRead({ candle: patternScan, chart: chartPattern, ew: elliottResult, mtf: mtfBiases, ind, price: heroPrice || null });
+        if (!read) return null;
+        return (
+          <div className={`cw-read cw-read--${read.tone}`}>
+            <span className="cw-read-kicker">Today's read</span>
+            <p className="cw-read-headline">{read.headline}</p>
+            <p className="cw-read-line">{read.line}</p>
+            {read.why.length > 0 && (
+              <>
+                <span className="cw-read-sub">Why</span>
+                <ul className="cw-read-why">
+                  {read.why.map(c => (
+                    <li key={c.text} className={`cw-read-why-item cw-read-why-item--${c.dir}`}>
+                      <span className="cw-read-why-dot" aria-hidden="true">{c.dir === "up" ? "▲" : c.dir === "down" ? "▼" : "•"}</span>
+                      <span>{c.text}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+            {read.watch && (
+              <>
+                <span className="cw-read-sub">What to watch</span>
+                <p className="cw-read-line">{read.watch}</p>
+              </>
+            )}
+            {read.alerts.length > 0 && (
+              <div className="cw-read-alerts">
+                <span className="cw-read-sub">Get notified</span>
+                <div className="cw-read-alert-row">
+                  {read.alerts.map(a => {
+                    const set = hasPriceAlert(coin as string, a.price, a.direction);
+                    return (
+                      <button
+                        key={`${a.direction}${a.price}`}
+                        type="button"
+                        className={`cw-read-alert${set ? " cw-read-alert--set" : ""}`}
+                        aria-pressed={set}
+                        aria-label={set ? `Cancel alert ${a.direction} ${ewFmt(a.price)}` : `Alert me ${a.direction} ${ewFmt(a.price)}`}
+                        onClick={() => {
+                          // Tap again to cancel (removes the server copy too, so no push).
+                          if (set) removePriceAlert(coin as string, a.price, a.direction, user?.id);
+                          else addPriceAlert(coin as CoinSymbol, a.price, a.direction, user?.id);
+                          setAlertTick(t => t + 1);
+                        }}
+                      >
+                        <span aria-hidden="true">{set ? "✓" : "🔔"}</span>
+                        {a.direction === "above" ? "Above" : "Below"} {ewFmt(a.price)}
+                        <em>{set ? "alert set" : a.why}</em>
+                        {set && <span className="cw-read-alert-x" aria-hidden="true">✕</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="cw-read-alert-hint">
+                  {!user
+                    ? "Alerts work while the app is open. Sign in to also get them as push notifications when it's closed."
+                    : profile?.notify_price_alerts === false
+                      ? "Price-alert notifications are turned off in your profile, so these won't push to your phone."
+                      : "You'll get a push notification when price crosses the level — even with the app closed. Tap a set alert to cancel it."}
+                </p>
+              </div>
+            )}
+            {read.momentum && <p className="cw-read-note">{read.momentum}</p>}
+          </div>
+        );
+      })()}
       <div className="cw-signal-cards">
-        <div className="cw-signal-card">
-          <span className="cw-signal-card-label">Elliott Wave</span>
+        {(() => {
+          // Tap: show the wave count on the chart (labels, path, targets,
+          // invalidation) — same as the Elliott chart toggle, which also
+          // zooms onto the wave. Tap again to hide.
+          const ewTap = !loading && !!elliottResult && elliottResult.pattern !== "none";
+          const onEw = () => {
+            toggleElliott();
+            if (!showElliott && !cwDesktop) chartContainerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+          };
+          return (
+        <div
+          className={`cw-signal-card${ewTap ? " cw-signal-card--tap" : ""}${ewTap && showElliott ? " cw-signal-card--on" : ""}`}
+          style={ewTap ? ({ "--ph-card": elliottResult!.direction === "bullish" ? "#22c55e" : elliottResult!.direction === "bearish" ? "#ef4444" : "#94a3b8" } as React.CSSProperties) : undefined}
+          {...(ewTap ? {
+            role: "button", tabIndex: 0, "aria-pressed": showElliott,
+            onClick: onEw,
+            onKeyDown: (e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onEw(); } },
+          } : {})}
+        >
+          <span className="cw-signal-card-label">
+            Elliott Wave
+            {ewTap && <span className="cw-signal-card-hint"> · {showElliott ? "showing on chart" : "tap to show on chart"}</span>}
+          </span>
           {loading ? (
             <div className="cw-signal-skeleton">
               <span className="cw-signal-skeleton-line cw-signal-skeleton-line--wide" />
@@ -3787,7 +4451,9 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                 </svg>
                 <div>
                   <div className="cw-signal-card-value">
-                    {elliottResult.pattern === "impulse" ? "Wave" : "Corr."} {elliottResult.currentWave}
+                    {elliottResult.name
+                      ? <>{elliottResult.name} <span className="cw-signal-card-tag--neutral">· {elliottResult.currentWave}</span></>
+                      : <>{elliottResult.pattern === "impulse" ? "Wave" : "Corr."} {elliottResult.currentWave}</>}
                   </div>
                   <div className={`cw-signal-card-tag cw-signal-card-tag--${elliottResult.direction === "bullish" ? "up" : elliottResult.direction === "bearish" ? "down" : "neutral"}`}>
                     {elliottResult.direction === "bullish" ? "Bullish" : elliottResult.direction === "bearish" ? "Bearish" : "Neutral"}
@@ -3798,6 +4464,99 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
             </>
           ) : (
             <p className="cw-signal-card-note">No clear wave count on this interval yet.</p>
+          )}
+        </div>
+          );
+        })()}
+
+        <div
+          className={`cw-signal-card${patternScan && !loading ? " cw-signal-card--tap" : ""}${patternFocus && patternScan ? " cw-signal-card--on" : ""}`}
+          style={patternScan ? ({ "--ph-card": patternScan.pattern.type === "bullish" ? "#22c55e" : patternScan.pattern.type === "bearish" ? "#ef4444" : "#94a3b8" } as React.CSSProperties) : undefined}
+          {...(patternScan && !loading ? {
+            role: "button", tabIndex: 0, "aria-pressed": patternFocus,
+            onClick: togglePatternFocus,
+            onKeyDown: (e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); togglePatternFocus(); } },
+          } : {})}
+        >
+          <span className="cw-signal-card-label">
+            Candle Patterns
+            {patternScan && !loading && <span className="cw-signal-card-hint"> · {patternFocus ? "showing on chart" : "tap to show on chart"}</span>}
+          </span>
+          {loading ? (
+            <div className="cw-signal-skeleton">
+              <span className="cw-signal-skeleton-line cw-signal-skeleton-line--wide" />
+              <span className="cw-signal-skeleton-line" />
+            </div>
+          ) : patternScan ? (() => {
+            const { pattern: p, candlesAgo, hits, samples, avgMovePct } = patternScan;
+            const dir = p.type === "bullish" ? "up" : p.type === "bearish" ? "down" : "neutral";
+            const color = dir === "up" ? "#22c55e" : dir === "down" ? "#ef4444" : "var(--color-text-muted)";
+            return (
+              <>
+                <div className="cw-signal-card-main">
+                  {/* Mini candle: body + wick in the pattern's colour. */}
+                  <svg width="40" height="26" viewBox="0 0 40 26" aria-hidden="true">
+                    <line x1="12" y1="3" x2="12" y2="23" stroke={color} strokeWidth="1.5" opacity="0.6" />
+                    <rect x="8" y="8" width="8" height="10" rx="1.5" fill={color} opacity="0.6" />
+                    <line x1="28" y1="1" x2="28" y2="25" stroke={color} strokeWidth="1.5" />
+                    <rect x="23" y="5" width="10" height="16" rx="1.5" fill={color} />
+                  </svg>
+                  <div>
+                    <div className="cw-signal-card-value">{p.name}</div>
+                    <div className={`cw-signal-card-tag cw-signal-card-tag--${dir}`}>
+                      {p.type === "bullish" ? "Bullish" : p.type === "bearish" ? "Bearish" : "Neutral"}
+                      <span className="cw-signal-card-tag--neutral"> · {candlesAgo === 1 ? "last candle" : `${candlesAgo} candles ago`}</span>
+                    </div>
+                  </div>
+                </div>
+                <p className="cw-signal-card-note">
+                  {hits !== null
+                    ? <>Worked {hits}/{samples} times here — price was {p.type === "bullish" ? "higher" : "lower"} {HIT_AHEAD} candles later (avg {avgMovePct! >= 0 ? "+" : ""}{avgMovePct!.toFixed(2)}%).</>
+                    : avgMovePct !== null
+                      ? <>Seen {samples} times here — avg move {avgMovePct >= 0 ? "+" : ""}{avgMovePct.toFixed(2)}% {HIT_AHEAD} candles later.</>
+                      : p.desc}
+                </p>
+              </>
+            );
+          })() : (
+            <p className="cw-signal-card-note">No clear pattern in the last {LATEST_WINDOW} candles.</p>
+          )}
+        </div>
+
+        {/* Classic chart pattern (H&S, double top/bottom, triangle, wedge, flag). */}
+        <div
+          className={`cw-signal-card${chartPattern && !loading ? " cw-signal-card--tap" : ""}${chartPatternFocus && chartPattern ? " cw-signal-card--on" : ""}`}
+          style={chartPattern ? ({ "--ph-card": chartPattern.bias === "bullish" ? "#22c55e" : "#ef4444" } as React.CSSProperties) : undefined}
+          {...(chartPattern && !loading ? {
+            role: "button", tabIndex: 0, "aria-pressed": chartPatternFocus,
+            onClick: toggleChartPatternFocus,
+            onKeyDown: (e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleChartPatternFocus(); } },
+          } : {})}
+        >
+          <span className="cw-signal-card-label">
+            Chart Pattern
+            {chartPattern && !loading && <span className="cw-signal-card-hint"> · {chartPatternFocus ? "showing on chart" : "tap to show on chart"}</span>}
+          </span>
+          {loading ? (
+            <div className="cw-signal-skeleton">
+              <span className="cw-signal-skeleton-line cw-signal-skeleton-line--wide" />
+              <span className="cw-signal-skeleton-line" />
+            </div>
+          ) : chartPattern ? (
+            <>
+              <div className="cw-signal-card-main">
+                <div>
+                  <div className="cw-signal-card-value">{chartPattern.name}</div>
+                  <div className={`cw-signal-card-tag cw-signal-card-tag--${chartPattern.bias === "bullish" ? "up" : "down"}`}>
+                    {chartPattern.bias === "bullish" ? "Bullish" : "Bearish"}
+                    <span className="cw-signal-card-tag--neutral"> · {chartPattern.status === "breakout" ? "confirmed" : "still forming"}</span>                  </div>
+                </div>
+              </div>
+              <p className="cw-signal-card-note">{chartPattern.what}</p>
+              <p className="cw-signal-card-note">{chartPattern.next}</p>
+            </>
+          ) : (
+            <p className="cw-signal-card-note">No classic chart pattern on this interval right now.</p>
           )}
         </div>
 
@@ -4839,6 +5598,22 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                 generation={chartGeneration}
                 visible={cwPrefs.style !== "line"}
               />
+              <PatternHighlight
+                chartRef={chartRef}
+                seriesRef={candleSeriesRef}
+                candlesRef={candlesRef as React.MutableRefObject<any[]>}
+                times={patternFocus ? patternTimes : null}
+                name={patternScan?.pattern.name ?? ""}
+                type={patternScan?.pattern.type ?? "neutral"}
+                desc={patternScan?.pattern.desc ?? ""}
+                onClose={() => setPatternFocus(false)}
+              />
+              <ChartPatternOverlay
+                chartRef={chartRef}
+                seriesRef={candleSeriesRef}
+                pattern={chartPatternFocus ? chartPattern : null}
+                onClose={() => setChartPatternFocus(false)}
+              />
               {/* Drawing tools (same rail as the Trade chart), desktop. */}
               <ChartDrawingTools
                 chartRef={chartRef}
@@ -5136,7 +5911,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                   <div className="cw-ai-header">
                     <span className="cw-ai-badge cw-ew-badge">〜 Elliott Wave</span>
                     {hasPattern && (
-                      <span className={`cw-elliott-btn-badge`}>Wave {elliottResult.currentWave}</span>
+                      <span className={`cw-elliott-btn-badge`}>{elliottResult.name ? `${elliottResult.name} · ` : ""}Wave {elliottResult.currentWave}</span>
                     )}
                   </div>
                   <button
@@ -5156,69 +5931,30 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
               {elliottResult && elliottResult.pattern !== "none" && (() => {
                 const ew = elliottResult;
                 const fmt = (p: number) => "$" + p.toLocaleString(undefined, { maximumFractionDigits: 0 });
-                const pct = (a: number, b: number) => Math.abs((b - a) / a * 100).toFixed(1) + "%";
-
-                // Build wave rows from pivot pairs
-                const waveRows = ew.pivots.slice(1).map((p, i) => {
-                  const prev = ew.pivots[i];
-                  const up = p.price > prev.price;
-                  const waveDescriptions: Record<string, string> = {
-                    "1": "Impulse — first push",
-                    "2": `Retraced ${pct(p.price, prev.price)} of W1`,
-                    "3": `Extended impulse — ${up ? "+" : "-"}${pct(prev.price, p.price)} move`,
-                    "4": `Consolidation — retraced ${pct(p.price, prev.price)} of W3`,
-                    "5": "Final push — impulse complete",
-                    "A": "Correction wave A",
-                    "B": `Rebound — recovered ${pct(prev.price, p.price)}`,
-                    "C": `Wave C — final correction leg`,
-                  };
-                  return { label: p.label, up, pct: pct(prev.price, p.price), price: p.price, desc: waveDescriptions[p.label] ?? "" };
-                });
-
-                // Situation + outlook text
-                let situation = "";
-                let outlook = "";
-                if (ew.pattern === "impulse" && ew.complete) {
-                  const last = ew.pivots[ew.pivots.length - 1];
-                  situation = `5-wave ${ew.direction} impulse completed its full structure at ${fmt(last.price)}. Classic Elliott theory says this exhausts the trend — a corrective A-B-C move typically follows before the next impulse.`;
-                  const mainProj = ew.projections.find(p => p.isMain);
-                  const cProj = ew.projections.find(p => p.label.startsWith("C"));
-                  outlook = `Watch for a Wave A ${ew.direction === "bullish" ? "pullback" : "bounce"} toward ${mainProj ? fmt(mainProj.price) : "—"}. If that level holds, expect a Wave B rebound before Wave C targets ${cProj ? fmt(cProj.price) : "—"}. A break of Wave C = A signals trend continuation.`;
-                } else if (ew.pattern === "impulse" && ew.currentWave === "5") {
-                  const w4 = ew.pivots[4];
-                  const mainProj = ew.projections.find(p => p.isMain);
-                  const minProj = ew.projections.find(p => p.label.includes("min"));
-                  situation = `Waves 1–4 are complete. Wave 4 ${ew.direction === "bullish" ? "dipped" : "peaked"} at ${fmt(w4.price)}, respecting the no-overlap rule. Wave 5 — the final impulse leg — is now forming.`;
-                  outlook = `Minimum Wave 5 target (0.618× W1) is ${minProj ? fmt(minProj.price) : "—"}. The classic target (1.618× W1) sits at ${mainProj ? fmt(mainProj.price) : "—"}. Look for ${ew.direction === "bullish" ? "bullish" : "bearish"} momentum confirmation before entries — Wave 5s can be extended or truncated.`;
-                } else if (ew.pattern === "impulse" && ew.currentWave === "4") {
-                  const w3 = ew.pivots[ew.pivots.length - 1];
-                  const t382 = ew.projections.find(p => p.label.includes("38.2"));
-                  const t618 = ew.projections.find(p => p.label.includes("61.8"));
-                  const w5proj = ew.projections.find(p => p.label.includes("W5"));
-                  situation = `Wave 3 peaked at ${fmt(w3.price)} — the strongest wave of the sequence. Wave 4 correction is now underway. It must NOT enter Wave 1 territory.`;
-                  outlook = `Key Wave 4 support: ${t382 ? fmt(t382.price) : "—"} (38.2%) to ${t618 ? fmt(t618.price) : "—"} (61.8%). Once Wave 4 completes, expect Wave 5 to target ${w5proj ? fmt(w5proj.price) : "—"}. A shallow Wave 4 (38.2%) often signals a strong Wave 5.`;
-                } else if (ew.pattern === "corrective") {
-                  const pc = ew.pivots[ew.pivots.length - 1];
-                  const mainProj = ew.projections.find(p => p.isMain);
-                  const full = ew.projections.find(p => p.label.includes("100"));
-                  situation = `A-B-C ${ew.direction} correction completed at ${fmt(pc.price)}. Three-wave corrections exhaust counter-trend moves — a reversal back into the primary trend is expected.`;
-                  outlook = `Primary reversal target: ${mainProj ? fmt(mainProj.price) : "—"} (61.8% recovery). Full recovery to ${full ? fmt(full.price) : "—"} (100%) would signal a fresh impulse is underway. Watch for a strong ${ew.direction === "bearish" ? "bullish" : "bearish"} candle to confirm the reversal.`;
-                }
+                // Plain-language rows + "what's happening" / "what's next".
+                const { rows: waveRows, what: situation, next: outlook } = ewKidStory(ew);
 
                 return (
                   <div className="cw-ew-analysis">
                     <div className="cw-ew-analysis-header">
                       Elliott Wave Analysis
-                      <span className={`cw-ew-dir cw-ew-dir--${ew.direction}`}>
-                        {ew.direction === "bullish" ? "▲ BULLISH" : ew.direction === "bearish" ? "▼ BEARISH" : "◆ NEUTRAL"}
-                      </span>
+                      {/* The NEXT move the text describes (not the past
+                          trend) — a finished 5 waves down expects a move up. */}
+                      {(() => {
+                        const nextUp = ewNextUp(ew);
+                        return (
+                          <span className={`cw-ew-dir cw-ew-dir--${nextUp ? "bullish" : "bearish"}`}>
+                            {nextUp ? "▲" : "▼"} NEXT: {ewNextLabel(ew).toUpperCase()}
+                          </span>
+                        );
+                      })()}
                     </div>
 
                     {/* Wave history */}
                     <div className="cw-ew-waves">
                       {waveRows.map(r => (
                         <div key={r.label} className="cw-ew-wave-row">
-                          <span className="cw-ew-wave-lbl">W{r.label}</span>
+                          <span className="cw-ew-wave-lbl">{r.label}</span>
                           <span className="cw-ew-wave-desc">{r.desc}</span>
                           <span className={`cw-ew-wave-pct cw-ew-wave-pct--${r.up ? "up" : "down"}`}>{r.up ? "▲" : "▼"} {r.pct}</span>
                           <span className="cw-ew-wave-price">{fmt(r.price)}</span>
@@ -5232,13 +5968,13 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                     {/* Outlook + targets */}
                     {outlook && (
                       <div className="cw-ew-outlook">
-                        <div className="cw-ew-outlook-title">↳ Next Move</div>
+                        <div className="cw-ew-outlook-title">↳ What might happen next</div>
                         <p className="cw-ew-outlook-text">{outlook}</p>
                         {ew.projections.length > 0 && (
                           <div className="cw-ew-targets">
                             {ew.projections.map(p => (
                               <div key={p.label} className={`cw-ew-target-row${p.isMain ? " cw-ew-target-row--main" : ""}`}>
-                                <span className="cw-ew-target-lbl">{p.label}</span>
+                                <span className="cw-ew-target-lbl">{EW_TARGET_NAMES[p.label] ?? p.label}</span>
                                 <span className="cw-ew-target-price" style={{ color: p.color }}>{fmt(p.price)}</span>
                               </div>
                             ))}
@@ -5494,11 +6230,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                   not the AI, so it misled next to an empty state). */}
               {(aiRead || aiLoading) && (
               <div className="cw-ai-header">
-                {pattern && pattern.type !== "neutral" && (
-                  <span className={`cw-pattern-tag cw-pattern-tag--${pattern.type}`}>
-                    {pattern.emoji} {pattern.name}
-                  </span>
-                )}
+                <span className="cw-desk-title">AI desk read</span>
                 <div className="cw-ai-header-refresh">
                   {secondsAgo !== null && (
                     <span className="cw-updated">↻ {secondsAgo}s ago</span>
@@ -5514,18 +6246,6 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
               </div>
               )}
 
-              {!aiLoading && aiRead && (
-                <button
-                  className={`cw-forecast-btn${showForecast ? ` cw-forecast-btn--active${aiRead.bias === "bearish" ? " cw-forecast-btn--bear" : ""}` : ""}`}
-                  onClick={toggleForecast}
-                >
-                  {showForecast ? "✕ Hide Prediction" : "✦ Predict Next Move on Chart"}
-                  {showForecast && (
-                    <span className="cw-forecast-btn-bias">{aiRead.bias.toUpperCase()}</span>
-                  )}
-                </button>
-              )}
-
               {aiLoading && (
                 <div className="cw-ai-loading">
                   <div className="cw-ai-spinner" />
@@ -5535,172 +6255,179 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
 
               {!aiLoading && aiRead && (
                 <>
-                  <div className={`cw-bias-bar cw-bias-bar--${aiRead.bias}`}>
-                    <span className="cw-bias-label">
-                      {aiRead.bias === "bullish" ? "▲ BULLISH BIAS" : aiRead.bias === "bearish" ? "▼ BEARISH BIAS" : "◆ NEUTRAL"}
-                      <span className="cw-bias-interval"> · {interval.label}</span>
-                    </span>
-                    <span className={`cw-confidence cw-confidence--${aiRead.confidence}`}>
-                      {aiRead.confidence.toUpperCase()} CONF
-                    </span>
-                  </div>
+                  {/* ── Pro desk layout ── */}
+                  {(() => {
+                    const now = heroPrice || null;
+                    const dist = (p: number) => (now ? ((p - now) / now) * 100 : null);
+                    const pct = (p: number) => { const d = dist(p); return d == null ? "" : `${d >= 0 ? "+" : ""}${d.toFixed(2)}%`; };
+                    const sc = aiRead.scenario;
+                    const bullT = sc ? firstPrice(sc.bullCase) : null;
+                    const bearT = sc ? firstPrice(sc.bearCase) : null;
+                    const trigT = sc ? firstPrice(sc.trigger) : null;
+                    const side = aiRead.bias === "bullish" ? "long" : aiRead.bias === "bearish" ? "short" : "flat";
+                    const confN = aiRead.confidence === "high" ? 3 : aiRead.confidence === "medium" ? 2 : 1;
 
-                  {/* Conflict notice — only for sub-MTF intervals (not 1h/4h/1d/1w which are already in the MTF panel) */}
-                  {mtfBiases.length > 0 && !["1h","4h","1d","1w"].includes(interval.value) && (() => {
-                    const mtf = getMTFSummary(mtfBiases);
-                    const aiBull = aiRead.bias === "bullish";
-                    const aiBear = aiRead.bias === "bearish";
-                    const conflicts = (aiBull && mtf.direction === "short") || (aiBear && mtf.direction === "long");
-                    if (!conflicts) return null;
-                    const htfDir = mtf.direction === "long" ? "bullish" : "bearish";
-                    const isCTRBull = aiBull && mtf.direction === "short";
+                    // Ladder: every level, merged when within 0.05%, sorted high → low.
+                    type Rung = { label: string; price: number; kind: "res" | "sup" | "bull" | "bear" | "trig" | "ai" };
+                    const raw: Rung[] = [
+                      ...(bullT ? [{ label: "Bull target", price: bullT, kind: "bull" as const }] : []),
+                      ...(bearT ? [{ label: "Bear target", price: bearT, kind: "bear" as const }] : []),
+                      ...(trigT ? [{ label: "Trigger", price: trigT, kind: "trig" as const }] : []),
+                      ...aiRead.keyLevels.map(l => ({ label: l.label, price: l.price, kind: "ai" as const })),
+                      ...(ind ? ind.resistance.slice(0, 2).map((r, i) => ({ label: `R${i + 1}`, price: r, kind: "res" as const })) : []),
+                      ...(ind ? ind.support.slice(0, 2).map((s, i) => ({ label: `S${i + 1}`, price: s, kind: "sup" as const })) : []),
+                    ];
+                    const rungs: Rung[] = [];
+                    for (const r of raw.sort((a, b) => b.price - a.price)) {
+                      const m = rungs.find(x => Math.abs(x.price - r.price) <= r.price * 0.0005);
+                      if (m) { if (!m.label.includes(r.label)) m.label += ` · ${r.label}`; if (r.kind !== "ai" && (m.kind === "ai" || m.kind === "res" || m.kind === "sup")) m.kind = r.kind; }
+                      else rungs.push({ ...r });
+                    }
+
+                    // Reward/risk for the bias: to the target vs. to the nearest level against it.
+                    let rr: { target: number; stop: number; ratio: number } | null = null;
+                    if (now && side !== "flat") {
+                      const target = side === "short" ? (bearT ?? ind?.support[0]) : (bullT ?? ind?.resistance[0]);
+                      const against = rungs.map(r => r.price).filter(p => (side === "short" ? p > now : p < now));
+                      const stop = against.length ? (side === "short" ? Math.min(...against) : Math.max(...against)) : null;
+                      if (target != null && stop != null) {
+                        const reward = side === "short" ? now - target : target - now;
+                        const risk = side === "short" ? stop - now : now - stop;
+                        if (reward > 0 && risk > 0) rr = { target, stop, ratio: reward / risk };
+                      }
+                    }
+                    const nowIdx = now ? rungs.findIndex(r => r.price < now) : -1;
+                    const mm = aiRead.mmAction.replace(/_/g, " ");
+
                     return (
-                      <div className="cw-bias-conflict">
-                        <div className="cw-bias-conflict-header">
-                          <span className="cw-bias-conflict-icon">⚠</span>
-                          <span className="cw-bias-conflict-title">Why you're seeing conflicting signals</span>
-                        </div>
-                        <div className="cw-bias-conflict-rows">
-                          <div className="cw-bias-conflict-row">
-                            <span className="cw-bias-conflict-source">{interval.label} AI</span>
-                            <span className="cw-bias-conflict-read">
-                              Reads <strong>{aiRead.bias}</strong> — based on candlestick patterns and momentum on your current {interval.label} chart
-                            </span>
+                      <div className={`cw-desk cw-desk--${side}`}>
+                        {/* Signal header */}
+                        <div className="cw-desk-signal">
+                          <div className="cw-desk-bias">
+                            <span className="cw-desk-bias-arrow">{side === "long" ? "▲" : side === "short" ? "▼" : "◆"}</span>
+                            <span className="cw-desk-bias-word">{side === "long" ? "LONG BIAS" : side === "short" ? "SHORT BIAS" : "NO EDGE"}</span>
+                            <span className="cw-desk-tf">{coin} · {interval.label}</span>
                           </div>
-                          <div className="cw-bias-conflict-row">
-                            <span className="cw-bias-conflict-source">HTF Trend</span>
-                            <span className="cw-bias-conflict-read">
-                              Reads <strong>{htfDir}</strong> — based on EMA20/50 structure across 1H · 4H · 1D · 1W
-                            </span>
+                          <div className="cw-desk-conf" title={`${aiRead.confidence} confidence`}>
+                            <span className="cw-desk-conf-label">CONF</span>
+                            <span className="cw-desk-conf-bars">{[1, 2, 3].map(n => <i key={n} className={n <= confN ? "on" : ""} />)}</span>
+                            <span className="cw-desk-conf-word">{aiRead.confidence.toUpperCase()}</span>
                           </div>
                         </div>
-                        <p className="cw-bias-conflict-note">
-                          Both are technically correct. A {isCTRBull ? "bullish bounce" : "bearish pullback"} can form
-                          inside a larger {htfDir} trend — this is called a <strong>counter-trend move</strong>.{" "}
-                          {isCTRBull
-                            ? "The bounce may be short-lived before sellers reassert control."
-                            : "The dip may be temporary before buyers step back in."}
-                          {" "}Trade with tighter stops and reduced size.
-                        </p>
+                        <div className="cw-desk-chips">
+                          <span className="cw-desk-chip">MM · {mm.toUpperCase()}</span>
+                          {sc && <span className={`cw-desk-chip cw-desk-chip--${sc.probability === "bulls favored" ? "long" : sc.probability === "bears favored" ? "short" : "flat"}`}>{sc.probability.toUpperCase()}</span>}
+                          {pattern && pattern.type !== "neutral" && <span className={`cw-desk-chip cw-desk-chip--${pattern.type === "bullish" ? "long" : "short"}`}>{pattern.name.toUpperCase()}</span>}
+                        </div>
+
+                        {/* Counter-trend flag: this chart's AI read vs the higher-timeframe trend. */}
+                        {mtfBiases.length > 0 && (() => {
+                          const htf = getMTFSummary(mtfBiases).htfBias;
+                          const against = (side === "long" && htf === "bearish") || (side === "short" && htf === "bullish");
+                          if (!against) return null;
+                          return (
+                            <div className="cw-desk-warn">
+                              ⚠ Counter-trend: {interval.label} reads {side}, the 4H–1W trend is {htf === "bullish" ? "up" : "down"}.
+                              Moves against the bigger trend are often short-lived.
+                            </div>
+                          );
+                        })()}
+
+                        {/* Thesis */}
+                        {sc && <p className="cw-desk-thesis">{sc.headline}</p>}
+
+                        {/* Scenarios */}
+                        {sc && (
+                          <div className="cw-desk-table">
+                            <div className="cw-desk-th"><span>Scenario</span><span>Level</span><span>Δ</span></div>
+                            {([
+                              ["bull", "▲ Bull", sc.bullCase, bullT],
+                              ["bear", "▼ Bear", sc.bearCase, bearT],
+                              ["trig", "⚡ Trigger", sc.trigger, trigT],
+                            ] as const).map(([k, name, text, lvl]) => (
+                              <div key={k} className={`cw-desk-tr cw-desk-tr--${k}`}>
+                                <div className="cw-desk-td-main">
+                                  <span className="cw-desk-td-name">{name}</span>
+                                  <span className="cw-desk-td-text">{text}</span>
+                                </div>
+                                <span className="cw-desk-td-num">{lvl != null ? ewFmt(lvl) : "—"}</span>
+                                <span className={`cw-desk-td-num cw-desk-td-pct${lvl != null && now ? (lvl > now ? " up" : " down") : ""}`}>{lvl != null ? pct(lvl) : ""}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Reward / risk */}
+                        {rr && (
+                          <div className="cw-desk-rr">
+                            <div><span>Target</span><b>{ewFmt(rr.target)}</b><em>{pct(rr.target)}</em></div>
+                            <div><span>Nearest level against</span><b>{ewFmt(rr.stop)}</b><em>{pct(rr.stop)}</em></div>
+                            <div className={`cw-desk-rr-ratio${rr.ratio >= 2 ? " good" : rr.ratio < 1 ? " poor" : ""}`}><span>Reward : risk</span><b>{rr.ratio.toFixed(1)} : 1</b><em>{rr.ratio >= 2 ? "favorable" : rr.ratio < 1 ? "unfavorable" : "fair"}</em></div>
+                          </div>
+                        )}
+
+                        {/* Price ladder */}
+                        {rungs.length > 0 && (
+                          <div className="cw-desk-ladder">
+                            <div className="cw-desk-sub">Price ladder</div>
+                            {rungs.map((r, i) => (
+                              <Fragment key={`${r.label}${r.price}`}>
+                                {i === nowIdx && now && (
+                                  <div className="cw-desk-rung cw-desk-rung--now"><span>▶ NOW</span><b>{ewFmt(now)}</b><em /></div>
+                                )}
+                                <div className={`cw-desk-rung cw-desk-rung--${r.kind}${now ? (r.price > now ? " above" : " below") : ""}`}>
+                                  <span>{r.label}</span><b>{ewFmt(r.price)}</b><em>{pct(r.price)}</em>
+                                </div>
+                              </Fragment>
+                            ))}
+                            {nowIdx === -1 && now && (
+                              <div className="cw-desk-rung cw-desk-rung--now"><span>▶ NOW</span><b>{ewFmt(now)}</b><em /></div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Derivatives / market data */}
+                        {macroCtx && (
+                          <div className="cw-desk-stats">
+                            {macroCtx.fundingRate != null && (
+                              <div className={macroCtx.fundingRate > 0.0001 ? "short" : macroCtx.fundingRate < -0.0001 ? "long" : ""}>
+                                <span>Funding 8h</span><b>{macroCtx.fundingRate >= 0 ? "+" : ""}{(macroCtx.fundingRate * 100).toFixed(4)}%</b>
+                              </div>
+                            )}
+                            {macroCtx.oiDelta != null && (
+                              <div className={macroCtx.oiDelta > 0 ? "long" : "short"}>
+                                <span>OI Δ</span><b>{macroCtx.oiDelta >= 0 ? "+" : ""}{macroCtx.oiDelta.toFixed(2)}%</b>
+                              </div>
+                            )}
+                            {macroCtx.btcDominance != null && (
+                              <div><span>BTC Dom</span><b>{macroCtx.btcDominance.toFixed(1)}%</b></div>
+                            )}
+                            {macroCtx.marketStructure != null && (
+                              <div className={macroCtx.marketStructure === "uptrend" ? "long" : macroCtx.marketStructure === "downtrend" ? "short" : ""}>
+                                <span>Daily structure</span><b>{macroCtx.marketStructure === "uptrend" ? "↑ Up" : macroCtx.marketStructure === "downtrend" ? "↓ Down" : "→ Range"}</b>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Desk notes */}
+                        <div className="cw-desk-notes">
+                          <div><span>Smart money</span><p>{aiRead.mmReading}</p></div>
+                          <div><span>Next move</span><p>{aiRead.nextMove}</p></div>
+                        </div>
+
+                        <button
+                          type="button"
+                          className={`cw-desk-plot${showForecast ? " on" : ""}`}
+                          onClick={toggleForecast}
+                        >
+                          {showForecast ? "✕ Hide projection" : "✦ Plot projection on chart"}
+                        </button>
                       </div>
                     );
                   })()}
 
-
-                  {/* ── Macro Context ── */}
-                  {macroCtx && (
-                    <div className="cw-macro-panel">
-                      <div className="cw-macro-panel-label">Macro Context</div>
-                      <div className="cw-macro-chips">
-                        {macroCtx.btcDominance != null && (
-                          <div className="cw-macro-chip">
-                            <span className="cw-macro-chip-key">BTC Dom</span>
-                            <span className="cw-macro-chip-val">{macroCtx.btcDominance.toFixed(1)}%</span>
-                          </div>
-                        )}
-                        {macroCtx.fundingRate != null && (
-                          <div className={`cw-macro-chip cw-macro-chip--${macroCtx.fundingRate > 0.0001 ? "bear" : macroCtx.fundingRate < -0.0001 ? "bull" : "neutral"}`}>
-                            <span className="cw-macro-chip-key">Funding 8h</span>
-                            <span className="cw-macro-chip-val">
-                              {macroCtx.fundingRate >= 0 ? "+" : ""}{(macroCtx.fundingRate * 100).toFixed(4)}%
-                            </span>
-                          </div>
-                        )}
-                        {macroCtx.oiDelta != null && (
-                          <div className={`cw-macro-chip cw-macro-chip--${macroCtx.oiDelta > 0 ? "bull" : "bear"}`}>
-                            <span className="cw-macro-chip-key">OI Change</span>
-                            <span className="cw-macro-chip-val">
-                              {macroCtx.oiDelta >= 0 ? "+" : ""}{macroCtx.oiDelta.toFixed(2)}%
-                            </span>
-                          </div>
-                        )}
-                        {macroCtx.marketStructure != null && (
-                          <div className={`cw-macro-chip cw-macro-chip--${macroCtx.marketStructure === "uptrend" ? "bull" : macroCtx.marketStructure === "downtrend" ? "bear" : "neutral"}`}>
-                            <span className="cw-macro-chip-key">Daily MTF</span>
-                            <span className="cw-macro-chip-val">
-                              {macroCtx.marketStructure === "uptrend" ? "↑ Uptrend" : macroCtx.marketStructure === "downtrend" ? "↓ Downtrend" : "→ Ranging"}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-
-                  {/* ── Likely Scenario ── */}
-                  {aiRead.scenario && (
-                    <div className="cw-scenario">
-                      <div className="cw-scenario-headline">{aiRead.scenario.headline}</div>
-                      <div className="cw-scenario-rows">
-                        <div className="cw-scenario-row cw-scenario-row--bull">
-                          <span className="cw-scenario-side">▲ Bull case</span>
-                          <span className="cw-scenario-text">{aiRead.scenario.bullCase}</span>
-                        </div>
-                        <div className="cw-scenario-row cw-scenario-row--bear">
-                          <span className="cw-scenario-side">▼ Bear case</span>
-                          <span className="cw-scenario-text">{aiRead.scenario.bearCase}</span>
-                        </div>
-                        <div className="cw-scenario-row cw-scenario-row--trigger">
-                          <span className="cw-scenario-side">⚡ Watch for</span>
-                          <span className="cw-scenario-text">{aiRead.scenario.trigger}</span>
-                        </div>
-                      </div>
-                      <div className={`cw-scenario-prob cw-scenario-prob--${aiRead.scenario.probability === "bulls favored" ? "bull" : aiRead.scenario.probability === "bears favored" ? "bear" : "neutral"}`}>
-                        {aiRead.scenario.probability}
-                      </div>
-                    </div>
-                  )}
-
-
-                  <div className="cw-ai-section">
-                    <div className="cw-ai-section-label">What smart money is doing</div>
-                    <p className="cw-ai-text">{aiRead.mmReading}</p>
-                    <div className="cw-ai-section-label">Next move</div>
-                    <p className="cw-ai-text">{aiRead.nextMove}</p>
-                  </div>
-
-                  {(aiRead.keyLevels.length > 0 || (ind && (ind.resistance.length > 0 || ind.support.length > 0))) && (
-                    <div className="cw-ai-section">
-                      {aiRead.keyLevels.length > 0 && (
-                        <div className="cw-levels">
-                          <div className="cw-ai-section-label">Key levels</div>
-                          {aiRead.keyLevels.map((lv, i) => (
-                            <div key={i} className={`cw-level-row cw-level-row--${lv.side}`}>
-                              <span className="cw-level-label">{lv.label}</span>
-                              <span className="cw-level-price">${lv.price.toLocaleString("en-US", { maximumFractionDigits: 0 })}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                  {/* S/R from indicators */}
-                  {ind && (ind.resistance.length > 0 || ind.support.length > 0) && (
-                    <div className="cw-levels">
-                      <div className="cw-ai-section-label">Chart levels</div>
-                      {ind.resistance.slice(0, 2).map((r, i) => (
-                        <div key={"r" + i} className="cw-level-row cw-level-row--above">
-                          <div className="cw-level-tag">
-                            <span className="cw-level-label">R{i + 1}</span>
-                            <span className="cw-level-sublabel">{i === 0 ? "nearest resistance" : "2nd resistance"}</span>
-                          </div>
-                          <span className="cw-level-price">${r.toLocaleString("en-US", { maximumFractionDigits: 0 })}</span>
-                        </div>
-                      ))}
-                      {ind.support.slice(0, 2).map((s, i) => (
-                        <div key={"s" + i} className="cw-level-row cw-level-row--below">
-                          <div className="cw-level-tag">
-                            <span className="cw-level-label">S{i + 1}</span>
-                            <span className="cw-level-sublabel">{i === 0 ? "nearest support" : "2nd support"}</span>
-                          </div>
-                          <span className="cw-level-price">${s.toLocaleString("en-US", { maximumFractionDigits: 0 })}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                    </div>
-                  )}
-
-                  <p className="cw-disclaimer">Not financial advice. Trade at your own risk.</p>
+                  <p className="cw-disclaimer">AI read, not financial advice. Levels are estimates — trade at your own risk.</p>
                 </>
               )}
 
@@ -5753,90 +6480,64 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
               {!aiLoading && aiRead && (
                 <>
                   {/* ── Trade Wizard ── */}
-                  <div className="cw-wizard">
+                  {/* ── Position check (trade wizard) ── */}
+                  <div className="cw-desk cw-pos">
+                    <div className="cw-pos-head">
+                      <span className="cw-desk-sub">Position check</span>
+                      <span className="cw-desk-tf">{coin} · {interval.label}</span>
+                    </div>
+                    <div className="cw-pos-seg" role="tablist" aria-label="Your intended trade">
+                      {(["buy", "sell", "long", "short"] as WizardIntent[]).map(i => (
+                        <button
+                          key={i}
+                          type="button"
+                          role="tab"
+                          aria-selected={wizardIntent === i}
+                          className={`cw-pos-seg-btn cw-pos-seg-btn--${i === "buy" || i === "long" ? "up" : "down"}${wizardIntent === i ? " on" : ""}`}
+                          onClick={() => setWizardIntent(wizardIntent === i ? null : i)}
+                        >
+                          {i === "buy" ? "↑ Buy" : i === "sell" ? "↓ Sell" : i === "long" ? "▲ Long" : "▼ Short"}
+                        </button>
+                      ))}
+                    </div>
                     {wizardIntent === null ? (
-                      <>
-                        <div className="cw-wizard-prompt">What's your play?</div>
-                        <div className="cw-wizard-intents">
-                          {(["buy", "sell", "long", "short"] as WizardIntent[]).map(i => (
-                            <button key={i} className="cw-wizard-intent-btn" onClick={() => setWizardIntent(i)}>
-                              <span className="cw-wizard-intent-icon">{i === "buy" ? "↑" : i === "sell" ? "↓" : i === "long" ? "▲" : "▼"}</span>
-                              <span>{i === "buy" ? "Buy" : i === "sell" ? "Sell" : i === "long" ? "Long" : "Short"}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </>
+                      <p className="cw-pos-hint">Pick your intended trade to check it against the current read, trend and levels.</p>
                     ) : (() => {
                       const rec = getWizardRec(wizardIntent, aiRead, mtfBiases, ind, lastPrice);
-                      const fmt = (p: number) => "$" + p.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-                      const pct = (a: number, b: number) => ((Math.abs(a - b) / b) * 100).toFixed(1) + "%";
+                      const sgn = (from: number, to: number) => { const d = ((to - from) / from) * 100; return `${d >= 0 ? "+" : ""}${d.toFixed(2)}%`; };
                       return (
-                        <div className={`cw-wizard-rec cw-wizard-rec--${rec.verdict}`}>
-                          <div className="cw-wizard-rec-header">
-                            <span className="cw-wizard-rec-verdict">
-                              {rec.verdict === "go" ? "✅ GO" : rec.verdict === "wait" ? "⏸ WAIT" : "🚫 AVOID"}
-                            </span>
-                            <span className="cw-wizard-rec-headline">{rec.headline}</span>
-                            <button className="cw-wizard-reset-btn" onClick={() => setWizardIntent(null)} title="Change intent">✕</button>
+                        <div className={`cw-pos-rec cw-pos-rec--${rec.verdict}`}>
+                          <div className="cw-pos-verdict">
+                            <span className="cw-pos-verdict-badge">{rec.verdict === "go" ? "GO" : rec.verdict === "wait" ? "WAIT" : "AVOID"}</span>
+                            <span className="cw-pos-verdict-line">{rec.headline}</span>
                           </div>
-                          <p className="cw-wizard-rec-body">{rec.body}</p>
+                          <p className="cw-pos-body">{rec.body}</p>
 
                           {rec.levels && (
-                            <div className="cw-wizard-levels">
-                              <div className="cw-wizard-levels-header">
-                                <span className="cw-wizard-levels-label">Price levels</span>
-                                <span className="cw-wizard-levels-interval">based on {interval.label} chart</span>
+                            <>
+                              <div className="cw-desk-rr cw-pos-grid">
+                                <div><span>Entry</span><b>{ewFmt(rec.levels.entry)}</b><em>market</em></div>
+                                <div className="sl"><span>Stop</span><b>{ewFmt(rec.levels.stopLoss)}</b><em>{sgn(rec.levels.entry, rec.levels.stopLoss)}</em></div>
+                                <div className="tp"><span>Target</span><b>{ewFmt(rec.levels.target)}</b><em>{sgn(rec.levels.entry, rec.levels.target)}</em></div>
+                                <div className={`cw-desk-rr-ratio${rec.levels.rr >= 2 ? " good" : rec.levels.rr < 1 ? " poor" : ""}`}>
+                                  <span>R : R</span><b>{rec.levels.rr.toFixed(1)} : 1</b><em>{rec.levels.rr >= 2 ? "favorable" : rec.levels.rr >= 1 ? "acceptable" : "tight"}</em>
+                                </div>
                               </div>
-                              <div className="cw-wizard-level cw-wizard-level--entry">
-                                <span className="cw-wizard-level-tag">Entry</span>
-                                <span className="cw-wizard-level-price">{fmt(rec.levels.entry)}</span>
-                                <span className="cw-wizard-level-sub">market price</span>
-                              </div>
-                              <div className="cw-wizard-level cw-wizard-level--sl">
-                                <span className="cw-wizard-level-tag">Stop Loss</span>
-                                <span className="cw-wizard-level-price">{fmt(rec.levels.stopLoss)}</span>
-                                <span className="cw-wizard-level-sub cw-wizard-level-sub--sl">
-                                  -{pct(rec.levels.entry, rec.levels.stopLoss)}
-                                </span>
-                              </div>
-                              <div className="cw-wizard-level cw-wizard-level--tp">
-                                <span className="cw-wizard-level-tag">Target</span>
-                                <span className="cw-wizard-level-price">{fmt(rec.levels.target)}</span>
-                                <span className="cw-wizard-level-sub cw-wizard-level-sub--tp">
-                                  +{pct(rec.levels.entry, rec.levels.target)}
-                                </span>
-                              </div>
-                              <div className="cw-wizard-level cw-wizard-level--rr">
-                                <span className="cw-wizard-level-tag">R/R</span>
-                                <span className={`cw-wizard-level-price cw-wizard-level-rr-val${rec.levels.rr >= 2 ? "--good" : rec.levels.rr >= 1 ? "--ok" : "--bad"}`}>
-                                  {rec.levels.rr.toFixed(1)}:1
-                                </span>
-                                <span className="cw-wizard-level-sub">{rec.levels.rr >= 2 ? "favorable" : rec.levels.rr >= 1 ? "acceptable" : "tight"}</span>
-                              </div>
-
-                              {/* Key S/R levels */}
-                              {(rec.levels.resistance.length > 0 || rec.levels.support.length > 0) && (
-                                <div className="cw-wizard-sr">
+                              {(rec.levels.resistance.length > 0 || rec.levels.support.length > 0) && lastPrice != null && (
+                                <div className="cw-desk-ladder">
                                   {rec.levels.resistance.map((r, i) => (
-                                    <div key={"r" + i} className="cw-wizard-sr-row cw-wizard-sr-row--r">
-                                      <span className="cw-wizard-sr-tag">R{i + 1}</span>
-                                      <span className="cw-wizard-sr-price">{fmt(r)}</span>
-                                      <span className="cw-wizard-sr-pct">+{pct(lastPrice!, r)}</span>
-                                    </div>
+                                    <div key={"r" + i} className="cw-desk-rung above"><span>R{i + 1}</span><b>{ewFmt(r)}</b><em>{sgn(lastPrice, r)}</em></div>
                                   ))}
+                                  <div className="cw-desk-rung cw-desk-rung--now"><span>▶ NOW</span><b>{ewFmt(lastPrice)}</b><em /></div>
                                   {rec.levels.support.map((s, i) => (
-                                    <div key={"s" + i} className="cw-wizard-sr-row cw-wizard-sr-row--s">
-                                      <span className="cw-wizard-sr-tag">S{i + 1}</span>
-                                      <span className="cw-wizard-sr-price">{fmt(s)}</span>
-                                      <span className="cw-wizard-sr-pct">-{pct(lastPrice!, s)}</span>
-                                    </div>
+                                    <div key={"s" + i} className="cw-desk-rung below"><span>S{i + 1}</span><b>{ewFmt(s)}</b><em>{sgn(lastPrice, s)}</em></div>
                                   ))}
                                 </div>
                               )}
-                            </div>
+                            </>
                           )}
 
-                          {rec.risk && <div className="cw-wizard-rec-risk">⚠ {rec.risk}</div>}
+                          {rec.risk && <div className="cw-desk-warn">⚠ {rec.risk}</div>}
                         </div>
                       );
                     })()}
@@ -5844,16 +6545,16 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
 
                   {/* ── Our Take ─────────────────────────────────────────── */}
                   {predData?.ourTake && (
-                    <div className={`cw-our-take cw-our-take--${predData.ourTakeAction ?? "watch"}`}>
-                      <div className="cw-our-take-header">
-                        <span className="cw-our-take-eyebrow">✦ Our Take</span>
+                    <div className={`cw-desk cw-view cw-view--${predData.ourTakeAction ?? "watch"}`}>
+                      <div className="cw-pos-head">
+                        <span className="cw-desk-sub">Desk view</span>
                         {predData.ourTakeAction && (
-                          <span className={`cw-our-take-action cw-our-take-action--${predData.ourTakeAction}`}>
+                          <span className={`cw-view-action cw-view-action--${predData.ourTakeAction}`}>
                             {predData.ourTakeAction.toUpperCase()}
                           </span>
                         )}
                       </div>
-                      <p className="cw-our-take-text">{predData.ourTake}</p>
+                      <p className="cw-view-text">{predData.ourTake}</p>
 
                       {/* Elliott Wave addendum */}
                       {elliottResult && elliottResult.pattern !== "none" && (() => {
@@ -5871,7 +6572,9 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                         if (ew.pattern === "impulse" && ew.complete) {
                           const isBull = ew.direction === "bullish";
                           nextDir = isBull ? "down" : "up";
-                          nextSummary = `5-wave ${ew.direction} impulse is done. Expect a counter-trend A-B-C ${isBull ? "correction" : "bounce"}.`;
+                          nextSummary = ew.subtype === "diagonal"
+                            ? `${ew.name} (${isBull ? "rising" : "falling"} wedge) is done — trend exhausted, expect a sharp ${isBull ? "drop" : "bounce"}.`
+                            : `5-wave ${ew.direction} impulse is done. Expect a counter-trend A-B-C ${isBull ? "correction" : "bounce"}.`;
                           actionHint = isBull
                             ? `Look for short entries if price bounces into ${mainProj ? fmt(mainProj.price) : "resistance"} — that's where the correction could stall.`
                             : `Look for long entries near current levels — the bounce targets ${mainProj ? fmt(mainProj.price) : "resistance"}.`;
@@ -5891,44 +6594,56 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                           actionHint = isBull
                             ? `Watch ${t382 ? fmt(t382.price) : "support"}–${t618 ? fmt(t618.price) : "support"} for a Wave 4 low — that zone is a high-probability long entry for the Wave 5 rally.`
                             : `Watch ${t382 ? fmt(t382.price) : "resistance"}–${t618 ? fmt(t618.price) : "resistance"} for the Wave 4 peak — a rejection there sets up the Wave 5 drop.`;
+                        } else if (ew.subtype === "triangle") {
+                          // Triangle direction = breakout direction (not a reversal).
+                          const up = ew.direction === "bullish";
+                          nextDir = up ? "up" : "down";
+                          nextSummary = `Contracting triangle (A-B-C-D-E) complete. ${up ? "Upside" : "Downside"} breakout expected.`;
+                          actionHint = `Wait for a clean close ${up ? "above the upper" : "below the lower"} triangle line, then target ${mainProj ? fmt(mainProj.price) : "—"}. A move ${up ? "below" : "above"} wave E cancels it.`;
                         } else if (ew.pattern === "corrective") {
                           const isBear = ew.direction === "bearish";
                           nextDir = isBear ? "up" : "down";
-                          nextSummary = `A-B-C ${ew.direction} correction complete. Counter-trend reversal expected.`;
+                          nextSummary = `${ew.name ?? "A-B-C"} ${ew.direction} correction complete. Counter-trend reversal expected.`;
                           actionHint = isBear
                             ? `A-B-C correction is done — new ${isBear ? "bullish" : "bearish"} impulse likely starting. ${mainProj ? fmt(mainProj.price) : "—"} is the first target.`
                             : `Correction finished — price should reverse. First target: ${mainProj ? fmt(mainProj.price) : "—"}.`;
                         }
 
                         if (!nextSummary) return null;
+                        // Same net direction as Today's read / the Elliott tab
+                        // (a wave-4 bounce in a bearish count reads "small
+                        // bounce, then down", not "UP").
+                        nextDir = ewNextUp(ew) ? "up" : "down";
+
+                        // Levels as a ladder with the current price slotted in.
+                        const rungs = [...allProj].sort((a, b) => b.price - a.price);
+                        const nowAt = lastPrice > 0 ? rungs.findIndex(p => p.price < lastPrice) : -1;
+                        const pctTo = (p: number) => { const d = lastPrice > 0 ? ((p - lastPrice) / lastPrice) * 100 : 0; return `${d >= 0 ? "+" : ""}${d.toFixed(2)}%`; };
+                        const nowRow = lastPrice > 0 ? <div className="cw-desk-rung cw-desk-rung--now"><span>▶ NOW</span><b>{ewFmt(lastPrice)}</b><em /></div> : null;
 
                         return (
-                          <div className="cw-our-take-ew">
-                            <div className="cw-our-take-ew-header">
-                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="2 17 8 11 13 16 22 7"/></svg>
-                              Elliott Wave · Wave {ew.currentWave}
-                              <span className={`cw-our-take-ew-dir cw-our-take-ew-dir--${nextDir}`}>
-                                {nextDir === "up" ? "▲ UP" : "▼ DOWN"}
+                          <div className="cw-view-ew">
+                            <div className="cw-view-ew-head">
+                              <span className="cw-desk-sub">Elliott · {ew.name ? `${ew.name} · ` : ""}wave {ew.currentWave}</span>
+                              <span className={`cw-view-ew-dir cw-view-ew-dir--${nextDir}`}>
+                                {nextDir === "up" ? "▲" : "▼"} {ewNextLabel(ew).toUpperCase()}
                               </span>
                             </div>
-                            <p className="cw-our-take-ew-summary">{nextSummary}</p>
-                            {allProj.length > 0 && (
-                              <div className="cw-our-take-ew-levels">
-                                {allProj.map(p => {
-                                  const dist = lastPrice > 0 ? ((p.price - lastPrice) / lastPrice * 100) : 0;
-                                  return (
-                                    <div key={p.label} className={`cw-our-take-ew-level${p.isMain ? " cw-our-take-ew-level--main" : ""}`}>
-                                      <span className="cw-our-take-ew-level-lbl">{p.label}</span>
-                                      <span className="cw-our-take-ew-level-price" style={{ color: p.color }}>{fmt(p.price)}</span>
-                                      <span className={`cw-our-take-ew-level-dist${dist >= 0 ? " up" : " dn"}`}>
-                                        {dist >= 0 ? "+" : ""}{dist.toFixed(1)}%
-                                      </span>
+                            <p className="cw-view-ew-summary">{nextSummary}</p>
+                            {rungs.length > 0 && (
+                              <div className="cw-desk-ladder">
+                                {rungs.map((p, i) => (
+                                  <Fragment key={p.label}>
+                                    {i === nowAt && nowRow}
+                                    <div className={`cw-desk-rung${p.isMain ? " cw-desk-rung--main" : ""}${lastPrice > 0 ? (p.price > lastPrice ? " above" : " below") : ""}`}>
+                                      <span>{p.label}{p.isMain ? " · main" : ""}</span><b>{ewFmt(p.price)}</b><em>{pctTo(p.price)}</em>
                                     </div>
-                                  );
-                                })}
+                                  </Fragment>
+                                ))}
+                                {nowAt === -1 && nowRow}
                               </div>
                             )}
-                            <p className="cw-our-take-ew-hint">{actionHint}</p>
+                            <p className="cw-view-ew-hint">{actionHint}</p>
                           </div>
                         );
                       })()}
@@ -5939,42 +6654,34 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                   {predData?.timeframes && (() => {
                     const TF = ["8h", "12h", "16h", "24h"] as const;
                     const currentPrice = candles[candles.length - 1]?.close ?? 0;
-                    const fmtP = (n: number) => `$${n.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+                    // One shared scale across all horizons so the bands are
+                    // comparable (wider band = more uncertainty further out).
+                    const all = TF.flatMap(tf => [predData.timeframes![tf].low, predData.timeframes![tf].high]).concat(currentPrice > 0 ? [currentPrice] : []);
+                    const lo = Math.min(...all), hi = Math.max(...all), span = hi - lo || 1;
+                    const x = (p: number) => ((p - lo) / span) * 100;
+                    const sgn = (p: number) => { const d = currentPrice > 0 ? ((p - currentPrice) / currentPrice) * 100 : 0; return `${d >= 0 ? "+" : ""}${d.toFixed(1)}%`; };
                     return (
-                      <div className="cw-ai-section cw-range-forecast">
-                        <div className="cw-ai-section-label">Price Range Forecast</div>
-                        <div className="cw-range-rows">
-                          {TF.map(tf => {
-                            const r = predData.timeframes![tf];
-                            const span = r.high - r.low;
-                            const cpTop = currentPrice > 0 && span > 0
-                              ? Math.max(1, Math.min(99, ((r.high - currentPrice) / span) * 100))
-                              : null;
-                            const outOfRange = currentPrice > 0 && (currentPrice < r.low || currentPrice > r.high);
-                            return (
-                              <div key={tf} className="cw-range-row">
-                                <span className="cw-range-tf">{tf.toUpperCase()}</span>
-                                <div className="cw-range-track">
-                                  <div className="cw-range-fill" />
-                                  {cpTop !== null && (
-                                    <div className={`cw-range-needle${outOfRange ? " cw-range-needle--out" : ""}`}
-                                      style={{ top: `${cpTop}%` }}
-                                      title={`Current: ${fmtP(currentPrice)}`} />
-                                  )}
-                                </div>
-                                <div className="cw-range-vals">
-                                  <span className="cw-range-hi">{fmtP(r.high)}</span>
-                                  <span className="cw-range-lo">{fmtP(r.low)}</span>
-                                </div>
-                              </div>
-                            );
-                          })}
+                      <div className="cw-desk cw-band">
+                        <div className="cw-pos-head">
+                          <span className="cw-desk-sub">Expected range</span>
+                          {currentPrice > 0 && <span className="cw-desk-tf">now {ewFmt(currentPrice)}</span>}
                         </div>
-                        {currentPrice > 0 && (
-                          <p className="cw-range-footer">
-                            <span className="cw-range-dot" /> Current: <strong>${currentPrice.toLocaleString("en-US", { maximumFractionDigits: 0 })}</strong>
-                          </p>
-                        )}
+                        <div className="cw-band-th"><span>Horizon</span><span /><span>Low</span><span>High</span></div>
+                        {TF.map(tf => {
+                          const r = predData.timeframes![tf];
+                          const out = currentPrice > 0 && (currentPrice < r.low || currentPrice > r.high);
+                          return (
+                            <div key={tf} className="cw-band-row">
+                              <span className="cw-band-tf">{tf.toUpperCase()}</span>
+                              <div className="cw-band-track">
+                                <i className="cw-band-fill" style={{ left: `${x(r.low)}%`, width: `${x(r.high) - x(r.low)}%` }} />
+                                {currentPrice > 0 && <i className={`cw-band-now${out ? " out" : ""}`} style={{ left: `${x(currentPrice)}%` }} />}
+                              </div>
+                              <span className="cw-band-num down"><b>{ewFmt(r.low)}</b><em>{sgn(r.low)}</em></span>
+                              <span className="cw-band-num up"><b>{ewFmt(r.high)}</b><em>{sgn(r.high)}</em></span>
+                            </div>
+                          );
+                        })}
                       </div>
                     );
                   })()}

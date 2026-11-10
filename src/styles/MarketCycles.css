@@ -1,12 +1,13 @@
 /* Phones, Bitcoin page: "Market Cycles" (CoinMarketCap app layout). */
-.mcyc { display: flex; flex-direction: column; gap: 14px; padding: 8px 0 24px; }
+/* Flat blocks (no card colour), so a bit more air between them. */
+.mcyc { display: flex; flex-direction: column; gap: 28px; padding: 8px 0 24px; }
 .mcyc-h { margin: 8px 0 0; font-size: 22px; font-weight: 700; letter-spacing: -0.01em; color: var(--color-text); }
 .mcyc-note { margin: 0; font-size: 11.5px; color: var(--color-text-muted); }
 
 /* Status cards: a sideways row. */
 .mcyc-cards {
   display: flex;
-  gap: 10px;
+  gap: 28px;
   margin: 0 -16px;
   padding: 0 16px 4px;
   overflow-x: auto;
@@ -24,9 +25,9 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 16px;
-  border-radius: 16px;
-  background: var(--mcyc-card);
+  padding: 0;
+  border-radius: 0;
+  background: none;
 }
 .mcyc-card-k { font-size: 13px; font-weight: 700; color: var(--color-text); }
 .mcyc-card-v { font-size: 22px; font-weight: 700; color: var(--color-text); font-variant-numeric: tabular-nums; }
@@ -56,24 +57,23 @@ html:not([data-theme="light"]) .mcyc-meter-bar { background: linear-gradient(90d
 html:not([data-theme="light"]) .mcyc-meter i { background: #fff; border-color: #0b0e14; }
 .mcyc-meter-cap { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--color-text-muted); }
 .mcyc-card-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.mcyc-card-pair span { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 10px; background: var(--color-background, #fff); }
+.mcyc-card-pair span { display: flex; flex-direction: column; gap: 2px; padding: 0; border-radius: 0; background: none; }
 .mcyc-card-pair em { font-style: normal; font-size: 11px; color: var(--color-text-muted); }
 .mcyc-card-pair b { font-size: 14px; font-weight: 700; color: var(--color-text); font-variant-numeric: tabular-nums; }
 .mcyc-badge { align-self: flex-start; padding: 3px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 600; background: color-mix(in srgb, #16c784 12%, transparent); color: #0f9b6c; }
 .mcyc-badge--hot { background: color-mix(in srgb, #ea3943 12%, transparent); color: #ea3943; }
 
 /* Chart blocks */
-/* Each chart sits on CMC's light card: #f8fafd, 16px radius, 16px inside.
-   (--mcyc-card is also the rainbow's "below the bands" fill.) */
-.mcyc { --mcyc-card: #f8fafd; }
-html:not([data-theme="light"]) .mcyc { --mcyc-card: #171924; }
+/* No card colour: the blocks sit flat on the page like every other coin
+   page section, separated by spacing only. */
+.mcyc { --mcyc-card: transparent; }
 .mcyc-block {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 16px;
-  border-radius: 16px;
-  background: var(--mcyc-card);
+  padding: 0;
+  border-radius: 0;
+  background: none;
 }
 .mcyc-bh { display: inline-flex; align-items: center; gap: 6px; margin: 0; font-size: 16px; font-weight: 700; color: var(--color-text); }
 .mcyc-bh-i { display: inline-flex; color: #a1a7bb; }

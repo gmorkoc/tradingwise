@@ -138,3 +138,32 @@
   line-height: 1.45;
   color: var(--color-text-secondary);
 }
+
+/* ── Pro tape look ─────────────────────────────────────────────────────────
+   Log-style rows: hairline separators instead of boxed cards, a thin accent
+   on the left coloured by the action, monospace time/price, square badges. */
+.mm-narr-list { gap: 0; }
+.mm-narr-row {
+  gap: 3px;
+  padding: 9px 10px 9px 12px;
+  border: none;
+  border-left: 2px solid rgba(148, 163, 184, 0.45);
+  border-radius: 0;
+  background: none;
+}
+.mm-narr-row + .mm-narr-row { border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); }
+.mm-narr-row--trap { border-left-color: #f59e0b; }
+.mm-narr-row--bull { border-left-color: #22c55e; }
+.mm-narr-row--bear { border-left-color: #ef4444; }
+.mm-narr-row--new { background: color-mix(in srgb, var(--color-text) 4%, transparent); }
+.mm-narr-time,
+.mm-narr-price { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+.mm-narr-price { color: var(--color-text); }
+.mm-narr-badge {
+  border-radius: 5px;
+  font-size: 0.56rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.mm-narr-title { font-size: 0.64rem; font-weight: 800; letter-spacing: 0.08em; }

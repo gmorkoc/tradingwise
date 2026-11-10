@@ -63,6 +63,7 @@ import { AuthModal } from "./components/AuthModal";
 import { BlurGate } from "./components/MembershipGate";
 import { PaywallPromo } from "./components/PaywallPromo";
 import { BottomSheet } from "./components/BottomSheet";
+import { SignupPromoCard } from "./components/SignupPromoCard";
 import { UpgradeModal } from "./components/UpgradeModal";
 import { EliteUpsellModal } from "./components/EliteUpsellModal";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
@@ -75,6 +76,7 @@ import { PriceTickerFullscreen } from "./components/PriceTickerFullscreen";
 import { PositionIntelligence } from "./components/PositionIntelligence";
 import { ChartBottomPanel } from "./components/ChartBottomPanel";
 import { CoinInfoPanel } from "./components/CoinInfoPanel";
+import { PeerCompare } from "./components/PeerCompare";
 import { CoinNews } from "./components/CoinNews";
 import { MarketCycles } from "./components/MarketCycles";
 import { TradeInsights } from "./components/TradeInsights";
@@ -763,7 +765,7 @@ function AppDashboard({
   // Whale transfers share the price toast (Whale Activity switch in
   // Notification Settings). A price move shows first; whales wait behind it.
   const [whaleAlertsOn] = useWhaleAlertsEnabled();
-  const { alert: whaleToast, dismiss: dismissWhaleToast } = useWhaleToast(notificationsEnabled && whaleAlertsOn);
+  const { alert: whaleToast, dismiss: dismissWhaleToast, snooze: snoozeWhaleToast } = useWhaleToast(notificationsEnabled && whaleAlertsOn);
 
   // Tapping a coin-mention push (pushNotifications.ts) jumps straight to
   // that comment: switch to its coin, open the chart + chat dock, and
@@ -4286,6 +4288,20 @@ function AppDashboard({
                             same panel; Watchlist lives in its filter. */}
                         {/* Phones: CoinMarketCap-style coin stats, above the
                             coin table (desktop has them in the left column). */}
+                        {/* Peers for comparison: tick coins to overlay them
+                            on a % comparison chart against this one. */}
+                        {activeSection === "chart" && (
+                          <PeerCompare
+                            coin={coin}
+                            theme={theme}
+                            onSelectCoin={(symbol) => {
+                              openChartCoin(symbol, { recent: true });
+                              requestAnimationFrame(() => {
+                                document.querySelector(".price-chart-container")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                              });
+                            }}
+                          />
+                        )}
                         {activeSection === "chart" && !isDesktopWidth && (
                           <>
                             <CoinInfoPanel phone coin={coin} ticker={coinTickers.get(coin)} />
@@ -4433,6 +4449,11 @@ function AppDashboard({
                   }
                 }}
               />
+            )}
+            {/* Signed-out visitors on the Chart or Advance Chart: sign-up
+                card once per visit, at a random moment. */}
+            {!user && (activeSection === "chart" || activeSection === "advance-chart" || (mobileAdvanceChartOpen && !isDesktopWidth)) && (
+              <SignupPromoCard onSignUp={() => onOpenAuth("signup")} />
             )}
             {mobileAdvanceChartOpen && !isDesktopWidth && (
               <MobileSymbolSheet
@@ -4726,18 +4747,18 @@ function AppDashboard({
           anchorRect={searchAnchor}
         />
 
-        {assetPanelOpen && (
-          <div
-            className="asset-modal-overlay"
-            onClick={() => setAssetPanelOpen(false)}
-          >
-            <div
-              className="asset-modal-panel"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="asset-panel-header">
-                <h2>{t("assetCalc.title")}</h2>
-                <div className="asset-panel-header-actions">
+        {/* Asset Calculator: shared bottom sheet (full height on phones,
+            centred popup on desktop); Import / Export sit under the title. */}
+        <BottomSheet
+          open={assetPanelOpen}
+          onClose={() => setAssetPanelOpen(false)}
+          title={t("assetCalc.title")}
+          className="asset-sheet"
+          bodyClassName="bs-body--pad"
+          desktopModal
+          startFull
+          headerExtra={
+                <div className="asset-panel-header-actions asset-panel-header-actions--sheet">
                   <input
                     ref={importFileInputRef}
                     type="file"
@@ -4763,16 +4784,10 @@ function AppDashboard({
                   >
                     <span className="asset-icon-btn-glyph">↓</span> {t("assetCalc.export")}
                   </button>
-                  <button
-                    className="asset-close-btn"
-                    onClick={() => setAssetPanelOpen(false)}
-                    title="Close"
-                  >
-                    ✕
-                  </button>
                 </div>
-              </div>
-              <div className="asset-modal-content">
+          }
+        >
+              <div className="asset-modal-content asset-modal-content--sheet">
                 <PortfolioValueChart holdings={portfolioHoldings} formatCurrency={formatCurrency} />
 
                 <div className="asset-value-card">
@@ -4889,9 +4904,7 @@ function AppDashboard({
                   {t("assetCalc.addPosition")}
                 </button>
               </div>
-            </div>
-          </div>
-        )}
+        </BottomSheet>
 
         {/* Price signal banner (bullish/bearish) hidden for now — see
             priceAlert state above, logic left intact to re-enable easily. */}
@@ -5057,6 +5070,8 @@ function AppDashboard({
     <BtcMoveToast
       alert={notificationsEnabled && !chartFullscreen ? (btcMoveAlert ?? whaleToast) : null}
       onDismiss={btcMoveAlert ? dismissBtcAlert : dismissWhaleToast}
+      // ✕ on a whale alert snoozes whale alerts for an hour.
+      onClose={btcMoveAlert ? undefined : snoozeWhaleToast}
     />
     {focusToast && ReactDOM.createPortal(
       <div className="focus-toast" role="status">

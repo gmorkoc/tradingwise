@@ -207,10 +207,9 @@ export function MarketCycles({ coin, theme }: { coin: string; theme: "dark" | "l
   if (coin !== "BTC") return null;
   const isLight = theme === "light";
   const priceGrey = isLight ? "#a6b0c3" : "#5b6378";
-  // The page's own background (the rainbow's "below the bands" fill).
-  // The chart cards' colour (matches --mcyc-card) — the rainbow's
-  // "below the bands" fill.
-  const pageBg = isLight ? "#f8fafd" : "#171924";
+  // The page's own background (the rainbow's "below the bands" fill) —
+  // the blocks have no card colour of their own any more.
+  const pageBg = isLight ? "#ffffff" : "#000000";
 
   const puellNow = calc?.puell[calc.puell.length - 1]?.value ?? null;
   // Marker on a log scale 0.2 … 8 (undervalued < 0.5, overvalued > 4).

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { BottomSheet } from "./BottomSheet";
 import "../styles/LearnSection.css";
 
 interface MiniCandle { o: number; c: number; h: number; l: number; }
@@ -197,15 +198,18 @@ export const LearnSection: React.FC<LearnSectionProps> = ({ isOpen, onClose }) =
 
   if (!isOpen) return null;
 
+  // Shared bottom sheet: full height on phones, centred popup on desktop.
   return (
-    <div className="learn-overlay" onClick={onClose}>
-      <div className="learn-modal" onClick={e => e.stopPropagation()}>
-        <div className="learn-modal-header">
-          <span className="learn-modal-title">{t("learnSection.title")}</span>
-          <button className="learn-modal-close" onClick={onClose}>✕</button>
-        </div>
-
-        <div className="learn-modal-body">
+    <BottomSheet
+      open
+      onClose={onClose}
+      title={t("learnSection.title")}
+      className="learn-sheet"
+      bodyClassName="bs-body--pad"
+      desktopModal
+      startFull
+    >
+        <div className="learn-modal-body learn-modal-body--sheet">
           <div className="learn-panels">
             <div className="learn-panel">
               <div className="learn-panel-header learn-panel-header--bullish">
@@ -226,7 +230,6 @@ export const LearnSection: React.FC<LearnSectionProps> = ({ isOpen, onClose }) =
             </div>
           </div>
         </div>
-      </div>
-    </div>
+    </BottomSheet>
   );
 };

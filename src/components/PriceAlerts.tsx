@@ -5,40 +5,18 @@ import { coinglass, CoinSymbol, COINS } from "../services/coinglass";
 import { useNotificationsEnabled } from "../hooks/useNotificationsEnabled";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../services/supabase";
+import {
+  type PriceAlert, loadPriceAlerts as loadAlerts, savePriceAlerts as saveAlerts,
+  makePriceAlert, syncPriceAlertToServer, PRICE_ALERTS_EVENT,
+} from "../services/priceAlertStore";
 import { playAlertSoundFile } from "../utils/alertSound";
 import { HoverTip } from "./HoverTip";
 import "../styles/PriceAlerts.css";
-
-interface PriceAlert {
-  id: string;
-  coin: CoinSymbol;
-  targetPrice: number;
-  direction: "above" | "below";
-  label: string;
-  triggered: boolean;
-  createdAt: number;
-}
 
 interface Props {
   coin: CoinSymbol;
   currentPrice: number;
   coinChatOpen?: boolean;
-}
-
-const STORAGE_KEY = "priceAlerts";
-
-function loadAlerts(): PriceAlert[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    // Alerts saved before per-coin support didn't store a coin at all —
-    // fall back to BTC for those rather than crash on the missing field.
-    return (JSON.parse(raw) as PriceAlert[]).map((a) => ({ ...a, coin: a.coin ?? "BTC" }));
-  } catch { return []; }
-}
-
-function saveAlerts(alerts: PriceAlert[]) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(alerts)); } catch { /* quota */ }
 }
 
 // Set CSS vars synchronously — no React state, no re-render, no position flash
@@ -140,6 +118,13 @@ export function PriceAlerts({ coin, currentPrice, coinChatOpen }: Props) {
 
   useEffect(() => { saveAlerts(alerts); }, [alerts]);
 
+  // Alerts added elsewhere (e.g. Candle Insights "Today's read") — reload.
+  useEffect(() => {
+    const reload = () => setAlerts(loadAlerts());
+    window.addEventListener(PRICE_ALERTS_EVENT, reload);
+    return () => window.removeEventListener(PRICE_ALERTS_EVENT, reload);
+  }, []);
+
   useEffect(() => {
     const prevPrices = prevPricesRef.current;
     prevPricesRef.current = prices;
@@ -178,26 +163,14 @@ export function PriceAlerts({ coin, currentPrice, coinChatOpen }: Props) {
     if (!price || isNaN(price) || price <= 0) return;
     const refPrice = prices[selectedCoin] ?? currentPrice;
     const direction: "above" | "below" = price > refPrice ? "above" : "below";
-    const alert: PriceAlert = {
-      id: crypto.randomUUID(),
-      coin: selectedCoin,
-      targetPrice: price,
-      direction,
-      label: `${direction === "above" ? "↑" : "↓"} $${price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-      triggered: false,
-      createdAt: Date.now(),
-    };
+    const alert = makePriceAlert(selectedCoin, price, direction);
     setAlerts((prev) => [...prev, alert].sort((a, b) => b.targetPrice - a.targetPrice));
     setInput("");
 
     // Mirrors into Supabase so the price-alert cron can push a notification
     // for this even with the app closed — the local copy above still drives
     // the in-app toast/sound while it's open, unchanged.
-    if (user) {
-      supabase.from("price_alerts").insert({
-        id: alert.id, user_id: user.id, coin: selectedCoin, target_price: price, direction,
-      }).then(({ error }) => { if (error) console.error("Saving price alert failed:", error.message); });
-    }
+    syncPriceAlertToServer(alert, user?.id);
   };
 
   const removeAlert = (id: string) => {

@@ -1,0 +1,88 @@
+/* Candle Insights: classic chart pattern drawn over the chart. */
+.cpo {
+  --cpo: #ef4444;
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  overflow: hidden;
+  animation: cpo-in 0.3s ease both;
+}
+.cpo--up { --cpo: #22c55e; }
+@keyframes cpo-in { from { opacity: 0; } to { opacity: 1; } }
+
+.cpo-svg { position: absolute; inset: 0; overflow: visible; }
+.cpo-fill { fill: color-mix(in srgb, var(--cpo) 9%, transparent); }
+.cpo-line { fill: none; stroke-linejoin: round; stroke-linecap: round; }
+.cpo-line--shape { stroke: var(--cpo); stroke-width: 2; stroke-opacity: 0.85; }
+.cpo-line--trigger { stroke: var(--cpo); stroke-width: 1.75; stroke-dasharray: 6 4; }
+.cpo-line--boundary { stroke: var(--color-text-muted, #94a3b8); stroke-width: 1.25; stroke-dasharray: 6 4; }
+.cpo-line--pole { stroke: var(--cpo); stroke-width: 3; stroke-opacity: 0.5; }
+
+.cpo-level { stroke-width: 1; stroke-dasharray: 3 3; }
+.cpo-level--trigger { stroke: var(--color-text-muted, #94a3b8); }
+.cpo-level--target { stroke: var(--cpo); }
+.cpo-level--cancel { stroke: #f59e0b; }
+
+/* Swing labels: Left shoulder / Head / Top 1 … */
+.cpo-tag {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 6px));
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  white-space: nowrap;
+  color: #fff;
+  background: var(--cpo);
+}
+.cpo-tag--below { transform: translate(-50%, 6px); }
+
+/* Level tags at the right end: Signal / Target / Cancel. */
+.cpo-lvl {
+  position: absolute;
+  transform: translateY(-50%);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  white-space: nowrap;
+  background: var(--color-surface, #fff);
+  border: 1px solid currentColor;
+}
+html:not([data-theme="light"]) .cpo-lvl { background: #1a1d26; }
+.cpo-lvl--trigger { color: var(--color-text-muted, #94a3b8); }
+.cpo-lvl--target { color: var(--cpo); }
+.cpo-lvl--cancel { color: #f59e0b; }
+
+/* Name chip: bottom-center, just above the time axis — the top of the chart
+   is taken by the OHLC legend, which drew over it. */
+.cpo-head {
+  position: absolute;
+  bottom: 38px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px 6px 12px;
+  border-radius: 999px;
+  background: var(--color-surface, #fff);
+  border: 1px solid color-mix(in srgb, var(--cpo) 45%, transparent);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.14);
+  pointer-events: auto;
+  white-space: nowrap;
+}
+html:not([data-theme="light"]) .cpo-head { background: #1a1d26; }
+.cpo-head-name { font-size: 0.78rem; font-weight: 800; color: var(--color-text); }
+.cpo-head-tag { font-size: 0.66rem; font-weight: 700; color: var(--cpo); }
+.cpo-head-x,
+.cpo-head-x:hover {
+  all: unset;
+  padding: 0 4px;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (prefers-reduced-motion: reduce) { .cpo { animation: none; } }

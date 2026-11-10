@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import "../styles/ChartGoTo.css";
 
@@ -72,6 +72,27 @@ export function ChartGoTo({ onClose, onGoToDate, onGoToRange }: Props) {
   // Phones: centered on screen over a dim backdrop (portaled to <body>);
   // desktop keeps the popover anchored above the range bar.
   const [centered] = useState(() => window.matchMedia("(max-width: 640px)").matches);
+
+  // Desktop position: centered over the calendar button (the element just
+  // before this component's anchor), kept inside the window.
+  const anchorRef = useRef<HTMLSpanElement>(null);
+  const [pos, setPos] = useState<{ left: number; bottom: number } | null>(null);
+  useLayoutEffect(() => {
+    if (centered) return;
+    const place = () => {
+      const btn = anchorRef.current?.previousElementSibling as HTMLElement | null;
+      // No button next to it (mounted on its own): center near the bottom.
+      if (!btn) { setPos({ left: Math.max(8, (window.innerWidth - 330) / 2), bottom: 80 }); return; }
+      const r = btn.getBoundingClientRect();
+      const W = 330;
+      const left = Math.min(Math.max(8, r.left + r.width / 2 - W / 2), window.innerWidth - W - 8);
+      setPos({ left, bottom: window.innerHeight - r.top + 8 });
+    };
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => { window.removeEventListener("resize", place); window.removeEventListener("scroll", place, true); };
+  }, [centered]);
 
   // Close on Escape / click outside.
   useEffect(() => {
@@ -245,7 +266,20 @@ export function ChartGoTo({ onClose, onGoToDate, onGoToRange }: Props) {
       </div>
     </div>
   );
-  if (!centered) return dialog;
+  if (!centered) {
+    // Desktop: portaled to <body> and pinned above the calendar button.
+    // Rendered inside the range bar it sat under the drawing-tools rail
+    // (a fixed layer with a higher z-index) and its left side was cut off.
+    return (
+      <>
+        <span ref={anchorRef} className="cgt-anchor" aria-hidden="true" />
+        {pos && createPortal(
+          <div className="cgt-float" style={{ left: pos.left, bottom: pos.bottom }}>{dialog}</div>,
+          document.body,
+        )}
+      </>
+    );
+  }
   return createPortal(
     <>
       <div className="cgt-backdrop" />

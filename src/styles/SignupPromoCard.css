@@ -1,0 +1,78 @@
+/* Advance Chart sign-up card (signed-out visitors). */
+.spc {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 200050; /* above the chart and bottom sheets (200030) */
+  width: 400px;
+  padding: 8px;
+  border-radius: 16px;
+  background: #fff;
+  color: #0d1421;
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.28), 0 0 0 1px rgba(15, 23, 42, 0.06);
+  animation: spc-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+html:not([data-theme="light"]) .spc {
+  background: #16181f;
+  color: #fff;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+@keyframes spc-in { from { opacity: 0; transform: translateY(16px) scale(0.98); } to { opacity: 1; transform: none; } }
+
+.spc-media { position: relative; height: 210px; border-radius: 10px; overflow: hidden; background: #0b0f17; }
+/* Real trading photo with a slow zoom so it isn't static. */
+.spc-photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 60% 50%;
+  user-select: none;
+  -webkit-user-select: none;
+  animation: spc-zoom 14s ease-in-out infinite alternate;
+}
+@keyframes spc-zoom { from { transform: scale(1); } to { transform: scale(1.08) translateX(-2%); } }
+.spc-close {
+  all: unset;
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.spc-close { right: 8px; top: 8px; }
+
+.spc-body { padding: 14px 10px 8px; display: flex; flex-direction: column; }
+.spc-title { margin: 0 0 6px; font-size: 1.25rem; font-weight: 700; letter-spacing: -0.01em; }
+.spc-text { margin: 0 0 16px; font-size: 0.9rem; line-height: 1.5; color: var(--color-text-secondary, #58667e); }
+.spc-cta {
+  all: unset;
+  align-self: center;
+  padding: 11px 28px;
+  border-radius: 10px;
+  background: #0d1421;
+  color: #fff;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+html:not([data-theme="light"]) .spc-cta { background: #fff; color: #0d1421; }
+.spc-cta:active { opacity: 0.85; }
+
+/* Phones: full width with 16px sides, resting above the home indicator. */
+@media (max-width: 900px) {
+  .spc {
+    left: 16px;
+    right: 16px;
+    width: auto;
+    bottom: calc(16px + var(--native-safe-area-bottom, env(safe-area-inset-bottom)));
+  }
+  .spc-media { height: 175px; }
+}
+@media (prefers-reduced-motion: reduce) { .spc, .spc-photo { animation: none; } }

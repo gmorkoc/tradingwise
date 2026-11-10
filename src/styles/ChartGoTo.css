@@ -227,6 +227,11 @@
 
 /* Phones: a bottom sheet (full width, slides up) over a dim backdrop,
    same feel as the Date Range sheet. */
+/* Desktop: portaled to <body>, above the drawing-tools rail (z 1002). */
+.cgt-anchor { display: none; }
+.cgt-float { position: fixed; z-index: 1100; width: 330px; }
+.cgt-float > .cgt { position: relative; left: auto; bottom: auto; }
+
 .cgt-backdrop {
   position: fixed;
   inset: 0;

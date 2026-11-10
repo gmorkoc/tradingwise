@@ -15,6 +15,12 @@ export interface WhaleToastAlert {
 }
 
 const MAX_QUEUE = 5;
+// ✕ on a whale alert: no more whale alerts for an hour (this device).
+const SNOOZE_KEY = "whale-snoozed-until";
+const SNOOZE_MS = 60 * 60 * 1000;
+const snoozedNow = () => {
+  try { return Date.now() < Number(localStorage.getItem(SNOOZE_KEY) ?? 0); } catch { return false; }
+};
 
 /** `enabled` = global alerts on AND the Whale Activity switch on. */
 export function useWhaleToast(enabled: boolean) {
@@ -30,7 +36,7 @@ export function useWhaleToast(enabled: boolean) {
   }, [enabled]);
 
   useEffect(() => subscribeWhaleAlerts(async (tx) => {
-    if (!enabledRef.current) return;
+    if (!enabledRef.current || snoozedNow()) return;
     // USD value at BTC's live price (the page's own coin may not be BTC).
     const p = (await coinglass.getLiveSecondCandle("BTC").catch(() => null))?.close;
     if (!enabledRef.current) return;
@@ -58,5 +64,13 @@ export function useWhaleToast(enabled: boolean) {
     setAlert(next);
   }, []);
 
-  return { alert, dismiss };
+  /** ✕ pressed: hide it, drop the queue and snooze whale alerts for 1 hour. */
+  const snooze = useCallback(() => {
+    try { localStorage.setItem(SNOOZE_KEY, String(Date.now() + SNOOZE_MS)); } catch { /* ignore */ }
+    queueRef.current = [];
+    showingRef.current = false;
+    setAlert(null);
+  }, []);
+
+  return { alert, dismiss, snooze };
 }

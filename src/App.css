@@ -1229,6 +1229,10 @@ html[data-theme="light"] .coin-picker-menu--table {
   flex-direction: column;
   gap: 16px;
 }
+/* In the shared bottom sheet: the sheet scrolls and gives the 16px sides. */
+.asset-modal-content.asset-modal-content--sheet { padding: 8px 0 0; overflow: visible; }
+.asset-panel-header-actions.asset-panel-header-actions--sheet { justify-content: flex-start; }
+@media (min-width: 901px) { .bs-sheet.asset-sheet { max-width: 640px; } }
 
 .auto-refresh-toggle {
   display: flex;
@@ -3763,6 +3767,18 @@ html:not([data-theme="light"]) .icon-strip-bottom::before {
   .icon-strip-profile-row:hover {
     background: var(--color-input-bg);
   }
+  /* Touch screens (iOS): no hover/press background on the profile row. */
+  @media (hover: none) {
+    .icon-strip-profile-row,
+    .icon-strip-profile-row:hover,
+    .icon-strip-profile-row:active {
+      background: none;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+  }
   .icon-strip-profile-avatar {
     width: 32px;
     height: 32px;
@@ -4312,22 +4328,26 @@ html:not([data-theme="light"]) .top-nav-bar .top-nav-search-ic { color: #ffffff 
 .top-nav-gl:hover { background: #f2f3f5; }
 .top-nav-gl--on { color: #0052ff; }
 .top-nav-gl svg { opacity: 0.6; }
+/* "AI" written straight onto the label's last word — "Candle InsightsAI":
+   same size and line as the label, uppercase, gradient text, no background
+   and no glow. The indigo → violet → pink gradient drifts slowly. */
 .top-nav-gl-ai {
-  margin-left: -3px;
-  background: linear-gradient(135deg, #6366f1, #a855f7);
+  /* Pulls in the button's 6px flex gap, leaving a hairline 2px space. */
+  margin-left: -4px;
+  font-size: inherit;
+  font-weight: 800;
+  text-transform: uppercase;
+  line-height: inherit;
+  background: linear-gradient(110deg, #4f46e5, #8b5cf6 40%, #db2777 70%, #4f46e5);
+  background-size: 250% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  font-size: 11px;
-  font-weight: 800;
-  line-height: 1;
-  transform: translateY(-6px);
-  filter: drop-shadow(0 0 3px rgba(168, 85, 247, 0.9)) drop-shadow(0 0 7px rgba(99, 102, 241, 0.6));
-  animation: top-nav-ai-glow 2.4s ease-in-out infinite;
+  animation: top-nav-ai-shift 5s ease-in-out infinite alternate;
 }
-@keyframes top-nav-ai-glow {
-  0%, 100% { filter: drop-shadow(0 0 2px rgba(168, 85, 247, 0.7)) drop-shadow(0 0 5px rgba(99, 102, 241, 0.4)); }
-  50% { filter: drop-shadow(0 0 4px rgba(168, 85, 247, 1)) drop-shadow(0 0 10px rgba(99, 102, 241, 0.75)); }
+@keyframes top-nav-ai-shift {
+  from { background-position: 0% 50%; }
+  to   { background-position: 100% 50%; }
 }
 @media (prefers-reduced-motion: reduce) { .top-nav-gl-ai { animation: none; } }
 .top-nav-gl:focus-visible { outline: 2px solid #0052ff; outline-offset: 2px; }
@@ -5840,8 +5860,17 @@ html:not([data-theme="light"]) .mch-search-btn:hover {
     margin-bottom: 4px;
     cursor: pointer;
   }
-  .mob-nav-profile--clickable:active {
-    background: var(--color-primary-soft);
+  /* No background on press or long press (iOS) — just the tap. */
+  .mob-nav-profile--clickable,
+  .mob-nav-profile--clickable:hover,
+  .mob-nav-profile--clickable:active,
+  .mob-nav-profile--clickable:focus {
+    background: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    outline: none;
   }
   .mob-nav-profile-arrow {
     display: none;

@@ -279,3 +279,19 @@
   .tutorial-tab-label { display: none; }
   .tutorial-tab { padding: 10px; }
 }
+
+/* Inside the shared bottom sheet: the sheet gives the frame, title, close,
+   scrolling and 16px side padding — no own frame, height or inner scroll. */
+.tutorial-page.tutorial-page--sheet {
+  background: none;
+  border: 0;
+  height: auto;
+  max-height: none;
+  max-width: none;
+  overflow: visible;
+}
+.tutorial-page--sheet .tutorial-tabs { overflow-x: auto; scrollbar-width: none; }
+.tutorial-page--sheet .tutorial-tabs::-webkit-scrollbar { display: none; }
+.tutorial-page--sheet .tutorial-level-bar { padding: 10px 0; background: none; }
+.tutorial-page--sheet .tutorial-body { overflow: visible; padding: 16px 0 0; }
+@media (min-width: 901px) { .bs-sheet.tutorial-sheet { max-width: 1000px; } }

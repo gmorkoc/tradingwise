@@ -73,6 +73,10 @@
   flex: 1;
 }
 
+/* Inside the shared bottom sheet: the sheet scrolls and pads. */
+.learn-modal-body.learn-modal-body--sheet { overflow: visible; padding: 0; }
+@media (min-width: 901px) { .bs-sheet.learn-sheet { max-width: 900px; } }
+
 .learn-modal-body::-webkit-scrollbar       { width: 5px; }
 .learn-modal-body::-webkit-scrollbar-track { background: transparent; }
 .learn-modal-body::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.35); border-radius: 4px; }
