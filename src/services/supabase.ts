@@ -165,6 +165,18 @@ export async function isUsernameAvailable(username: string): Promise<boolean> {
   return !!data;
 }
 
+/**
+ * Sign-up live check: does this email already have an account, and how does
+ * it sign in? "available" | "password" | provider list ("google", …) |
+ * "invalid", or null if the check couldn't run (then the form just submits
+ * as before and the post-submit check catches it).
+ */
+export async function emailAccountStatus(email: string): Promise<string | null> {
+  const { data, error } = await supabase.rpc("email_account_status", { check_email: email });
+  if (error) { console.warn("emailAccountStatus failed:", error.message); return null; }
+  return typeof data === "string" ? data : null;
+}
+
 export async function saveUsername(userId: string, username: string): Promise<void> {
   const { error } = await supabase
     .from("profiles")

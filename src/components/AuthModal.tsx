@@ -4,7 +4,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { CoinHintzLogo } from "./CoinHintzLogo";
 import { BottomSheet } from "./BottomSheet";
 import { RiskDisclaimer } from "./RiskDisclaimer";
-import { isUsernameAvailable, USERNAME_PATTERN, supabase } from "../services/supabase";
+import { isUsernameAvailable, emailAccountStatus, USERNAME_PATTERN, supabase } from "../services/supabase";
 import { passkeysAvailable, signInWithPasskey } from "../services/passkeys";
 import "../styles/AuthModal.css";
 
@@ -88,13 +88,26 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
   const [name,        setName]        = useState("");
   const [username,       setUsername]       = useState("");
   const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>("idle");
+  // Live email check (sign-up): "available" | "password" | "google"… | null.
+  const [emailStatus, setEmailStatus] = useState<string | null>(null);
+  const [emailChecking, setEmailChecking] = useState(false);
   const [error,       setError]       = useState("");
   const [info,        setInfo]        = useState("");
   const [busy,        setBusy]        = useState(false);
   const [showPw,      setShowPw]      = useState(false);
   const [showCfm,     setShowCfm]     = useState(false);
-  const alreadyAgreed = !!localStorage.getItem("terms_agreed_at");
-  const [termsAgreed, setTermsAgreed] = useState(alreadyAgreed);
+  // Every new account must agree to the terms itself — never skipped
+  // because this browser agreed once before (that hid the checkbox for a
+  // second account created on the same device). Signing in doesn't ask.
+  const alreadyAgreed = false;
+  const [termsAgreed, setTermsAgreed] = useState(false);
+  // Drop any leftover pending agreement (an abandoned earlier attempt) so
+  // it can't be credited to whichever account signs in next — App.tsx copies
+  // this flag onto the signed-in profile. Only a tick in THIS attempt counts;
+  // without one, TermsGateModal still asks after sign-in.
+  useEffect(() => {
+    try { localStorage.removeItem("terms_agreed_at"); } catch { /* ignore */ }
+  }, []);
   const [termsShake,  setTermsShake]  = useState(false);
   const backdropRef = useRef<HTMLDivElement>(null);
   const [isPhone] = useState(() => window.matchMedia("(max-width: 640px)").matches);
@@ -134,13 +147,32 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
     return () => clearTimeout(handle);
   }, [username, view]);
 
+  // Once the email looks complete, check right away whether it already has
+  // an account — so nobody submits and waits for a code that never comes.
+  useEffect(() => {
+    setEmailStatus(null);
+    if (view !== "signup") return;
+    const v = email.trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(v)) { setEmailChecking(false); return; }
+    setEmailChecking(true);
+    let alive = true;
+    const handle = setTimeout(() => {
+      emailAccountStatus(v).then(s => { if (alive) { setEmailStatus(s); setEmailChecking(false); } });
+    }, 500);
+    return () => { alive = false; clearTimeout(handle); };
+  }, [email, view]);
+  const emailTaken = !!emailStatus && emailStatus !== "available" && emailStatus !== "invalid";
+  const emailProvider = emailTaken && emailStatus !== "password"
+    ? (emailStatus!.includes("google") ? "Google" : emailStatus!.includes("apple") ? "Apple" : null)
+    : null;
+
   const handleBackdrop = (e: React.MouseEvent) => {
     if (e.target === backdropRef.current) onClose();
   };
 
   const saveTerms = () => {
-    if (termsAgreed && !alreadyAgreed)
-      localStorage.setItem("terms_agreed_at", new Date().toISOString());
+    // Kept as a record of when this device last agreed (not used to skip).
+    if (termsAgreed) localStorage.setItem("terms_agreed_at", new Date().toISOString());
   };
 
   // Buttons that need agreement stay clickable (not disabled) so this can
@@ -191,6 +223,8 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
     if (!trimmedUsername || !USERNAME_PATTERN.test(trimmedUsername)) {
       setError(t("auth.errors.usernameInvalid")); return;
     }
+    // Already has an account → no code would ever be sent; point to sign in.
+    if (emailTaken) { setError("sso_exists"); return; }
     if (password !== confirm) { setError(t("auth.errors.passwordMismatch")); return; }
     if (password.length < 6)  { setError(t("auth.errors.passwordTooShort")); return; }
     setBusy(true); setError("");
@@ -499,6 +533,25 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
                   <span className="auth-input-leading-icon"><MailIcon /></span>
                   <input className="auth-input auth-input--leading" type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} required />
                 </div>
+                {(emailChecking || emailStatus === "available" || emailTaken) && (
+                  <span className={`auth-username-status auth-username-status--${emailChecking ? "checking" : emailTaken ? "taken" : "available"}`}>
+                    {emailChecking && "Checking…"}
+                    {!emailChecking && emailStatus === "available" && "✓ Email available"}
+                    {!emailChecking && emailTaken && (emailProvider ? (
+                      <>This email signs in with {emailProvider}.{" "}
+                        {emailProvider === "Google"
+                          ? <button type="button" className="auth-link-btn" onClick={handleGoogle} disabled={busy}>Continue with Google</button>
+                          : appleSignInAvailable
+                            ? <button type="button" className="auth-link-btn" onClick={handleApple} disabled={busy}>Continue with Apple</button>
+                            : null}
+                      </>
+                    ) : (
+                      <>This email already has an account.{" "}
+                        <button type="button" className="auth-link-btn" onClick={() => { setError(""); setView("login"); }}>Sign in</button>
+                      </>
+                    ))}
+                  </span>
+                )}
               </label>
               <label className="auth-label">{t("auth.signup.passwordLabel")}
                 <div className="auth-input-wrap">
