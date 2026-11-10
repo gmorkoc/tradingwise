@@ -522,6 +522,23 @@
   transition: background 0.6s ease;
   overflow: hidden;
 }
+/* No data for this exchange (every source failed) or still loading. */
+.pe-exch-heat-row--na { background: color-mix(in srgb, var(--color-text) 3%, transparent); }
+.pe-exch-heat-row--na .pe-exch-heat-name { color: var(--color-text-muted); }
+.pe-exch-heat-skel {
+  display: inline-block;
+  width: 120px;
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--color-text) 7%, transparent) 25%,
+    color-mix(in srgb, var(--color-text) 14%, transparent) 50%,
+    color-mix(in srgb, var(--color-text) 7%, transparent) 75%);
+  background-size: 200% 100%;
+  animation: pe-exch-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes pe-exch-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .pe-exch-heat-skel { animation: none; } }
 
 .pe-exch-heat-name {
   font-size: 0.82rem;

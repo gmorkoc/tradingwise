@@ -77,6 +77,7 @@ import { PositionIntelligence } from "./components/PositionIntelligence";
 import { ChartBottomPanel } from "./components/ChartBottomPanel";
 import { CoinInfoPanel } from "./components/CoinInfoPanel";
 import { PeerCompare } from "./components/PeerCompare";
+import { AUTH_DISMISSED_EVENT } from "./hooks/useAuthFirst";
 import { CoinNews } from "./components/CoinNews";
 import { MarketCycles } from "./components/MarketCycles";
 import { TradeInsights } from "./components/TradeInsights";
@@ -765,7 +766,9 @@ function AppDashboard({
   // Whale transfers share the price toast (Whale Activity switch in
   // Notification Settings). A price move shows first; whales wait behind it.
   const [whaleAlertsOn] = useWhaleAlertsEnabled();
-  const { alert: whaleToast, dismiss: dismissWhaleToast, snooze: snoozeWhaleToast } = useWhaleToast(notificationsEnabled && whaleAlertsOn);
+  // Signed-in users only — whale alerts never pop up for signed-out visitors.
+  const { user: whaleUser } = useAuth();
+  const { alert: whaleToast, dismiss: dismissWhaleToast, snooze: snoozeWhaleToast } = useWhaleToast(!!whaleUser && notificationsEnabled && whaleAlertsOn);
 
   // Tapping a coin-mention push (pushNotifications.ts) jumps straight to
   // that comment: switch to its coin, open the chart + chat dock, and
@@ -4521,6 +4524,7 @@ function AppDashboard({
               {activeSection === "marketheatmap" && <MarketHeatmap />}
               {activeSection === "altanalysis" && (
                 <BlurGate
+                  autoAuth
                   requiredTier="pro"
                   featureName="Alt Analysis"
                   onOpenAuth={onOpenAuth}
@@ -4535,6 +4539,7 @@ function AppDashboard({
               )}
               {activeSection === "options" && (
                 <BlurGate
+                  autoAuth
                   requiredTier="pro"
                   featureName="Options Analytics"
                   onOpenAuth={onOpenAuth}
@@ -4546,6 +4551,7 @@ function AppDashboard({
               )}
               {activeSection === "correlation" && (
                 <BlurGate
+                  autoAuth
                   requiredTier="pro"
                   featureName="Correlation Matrix"
                   onOpenAuth={onOpenAuth}
@@ -4557,6 +4563,7 @@ function AppDashboard({
               )}
               {activeSection === "strategyalerts" && (
                 <BlurGate
+                  autoAuth
                   requiredTier="pro"
                   featureName="Strategy Alerts"
                   onOpenAuth={onOpenAuth}
@@ -5106,10 +5113,18 @@ function AppGate() {
   // every entry point (buttons, upgrade-reminder push taps, etc.).
   const userRef = useRef(user);
   userRef.current = user;
+  // Signed out → sign in / sign up first, then come back to the plan picker.
+  const upgradeAfterAuthRef = useRef(false);
   const openUpgrade = useCallback(() => {
     if (userRef.current) setShowUpgrade(true);
-    else setShowAuth(true);
+    else { upgradeAfterAuthRef.current = true; setShowAuth(true); }
   }, []);
+  useEffect(() => {
+    if (user && upgradeAfterAuthRef.current) {
+      upgradeAfterAuthRef.current = false;
+      setShowUpgrade(true);
+    }
+  }, [user]);
 
   // Native Google sign-in opens an in-app browser and returns immediately —
   // the real session lands later, asynchronously, via a deep-link listener
@@ -5253,12 +5268,21 @@ function AppGate() {
         theme={theme}
         setTheme={setTheme}
       />
-      {showAuth && <AuthModal initialView={authView ?? undefined} onClose={() => { setShowAuth(false); setAuthView(null); }} />}
+      {showAuth && <AuthModal initialView={authView ?? undefined} onClose={() => {
+        setShowAuth(false); setAuthView(null);
+        // Closed without signing in → don't pop the plan picker later, and
+        // tell any upgrade screen waiting on sign-in to close (useAuthFirst).
+        if (!userRef.current) {
+          upgradeAfterAuthRef.current = false;
+          window.dispatchEvent(new Event(AUTH_DISMISSED_EVENT));
+        }
+      }} />}
       {showUpgrade && user && (
         <UpgradeModal
           onClose={() => setShowUpgrade(false)}
           onOpenAuth={() => {
             setShowUpgrade(false);
+            upgradeAfterAuthRef.current = true;
             setShowAuth(true);
           }}
         />

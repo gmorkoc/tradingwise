@@ -123,10 +123,12 @@ interface CMEGap {
 
 export interface ExchangeActivity {
   exchange: string;
-  fundingRate: number;   // raw, e.g. 0.0001
-  fundingPct: string;    // formatted, e.g. "+0.0100%"
+  fundingRate: number;   // raw, e.g. 0.0001 (0 when unavailable — check `available`)
+  fundingPct: string;    // formatted, e.g. "+0.0100%" ("—" when unavailable)
   priceChange: number;   // 4h price change %
   signal: 'buying' | 'selling' | 'neutral';
+  /** false = every source for this exchange failed; the numbers are NOT real. */
+  available: boolean;
 }
 
 interface BTCData {
@@ -1096,8 +1098,11 @@ export const coinglass = {
           / priceCandles[priceCandles.length - 2].close) * 100
       : 0;
 
+    // 0.01% per 8h is the exchanges' default (baseline) funding, not a sign
+    // of crowded longs — "buying" only from double that; any clearly
+    // negative rate means shorts are paying.
     const classify = (fr: number): ExchangeActivity['signal'] => {
-      if (fr > 0.00005)  return 'buying';
+      if (fr > 0.0002)   return 'buying';
       if (fr < -0.00005) return 'selling';
       return 'neutral';
     };
@@ -1107,8 +1112,30 @@ export const coinglass = {
       return `${pct >= 0 ? '+' : ''}${pct.toFixed(4)}%`;
     };
 
+    // Every source for this exchange failed → marked unavailable, never shown
+    // as a real "0.0000% Neutral" reading.
     const mkNeutral = (exchange: string): ExchangeActivity =>
-      ({ exchange, fundingRate: 0, fundingPct: '0.0000%', priceChange, signal: 'neutral' });
+      ({ exchange, fundingRate: 0, fundingPct: '—', priceChange, signal: 'neutral', available: false });
+
+    // First choice: our exchange-funding server function, run in a non-US
+    // region so Binance/Bybit (which block US requests) answer — official
+    // exchange APIs only. Tries Frankfurt, then Tokyo for anything missing.
+    // Each exchange falls back to the older sources below if still missing.
+    const fnRates: Record<string, number | null> = {};
+    try {
+      const { supabase } = await import('./supabase');
+      const { FunctionRegion } = await import('@supabase/supabase-js');
+      for (const region of [FunctionRegion.EuCentral1, FunctionRegion.ApNortheast1]) {
+        const { data } = await supabase.functions.invoke('exchange-funding', { body: { coin }, region });
+        const rates = (data as { rates?: Record<string, number | null> } | null)?.rates;
+        if (rates) for (const [ex, v] of Object.entries(rates)) if (fnRates[ex] == null && typeof v === 'number') fnRates[ex] = v;
+        if (['Binance', 'Bybit', 'OKX', 'Bitget', 'Coinbase'].every((ex) => typeof fnRates[ex] === 'number')) break;
+      }
+    } catch { /* function not deployed / offline → older sources */ }
+    const fromFn = (exchange: string): ExchangeActivity | null => {
+      const fr = fnRates[exchange];
+      return typeof fr === 'number' ? { exchange, fundingRate: fr, fundingPct: fmt(fr), priceChange, signal: classify(fr), available: true } : null;
+    };
 
     // CoinGlass funding-rate/history: works for Binance on hobbyist plan, try Bybit too
     const parseCgFR = (res: { data?: { code?: string; data?: { close?: string }[] } } | null): number => {
@@ -1156,7 +1183,7 @@ export const coinglass = {
     const bnFRdirect = parseFloat(bnDirectRes?.lastFundingRate ?? '');
     const bnFRcoinalyze = coinalyzeMap.get(`${sym}_PERP.A`) ?? NaN;
     const bnFR = isFinite(bnFRcg) ? bnFRcg : isFinite(bnFRdirect) ? bnFRdirect : bnFRcoinalyze;
-    if (isFinite(bnFR)) binance = { exchange: 'Binance', fundingRate: bnFR, fundingPct: fmt(bnFR), priceChange, signal: classify(bnFR) };
+    if (isFinite(bnFR)) binance = { exchange: 'Binance', fundingRate: bnFR, fundingPct: fmt(bnFR), priceChange, signal: classify(bnFR), available: true };
 
     // ── Bybit: CoinGlass, then direct Bybit v5 API, then Coinalyze ───────────
     let bybit = mkNeutral('Bybit');
@@ -1164,12 +1191,12 @@ export const coinglass = {
     const bybitFRdirect = parseFloat(bybitDirectRes?.result?.list?.[0]?.fundingRate ?? '');
     const bybitFRcoinalyze = coinalyzeMap.get(`${sym}.6`) ?? NaN;
     const bybitFR = isFinite(bybitFRcg) ? bybitFRcg : isFinite(bybitFRdirect) ? bybitFRdirect : bybitFRcoinalyze;
-    if (isFinite(bybitFR)) bybit = { exchange: 'Bybit', fundingRate: bybitFR, fundingPct: fmt(bybitFR), priceChange, signal: classify(bybitFR) };
+    if (isFinite(bybitFR)) bybit = { exchange: 'Bybit', fundingRate: bybitFR, fundingPct: fmt(bybitFR), priceChange, signal: classify(bybitFR), available: true };
 
     // ── OKX via /okx-api proxy ───────────────────────────────────────────────
     let okx = mkNeutral('OKX');
     const okxFR = parseFloat(okxRes?.data?.[0]?.fundingRate ?? '');
-    if (isFinite(okxFR)) okx = { exchange: 'OKX', fundingRate: okxFR, fundingPct: fmt(okxFR), priceChange, signal: classify(okxFR) };
+    if (isFinite(okxFR)) okx = { exchange: 'OKX', fundingRate: okxFR, fundingPct: fmt(okxFR), priceChange, signal: classify(okxFR), available: true };
 
     // ── Bitget direct (data may be object or array) ──────────────────────────
     let bitget = mkNeutral('Bitget');
@@ -1177,16 +1204,23 @@ export const coinglass = {
     const bitgetFR = parseFloat(
       (Array.isArray(bgData) ? bgData[0]?.fundingRate : bgData?.fundingRate) ?? ''
     );
-    if (isFinite(bitgetFR)) bitget = { exchange: 'Bitget', fundingRate: bitgetFR, fundingPct: fmt(bitgetFR), priceChange, signal: classify(bitgetFR) };
+    if (isFinite(bitgetFR)) bitget = { exchange: 'Bitget', fundingRate: bitgetFR, fundingPct: fmt(bitgetFR), priceChange, signal: classify(bitgetFR), available: true };
 
     // ── Coinbase: CoinGlass first, fallback to INTX instrument endpoint ──────
     let coinbase = mkNeutral('Coinbase');
     const cbFRcg = parseCgFR(cbCgRes);
     const cbFRintx = parseFloat(cbIntxRes?.predicted_funding ?? cbIntxRes?.funding_rate ?? '');
     const cbFR = isFinite(cbFRcg) ? cbFRcg : cbFRintx;
-    if (isFinite(cbFR)) coinbase = { exchange: 'Coinbase', fundingRate: cbFR, fundingPct: fmt(cbFR), priceChange, signal: classify(cbFR) };
+    if (isFinite(cbFR)) coinbase = { exchange: 'Coinbase', fundingRate: cbFR, fundingPct: fmt(cbFR), priceChange, signal: classify(cbFR), available: true };
 
-    return [binance, bybit, okx, bitget, coinbase];
+    // The server function's direct-from-exchange readings win when present.
+    return [
+      fromFn('Binance') ?? binance,
+      fromFn('Bybit') ?? bybit,
+      fromFn('OKX') ?? okx,
+      fromFn('Bitget') ?? bitget,
+      fromFn('Coinbase') ?? coinbase,
+    ];
   },
 
   getHistoricalPrices: async (interval: TimeInterval): Promise<PriceDataPoint[]> => {

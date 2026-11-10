@@ -4,6 +4,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { redirectToCheckout, previewUpgrade, upgradePlan, PRICE_IDS } from "../services/stripeService";
 import { isIAPAvailable, getIAPPlans, purchaseIAPPlan, syncIAPEntitlement, type IAPPlan } from "../services/revenuecat";
 import "../styles/MembershipGate.css";
+import { useAuthFirst } from "../hooks/useAuthFirst";
 
 interface Props {
   onClose: () => void;
@@ -45,6 +46,10 @@ export function EliteUpsellModal({ onClose, onOpenAuth }: Props) {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
+
+  // Signed out → the sign-in window opens instead of this offer; it appears
+  // once signed in, and closes if sign-in is dismissed.
+  const signedIn = useAuthFirst(true, onOpenAuth, onClose);
 
   const isProUser = user !== null && tier === "pro";
   const iapPlan = iapPlans.find(p => p.tier === "elite");
@@ -112,6 +117,7 @@ export function EliteUpsellModal({ onClose, onOpenAuth }: Props) {
     : t("membershipGate.blurGate.upgradeBtn", { price: planPrice });
   const trustLine= isProUser ? t("membershipGate.blurGate.pro_trust")    : t("membershipGate.blurGate.trust");
 
+  if (!signedIn) return null;
   return (
     <div className="bg-modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="bg-elite-card bg-elite-card--modal">

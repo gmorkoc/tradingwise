@@ -332,6 +332,69 @@ html[data-theme="light"] .bg-modal-close:hover {
   padding-top: 24px;
 }
 
+/* Signed out: a single button over the blur (no sales card) — opens the
+   sign-in window. Stays inside its own section on every screen size (the
+   sales overlay goes full-screen on phones; a sign-in button must not). */
+.bg-root .bg-overlay.bg-overlay--signin,
+.bg-root.bg-root--top .bg-overlay.bg-overlay--signin {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: none;
+  backdrop-filter: none;
+}
+.bg-root.bg-root--top .bg-overlay.bg-overlay--signin { align-items: center; padding-top: 16px; }
+/* Compact placeholder instead of the real content: a few faded rows. */
+.bg-root.bg-root--signin { display: block; height: auto; min-height: 0; }
+.bg-root.bg-root--signin > .bg-signin-skel { width: 100%; box-sizing: border-box; }
+.bg-signin-skel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 22px 20px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+  opacity: 0.55;
+}
+.bg-signin-skel-row {
+  display: block;
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--color-text) 7%, transparent) 25%,
+    color-mix(in srgb, var(--color-text) 13%, transparent) 50%,
+    color-mix(in srgb, var(--color-text) 7%, transparent) 75%);
+  background-size: 200% 100%;
+  animation: bg-signin-shimmer 1.6s ease-in-out infinite;
+}
+.bg-signin-skel-row:first-child { height: 16px; }
+@keyframes bg-signin-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .bg-signin-skel-row { animation: none; } }
+.bg-signin-btn,
+.bg-signin-btn:hover {
+  all: unset;
+  flex: none;
+  align-self: center;
+  width: max-content;
+  max-width: 100%;
+  height: auto;
+  box-sizing: border-box;
+  text-align: center;
+  padding: 13px 22px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(90deg, #4338ca, #0070f3);
+  box-shadow: 0 10px 30px -10px rgba(37, 99, 235, 0.55);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
 .bg-card {
   position: relative;
   background: linear-gradient(160deg, rgba(12, 8, 20, 0.96) 0%, rgba(0, 0, 0, 0.96) 100%);

@@ -7,6 +7,7 @@ import { isIAPAvailable } from "../services/revenuecat";
 import { useStorePrices } from "../hooks/useStorePrices";
 import "../styles/AIQuotaWall.css";
 import "../styles/MembershipGate.css";
+import { useAuthFirst } from "../hooks/useAuthFirst";
 
 const TIER_COLOR: Record<Tier, string> = {
   free:  "#94a3b8",
@@ -28,6 +29,8 @@ interface Props {
   // Optional small line above the headline naming the locked feature
   // (e.g. "Alt Analysis is part of Pro") — used by the menu promo.
   eyebrow?: string;
+  /** Full-page gate: signed out → open the sign-in window on arrival. */
+  autoAuth?: boolean;
 }
 
 function CheckIcon({ color }: { color: string }) {
@@ -157,7 +160,7 @@ function formatAmount(cents: number, currency: string) {
 }
 
 /* ── BlurGate: shows static preview image blurred + upgrade card overlay ──── */
-export const BlurGate: React.FC<Props> = ({ requiredTier, children, onOpenAuth, onOpenUpgrade, previewSrc, className, extraFeature, eyebrow }) => {
+export const BlurGate: React.FC<Props> = ({ requiredTier, children, onOpenAuth, onOpenUpgrade, previewSrc, className, extraFeature, eyebrow, featureName, autoAuth }) => {
   const { t } = useTranslation();
   const { user, tier, loading } = useAuth();
   const prices = useStorePrices();
@@ -197,8 +200,31 @@ export const BlurGate: React.FC<Props> = ({ requiredTier, children, onOpenAuth, 
     };
   }, []);
 
+  // Signed out: no sales card. Full-page gates (autoAuth) open the sign-in
+  // window right away — same "Welcome to coinhintz" screen as Agent Ready —
+  // and the upgrade card shows here once signed in.
+  useAuthFirst(!!autoAuth, onOpenAuth);
+
   if (loading) return <>{children}</>;
   if (user && hasAccess(tier, requiredTier)) return <>{children}</>;
+  if (!user) {
+    // Closed the sign-in window? A compact faded placeholder (not the real,
+    // often very tall, content) with the sign-in button on it.
+    return (
+      <div className={`bg-root bg-root--signin${className ? ` ${className}` : ""}`}>
+        <div className="bg-signin-skel" aria-hidden="true">
+          {[72, 100, 88, 64, 94].map((w, i) => (
+            <span key={i} className="bg-signin-skel-row" style={{ width: `${w}%` }} />
+          ))}
+        </div>
+        <div className="bg-overlay bg-overlay--signin">
+          <button type="button" className="bg-signin-btn" onClick={() => onOpenAuth()}>
+            Sign in to unlock{featureName ? ` ${featureName}` : ""}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const isProGate  = requiredTier === "pro";
   const isProUser  = user !== null && tier === "pro";

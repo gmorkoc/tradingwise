@@ -1577,7 +1577,7 @@
     "bear": "Bear",
     "bull": "Bull",
     "exchActivity": "Exchange Activity",
-    "exchSub": "Funding rate per exchange · positive = longs crowded",
+    "exchSub": "Funding rate per exchange (8h) · 0.01% is the normal baseline; well above = longs crowded, negative = shorts crowded",
     "updating": "Updating…",
     "updatedAt": "Updated {{time}}",
     "selling": "◄ Selling",

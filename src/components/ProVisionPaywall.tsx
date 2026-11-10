@@ -17,6 +17,7 @@ import { useStorePrices } from "../hooks/useStorePrices";
 import { useTranslation } from "react-i18next";
 import "../styles/MembershipGate.css";
 import "../styles/PaywallPromo.css";
+import { useAuthFirst } from "../hooks/useAuthFirst";
 
 // Terms / Privacy pages exist in these languages (same as UpgradeModal).
 const LOCALIZED_LEGAL_LANGS = ["es", "it", "tr"];
@@ -198,7 +199,23 @@ export function ProVisionPaywallHost({ onOpenAuth, onOpenUpgrade }: { onOpenAuth
 
   useEffect(() => onProVisionPaywall((r) => { setError(null); setReq(r); }), []);
 
+  // Opened signed out ("sign in to try") → once signed in and the profile
+  // has loaded, show the offer that fits this account instead — or close
+  // and switch ProVision on if the plan already includes it.
+  const { user, profile, profileLoading } = useAuth();
+  useEffect(() => {
+    // Wait for THIS account's profile (its tier decides the offer).
+    if (!req || req.reason !== "signin" || !user || profileLoading || profile?.id !== user.id) return;
+    const reason = access.lockReason(req.coin ?? "BTC");
+    if (!reason) { setReq(null); setOn(true); return; }
+    if (reason !== "signin") setReq({ ...req, reason });
+  }, [req, user, profile, profileLoading, access, setOn]);
+
   const close = () => { if (!busy) setReq(null); };
+  // Signed out → open the sign-in window instead of the paywall; the
+  // effect below swaps in the right offer once signed in. Dismissing
+  // sign-in closes the request.
+  useAuthFirst(req?.reason === "signin", onOpenAuth, () => setReq(null));
 
   const startTrial = async () => {
     setBusy(true); setError(null);
@@ -257,7 +274,7 @@ export function ProVisionPaywallHost({ onOpenAuth, onOpenUpgrade }: { onOpenAuth
 
   return (
     <ProVisionPaywall
-      open={!!req}
+      open={!!req && req.reason !== "signin"}
       onRestore={restore}
       onClose={close}
       reason={req?.reason ?? "trial-available"}
@@ -268,7 +285,9 @@ export function ProVisionPaywallHost({ onOpenAuth, onOpenUpgrade }: { onOpenAuth
       onStartTrial={startTrial}
       onBuyPlan={buyPlan}
       onUpgradeElite={() => { setReq(null); onOpenUpgrade(); }}
-      onSignIn={() => { setReq(null); onOpenAuth(); }}
+      // Stays open under the sign-in window; the effect above swaps in the
+      // signed-in offer (or closes it if the plan already covers it).
+      onSignIn={() => { onOpenAuth(); }}
     />
   );
 }

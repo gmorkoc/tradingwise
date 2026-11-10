@@ -6,7 +6,6 @@ import { useAuth } from "../contexts/AuthContext";
 import { hasAccess } from "../services/supabase";
 import "../styles/PredictionEngine.css";
 
-const EXCH_WEIGHTS: Record<string, number> = { Binance: 54, OKX: 27, Bybit: 8, Bitget: 5, Coinbase: 6 };
 
 function polarToCart(cx: number, cy: number, r: number, deg: number): [number, number] {
   const rad = ((deg - 90) * Math.PI) / 180;
@@ -429,9 +428,13 @@ export function PredictionEngine({ btcData, coin, livePrice, onOpenAuth, onOpenU
           </span>
         </div>
         {(() => {
-          const exchList = exchLoading && exchangeData.length === 0
-            ? ["Binance","OKX","Bybit","Bitget","Coinbase"].map(e => ({ exchange: e, signal: "neutral" as const, fundingRate: 0, fundingPct: "0.0000%", priceChange: 0 }))
+          // First load: placeholder rows with NO numbers (they used to read
+          // as real "0.0000% Neutral" values while loading).
+          const firstLoad = exchLoading && exchangeData.length === 0;
+          const exchList: ExchangeActivity[] = firstLoad
+            ? ["Binance","OKX","Bybit","Bitget","Coinbase"].map(e => ({ exchange: e, signal: "neutral" as const, fundingRate: 0, fundingPct: "", priceChange: 0, available: false }))
             : exchangeData;
+          const reporting = exchList.filter(e => e.available);
 
           const sigCfg: Record<ExchangeActivity["signal"], { label: string; cls: string; icon: string }> = {
             buying:  { label: t("predEngine.sigBuying"),  cls: "bull",    icon: "▲" },
@@ -447,16 +450,18 @@ export function PredictionEngine({ btcData, coin, livePrice, onOpenAuth, onOpenU
           const sigIdx: Partial<Record<string, number>> = {};
 
           const CX = 200, CY = 200, OR = 186, IR = 108;
-          const total = exchList.reduce((s, e) => s + (EXCH_WEIGHTS[e.exchange] ?? 10), 0);
+          // Equal slices, coloured by each exchange's funding signal. (The old
+          // 54/27/8/5/6 "share" was a fixed guess, not live data, so no
+          // percentages are shown.) No data → grey.
           let ang = 0;
           const slices = exchList.map(ex => {
-            const w = EXCH_WEIGHTS[ex.exchange] ?? 10;
-            const a0 = ang; ang += (w / total) * 360;
-            const i = sigIdx[ex.signal] ?? 0; sigIdx[ex.signal] = i + 1;
-            return { ...ex, a0, a1: ang, color: sigPalette[ex.signal][i % sigPalette[ex.signal].length] };
+            const a0 = ang; ang += 360 / exchList.length;
+            const i = sigIdx[ex.signal] ?? 0; if (ex.available) sigIdx[ex.signal] = i + 1;
+            const color = ex.available ? sigPalette[ex.signal][i % sigPalette[ex.signal].length] : "rgba(148,163,184,0.28)";
+            return { ...ex, a0, a1: ang, color };
           });
 
-          const maxFR = Math.max(0.00005, ...exchList.map(e => Math.abs(e.fundingRate)));
+          const maxFR = Math.max(0.00005, ...reporting.map(e => Math.abs(e.fundingRate)));
 
           return (
             <div className="pe-exch-pie-heat-wrap">
@@ -465,19 +470,24 @@ export function PredictionEngine({ btcData, coin, livePrice, onOpenAuth, onOpenU
                   <path key={s.exchange} d={donutSlice(CX, CY, OR, IR, s.a0, s.a1)} fill={s.color} />
                 ))}
                 {slices.map(s => {
-                  const span = s.a1 - s.a0;
                   const mid = (s.a0 + s.a1) / 2;
                   const [tx, ty] = polarToCart(CX, CY, (OR + IR) / 2, mid);
-                  const pct = Math.round((EXCH_WEIGHTS[s.exchange] ?? 10) / total * 100);
-                  if (span < 12) return null;
-                  if (span >= 30) return (
+                  return (
                     <g key={`t-${s.exchange}`} style={{ pointerEvents: 'none' }}>
-                      <text x={tx} y={ty - 9} textAnchor="middle" dominantBaseline="middle" fill="#fff" fontSize="13" fontWeight="800">{s.exchange}</text>
-                      <text x={tx} y={ty + 9} textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.72)" fontSize="11">{pct}%</text>
+                      <text x={tx} y={ty - 8} textAnchor="middle" dominantBaseline="middle" fill={s.available ? "#fff" : "#94a3b8"} fontSize="12" fontWeight="800">{s.exchange}</text>
+                      <text x={tx} y={ty + 9} textAnchor="middle" dominantBaseline="middle" fill={s.available ? "rgba(255,255,255,0.8)" : "#94a3b8"} fontSize="10.5">
+                        {s.available ? s.fundingPct : firstLoad ? "…" : "no data"}
+                      </text>
                     </g>
                   );
-                  return <text key={`t-${s.exchange}`} x={tx} y={ty} textAnchor="middle" dominantBaseline="middle" fill="#fff" fontSize="11" fontWeight="700" style={{ pointerEvents: 'none' }}>{pct}%</text>;
                 })}
+                {/* Centre: how many exchanges actually reported. */}
+                <text x={CX} y={CY - 8} textAnchor="middle" dominantBaseline="middle" fill="currentColor" fontSize="30" fontWeight="800">
+                  {firstLoad ? "…" : `${reporting.length}/${exchList.length}`}
+                </text>
+                <text x={CX} y={CY + 20} textAnchor="middle" dominantBaseline="middle" fill="#94a3b8" fontSize="12">
+                  {firstLoad ? "loading" : "reporting"}
+                </text>
               </svg>
 
               <div className="pe-exch-heatgrid">
@@ -487,6 +497,20 @@ export function PredictionEngine({ btcData, coin, livePrice, onOpenAuth, onOpenU
                   <span>{t("predEngine.buying")}</span>
                 </div>
                 {slices.map(ex => {
+                  // No data / still loading: plain row, no number, no signal.
+                  if (!ex.available) return (
+                    <div key={ex.exchange} className={`pe-exch-heat-row pe-exch-heat-row--na${firstLoad ? " pe-exch-heat-row--loading" : ""}`}>
+                      <div className="pe-exch-heat-name-wrap">
+                        <span className="pe-exch-heat-dot" style={{ background: ex.color }} />
+                        <span className="pe-exch-heat-name">{ex.exchange}</span>
+                      </div>
+                      <div className="pe-exch-heat-stats">
+                        {firstLoad
+                          ? <span className="pe-exch-heat-skel" aria-hidden="true" />
+                          : <span className="pe-exch-heat-badge pe-exch-badge--neutral">No data</span>}
+                      </div>
+                    </div>
+                  );
                   const c = sigCfg[ex.signal];
                   const intensity = Math.abs(ex.fundingRate) / maxFR;
                   const alpha = (0.08 + intensity * 0.3).toFixed(3);
