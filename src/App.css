@@ -4914,13 +4914,16 @@ html[data-theme="light"] .main-coin-header {
 
 /* iOS-style "pop": after the back chevron, the page you return to slides in
    from the left (parallax start) and fades up — same curve as UIKit. */
-.main-content.page-pop { animation: page-pop-in 0.38s cubic-bezier(0.32, 0.72, 0, 1); }
+/* Phones only — desktop switches pages without a slide. */
+@media (max-width: 900px) {
+  .main-content.page-pop { animation: page-pop-in 0.38s cubic-bezier(0.32, 0.72, 0, 1); }
+  .main-content.page-push { animation: page-push-in 0.38s cubic-bezier(0.32, 0.72, 0, 1); }
+}
 @keyframes page-pop-in {
   from { transform: translateX(-28%); opacity: 0.55; }
   to { transform: none; opacity: 1; }
 }
 /* Opening a page ("push"): it slides in from the right, same curve. */
-.main-content.page-push { animation: page-push-in 0.38s cubic-bezier(0.32, 0.72, 0, 1); }
 @keyframes page-push-in {
   from { transform: translateX(32%); opacity: 0.55; }
   to { transform: none; opacity: 1; }
