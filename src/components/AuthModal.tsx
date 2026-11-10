@@ -169,11 +169,14 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
     setBusy(true); setError("");
     const err = await signIn(email, password);
     if (err === "verify_email") {
-      // Never confirmed — send a fresh code and go to the code step.
-      await resendVerification(email);
+      // Never confirmed — send a fresh code and go to the code step. If the
+      // send fails (e.g. rate limit), say so on the code screen instead of
+      // implying a code is on its way.
+      const sendErr = await resendVerification(email);
       setResendIn(30);
       setCode("");
       setView("verify");
+      if (sendErr) setError(`Couldn't send a new code: ${sendErr}`);
     } else if (err) {
       setError(err.toLowerCase().includes("invalid login credentials")
         ? "no_account" : err);
@@ -520,8 +523,12 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
                 </div>
               </label>
               {error === "sso_exists" ? (
+                // Email already has an account (password or Google) — no
+                // code is sent for it, so point to signing in instead.
                 <p className="auth-error">
-                  {t("auth.signup.ssoExists")}{" "}
+                  An account with this email already exists.{" "}
+                  <button type="button" className="auth-link-btn" onClick={() => { setError(""); setView("login"); }}>Sign in</button>
+                  {" or "}
                   <button type="button" className="auth-link-btn" onClick={handleGoogle} disabled={busy}>{t("auth.signup.signinWithGoogle")}</button>
                 </p>
               ) : error ? <p className="auth-error">{error}</p> : null}

@@ -148,6 +148,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
     });
     if (!error) {
+      // Email already has a CONFIRMED account: Supabase answers "success"
+      // (so outsiders can't probe emails) but sends no email and returns a
+      // user with no identities. Without this check the app showed "Check
+      // your email" for a code that never comes.
+      if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+        return "User already registered";
+      }
       supabase.functions.invoke("notify-admin", { body: { event: "signup", email } }).catch(() => {});
       if (!data.session) return "verify_email";
     }
