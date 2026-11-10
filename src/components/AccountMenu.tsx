@@ -92,7 +92,7 @@ export const AccountMenu: React.FC<Props> = ({
   const { user, profile, tier, signOut } = useAuth();
   const { used, limit, exceeded, isPaid } = useAIQuota();
   const [open, setOpen] = useState(false);
-  const [dropPos, setDropPos] = useState({ top: 0, left: 0 });
+  const [dropPos, setDropPos] = useState({ top: 0, left: 0, arrowX: 0, arrowY: 0 });
   const menuRef = useRef<HTMLDivElement>(null);
   const avatarRef = useRef<HTMLButtonElement>(null);
 
@@ -107,13 +107,17 @@ export const AccountMenu: React.FC<Props> = ({
       const DROPDOWN_W = 280;
       const DROPDOWN_H = 440;
 
-      let left = r.right - DROPDOWN_W;
-      let top = r.bottom + 10;
+      // Centred under the avatar, kept 8px inside the window; the pointer
+      // (`arrowX`) aims at the avatar's centre wherever the menu lands.
+      const vw = window.innerWidth;
+      const cx = r.left + r.width / 2;
+      let left = Math.round(cx - DROPDOWN_W / 2);
+      let top = r.bottom + 12;
 
-      if (left < 8) left = 8;
+      left = Math.min(Math.max(8, left), vw - DROPDOWN_W - 8);
       if (top + DROPDOWN_H > vh - 8) top = Math.max(8, vh - DROPDOWN_H - 8);
 
-      setDropPos({ top, left });
+      setDropPos({ top, left, arrowX: Math.round(cx), arrowY: top });
     }
     setOpen((v) => !v);
   };
@@ -194,6 +198,10 @@ export const AccountMenu: React.FC<Props> = ({
 
       {dropdown && open &&
         createPortal(
+          <>
+          {/* Pointer above the menu, aimed at the avatar (separate element —
+              the menu itself scrolls, so a child arrow would be clipped). */}
+          <span className="acct-dd-arrow" aria-hidden="true" style={{ top: dropPos.arrowY - 6, left: dropPos.arrowX - 6 }} />
           <div
             className="acct-dropdown acct-dropdown--portal"
             ref={menuRef}
@@ -358,7 +366,8 @@ export const AccountMenu: React.FC<Props> = ({
             >
               {t("account.signout")}
             </button>
-          </div>,
+          </div>
+          </>,
           document.body,
         )}
     </div>

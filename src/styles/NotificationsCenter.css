@@ -45,6 +45,21 @@
     box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22);
     animation: notif-drop-in 0.16s cubic-bezier(0.22, 1, 0.36, 1);
     transform-origin: top right;
+    overflow: visible;
+  }
+  /* Small pointer on top, aimed at the bell's centre. */
+  .notif-panel--drop .notif-arrow {
+    position: absolute;
+    top: -7px;
+    right: calc(var(--notif-arrow, 24px) - 7px);
+    width: 12px;
+    height: 12px;
+    transform: rotate(45deg);
+    background: inherit;
+    border-left: 1px solid var(--color-border);
+    border-top: 1px solid var(--color-border);
+    border-top-left-radius: 3px;
+    z-index: 1;
   }
 }
 @keyframes notif-drop-in { from { opacity: 0; transform: translateY(-6px) scale(0.98); } to { opacity: 1; transform: none; } }

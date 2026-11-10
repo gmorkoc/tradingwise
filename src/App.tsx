@@ -586,7 +586,7 @@ function AppDashboard({
   // than this component owning its own fetch too.
   const [notificationsCenterOpen, setNotificationsCenterOpen] = useState(false);
   // Desktop: where the notifications dropdown hangs (under its bell icon).
-  const [notifAnchor, setNotifAnchor] = useState<{ top: number; right: number } | null>(null);
+  const [notifAnchor, setNotifAnchor] = useState<{ top: number; right: number; arrow?: number } | null>(null);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
   // Mirrors TradingAgent's own internal `unread` state (dispatched via a
   // plain event, same convention as the rest of this cross-component
@@ -3931,7 +3931,11 @@ function AppDashboard({
                       if (!user) { onOpenAuth(); return; }
                       // Desktop: drop the feed down under this bell.
                       const r = e.currentTarget.getBoundingClientRect();
-                      setNotifAnchor({ top: Math.round(r.bottom + 8), right: Math.max(8, Math.round(window.innerWidth - r.right)) });
+                      // Centred under the bell (400px panel), kept 8px inside the window;
+                      // `arrow` = distance from the panel's right edge to the bell's centre.
+                      const vw = window.innerWidth, panelW = Math.min(400, vw - 16), cx = r.left + r.width / 2;
+                      const right = Math.min(Math.max(8, Math.round(vw - cx - panelW / 2)), Math.max(8, vw - panelW - 8));
+                      setNotifAnchor({ top: Math.round(r.bottom + 10), right, arrow: Math.round(vw - cx - right) });
                       setNotificationsCenterOpen((v) => !v);
                     }}
                   >

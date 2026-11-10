@@ -14,11 +14,23 @@ interface Props {
   open: boolean;
   onClose: () => void;
   /** Desktop: drop down under the bell (viewport px: top edge, right gap). */
-  anchor?: { top: number; right: number } | null;
+  anchor?: { top: number; right: number; arrow?: number } | null;
   // Lets FloatingNavBar's badge stay accurate even before this panel has
   // ever been opened (mount-time count) and the instant something here
   // changes it (opened/marked read) — not just while open.
   onUnreadCountChange?: (count: number) => void;
+}
+
+/** News headlines arrive HTML-encoded ("AMD&#x2019;s", "&amp;") — turn the
+ *  entities back into characters (text only; nothing is rendered as HTML). */
+function decodeEntities(s: string | null | undefined): string {
+  if (!s || !s.includes("&")) return s ?? "";
+  return s
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(parseInt(d, 10)))
+    .replace(/&quot;/g, '"').replace(/&apos;|&#39;/g, "'")
+    .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&");
 }
 
 // Text glyphs only, deliberately — same reasoning as FloatingNavBar's
@@ -117,8 +129,9 @@ export function NotificationsCenter({ open, onClose, onUnreadCountChange, anchor
       <div className="notif-backdrop" onClick={onClose} />
       <div
         className={`notif-panel${anchor ? " notif-panel--drop" : ""}`}
-        style={anchor ? { top: anchor.top, right: anchor.right } : undefined}
+        style={anchor ? ({ top: anchor.top, right: anchor.right, ["--notif-arrow" as string]: `${anchor.arrow ?? 24}px` }) : undefined}
       >
+        {anchor && <span className="notif-arrow" aria-hidden="true" />}
         <div className="notif-panel-header">
           <div>
             <span className="notif-panel-title">{t("notificationsCenter.title")}</span>
@@ -146,8 +159,8 @@ export function NotificationsCenter({ open, onClose, onUnreadCountChange, anchor
             >
               <span className="notif-item-icon">{TYPE_ICON[n.type] ?? "🔔"}</span>
               <span className="notif-item-body">
-                <span className="notif-item-title">{n.title}</span>
-                <span className="notif-item-text">{n.body}</span>
+                <span className="notif-item-title">{decodeEntities(n.title)}</span>
+                <span className="notif-item-text">{decodeEntities(n.body)}</span>
               </span>
               <span className="notif-item-meta">
                 {!n.read && <span className="notif-item-dot" />}

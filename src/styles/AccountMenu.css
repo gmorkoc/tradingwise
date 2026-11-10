@@ -114,6 +114,21 @@ img.acct-initial-icon {
   overflow-y: auto;
 }
 
+/* Pointer above the portal menu, aimed at the avatar (positioned inline). */
+.acct-dd-arrow {
+  position: fixed;
+  z-index: 300002;
+  width: 12px;
+  height: 12px;
+  transform: rotate(45deg);
+  background: #ffffff;
+  border-left: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-border);
+  border-top-left-radius: 3px;
+  pointer-events: none;
+}
+html:not([data-theme="light"]) .acct-dd-arrow { background: #111113; }
+
 /* Solid, not see-through (the light card colour is 90% opaque). */
 .acct-dropdown { background: #ffffff; }
 html:not([data-theme="light"]) .acct-dropdown { background: #111113; }
