@@ -208,7 +208,9 @@ function CoinBlock({ coin, eyebrow }: { coin: CgCoin; eyebrow: string }) {
         {price(coin.current_price)}
         <span style={{ color }}>{up ? "+" : ""}{pct.toFixed(2)}% 1D</span>
       </div>
-      <div className="mkst-chart mkst-chart--coin">
+      {/* No price history anywhere (rare): leave the chart out rather than
+          showing an empty dotted grid. */}
+      {d && <div className="mkst-chart mkst-chart--coin">
         <div className="mkst-plot">
           <span className="mkst-grid" style={{ top: "0%" }} />
           <span className="mkst-grid" style={{ top: "50%" }} />
@@ -225,7 +227,7 @@ function CoinBlock({ coin, eyebrow }: { coin: CgCoin; eyebrow: string }) {
           </svg>
           {lastY != null && <span className="mkst-enddot" style={{ top: `${lastY}%`, color }} />}
         </div>
-      </div>
+      </div>}
       <div className="mkst-foot">{t("marketStories.volume24h", { value: usd(coin.total_volume) })}</div>
     </div>
   );

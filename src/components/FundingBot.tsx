@@ -2,7 +2,13 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 import { LockCard } from "./MembershipGate";
+import { Capacitor } from "@capacitor/core";
+import { getAllExchangeFunding, FUNDING_EXCHANGES, type FundingExchange } from "../services/coinglass";
 import "../styles/FundingBot.css";
+
+// Website: the /okx-api proxy. iOS app: there is no proxy (the app's origin
+// is capacitor://localhost), so call OKX directly — its public API allows it.
+const OKX_BASE = Capacitor.isNativePlatform() ? "https://www.okx.com" : "/okx-api";
 
 /** Small lock pill shown to guests in place of a signal badge. */
 function SignalLock({ onClick }: { onClick: (e: React.MouseEvent) => void }) {
@@ -35,8 +41,20 @@ interface CoinRow {
   symbol: string;    // e.g. "BTC"
   fullSymbol: string; // e.g. "BTCUSDT"
   markPrice: number;
+  /** Average funding rate across the exchanges that list this coin. */
   fundingRate: number;
   nextFundingTime: number;
+  /** Each exchange's own current rate (missing = not listed / no answer). */
+  rates: Partial<Record<FundingExchange, number>>;
+  /** Highest − lowest rate across exchanges (null with < 2 exchanges). */
+  spread: number | null;
+}
+
+/** Next standard 8h funding time (00/08/16 UTC) — used when OKX has no row. */
+function nextFundingSlot(): number {
+  const now = Date.now();
+  const step = 8 * 3600_000;
+  return Math.ceil(now / step) * step;
 }
 
 interface Props {
@@ -238,36 +256,43 @@ export const FundingBot: React.FC<Props> = ({ coin, onOpenAuth }) => {
   /* ── Fetch scanner data ──────────────────────────────────────────────────── */
   const fetchScanner = useCallback(async () => {
     try {
-      const [fundingResults, markResults] = await Promise.all([
-        Promise.all(
-          TOP_COINS.map(sym =>
-            fetch(`/okx-api/api/v5/public/funding-rate?instId=${sym}-USDT-SWAP`)
-              .then(r => r.json())
-              .then(d => ({ sym, data: (d.data?.[0] ?? null) as OkxFundingRate | null }))
-              .catch(() => ({ sym, data: null }))
-          )
-        ),
-        Promise.all(
-          TOP_COINS.map(sym =>
-            fetch(`/okx-api/api/v5/public/mark-price?instId=${sym}-USDT-SWAP`)
-              .then(r => r.json())
-              .then(d => ({ sym, markPx: d.data?.[0]?.markPx ?? "0" }))
-              .catch(() => ({ sym, markPx: "0" }))
-          )
-        ),
+      // Three requests in all: OKX's bulk funding + mark prices (direct, works
+      // in the iOS app too) and Binance/Bybit/Bitget/Coinbase via our
+      // exchange-funding function (bulk, cached 30s server-side).
+      const getJson = (url: string) => fetch(url).then(r => r.json()).catch(() => null);
+      const [okxFunding, okxMarks, others] = await Promise.all([
+        getJson(`${OKX_BASE}/api/v5/public/funding-rate?instId=ANY`),
+        getJson(`${OKX_BASE}/api/v5/public/mark-price?instType=SWAP`),
+        getAllExchangeFunding(),
       ]);
+      const okxBy = new Map<string, OkxFundingRate>();
+      for (const d of (okxFunding?.data ?? []) as (OkxFundingRate & { instId: string })[]) {
+        if (d.instId?.endsWith("-USDT-SWAP")) okxBy.set(d.instId.replace("-USDT-SWAP", ""), d);
+      }
+      const markBy = new Map<string, number>();
+      for (const d of (okxMarks?.data ?? []) as { instId: string; markPx: string }[]) {
+        if (d.instId?.endsWith("-USDT-SWAP")) markBy.set(d.instId.replace("-USDT-SWAP", ""), parseFloat(d.markPx));
+      }
 
-      const markMap = Object.fromEntries(markResults.map(m => [m.sym, m.markPx]));
-
-      const filtered = fundingResults
-        .filter(r => r.data !== null)
-        .map(({ sym, data }) => ({
+      const filtered = TOP_COINS.flatMap((sym) => {
+        const okx = okxBy.get(sym);
+        const rates: Partial<Record<FundingExchange, number>> = { ...(others[sym] ?? {}) };
+        if (okx) rates.OKX = parseFloat(okx.fundingRate);
+        const vals = FUNDING_EXCHANGES.map(e => rates[e]).filter((v): v is number => typeof v === "number" && isFinite(v));
+        if (!vals.length) return [];
+        // Main number = average across the exchanges that list it; spread =
+        // highest − lowest (a funding-arbitrage gap).
+        const avg = vals.reduce((s, v) => s + v, 0) / vals.length;
+        return [{
           symbol:          sym,
           fullSymbol:      `${sym}USDT`,
-          markPrice:       parseFloat(markMap[sym] ?? "0"),
-          fundingRate:     parseFloat(data!.fundingRate),
-          nextFundingTime: parseInt(data!.nextFundingTime),
-        } satisfies CoinRow));
+          markPrice:       markBy.get(sym) ?? 0,
+          fundingRate:     avg,
+          nextFundingTime: okx ? parseInt(okx.nextFundingTime) : nextFundingSlot(),
+          rates,
+          spread:          vals.length > 1 ? Math.max(...vals) - Math.min(...vals) : null,
+        } satisfies CoinRow];
+      });
 
       if (filtered.length === 0) throw new Error("No data returned");
       setRows(filtered);
@@ -286,7 +311,7 @@ export const FundingBot: React.FC<Props> = ({ coin, onOpenAuth }) => {
     setHistory([]);
     try {
       const res = await fetch(
-        `/okx-api/api/v5/public/funding-rate-history?instId=${sym}-USDT-SWAP&limit=10`
+        `${OKX_BASE}/api/v5/public/funding-rate-history?instId=${sym}-USDT-SWAP&limit=10`
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
@@ -416,8 +441,10 @@ export const FundingBot: React.FC<Props> = ({ coin, onOpenAuth }) => {
                 <tr>
                   <th className="fb-col-star"></th>
                   <th>{t("fundingBot.colCoin")}</th>
-                  <th>{t("fundingBot.colRate")}</th>
+                  <th title={t("fundingBot2.avgRateTip")}>{t("fundingBot2.avgRate")}</th>
                   <th className="fb-col-bar">{t("fundingBot.colBar")}</th>
+                  {FUNDING_EXCHANGES.map(ex => <th key={ex} className="fb-col-ex">{ex}</th>)}
+                  <th className="fb-col-ex" title={t("fundingBot2.spreadTip")}>{t("fundingBot2.spread")}</th>
                   <th>{t("fundingBot.colSignal")}</th>
                   <th>{t("fundingBot.colNext")}</th>
                   <th>{t("fundingBot.colPrice")}</th>
@@ -471,6 +498,21 @@ export const FundingBot: React.FC<Props> = ({ coin, onOpenAuth }) => {
                             }}
                           />
                         </div>
+                      </td>
+
+                      {/* Each exchange's own rate ("—" = not listed there). */}
+                      {FUNDING_EXCHANGES.map(ex => {
+                        const r = row.rates[ex];
+                        return (
+                          <td key={ex} className={`fb-td-ex${r == null ? "" : r >= 0 ? " fb-rate--pos" : " fb-rate--neg"}`}>
+                            {r == null ? "—" : `${r >= 0 ? "+" : ""}${fmtRate(r)}`}
+                          </td>
+                        );
+                      })}
+
+                      {/* Spread: highest − lowest rate; ≥ 0.01% stands out. */}
+                      <td className={`fb-td-ex fb-td-spread${row.spread != null && row.spread >= 0.0001 ? " fb-td-spread--hot" : ""}`}>
+                        {row.spread == null ? "—" : fmtRate(row.spread)}
                       </td>
 
                       {/* Signal */}

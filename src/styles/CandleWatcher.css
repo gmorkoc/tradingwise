@@ -194,7 +194,24 @@
 .cw-updated {
   font-size: 0.7rem;
   color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
 }
+/* Next AI read countdown pill (ticks every second, fixed-width digits so it
+   doesn't jitter). */
+.cw-ai-cooldown {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: #4f46e5;
+  background: rgba(99, 102, 241, 0.12);
+}
+html:not([data-theme="light"]) .cw-ai-cooldown { color: #a5b4fc; background: rgba(129, 140, 248, 0.16); }
+.cw-ai-start-note { font-variant-numeric: tabular-nums; }
 
 /* 24h High/Low/Vol strip. */
 .cw-ticker-stats {

@@ -2539,6 +2539,35 @@ function IndicatorStat({
 
 // ── Main component ────────────────────────────────────────────────────────────
 
+/* ── Live timers (own 1s tick, so the big page doesn't re-render) ───────── */
+const COOLDOWN_NOTICE = "__ai-cooldown__";
+const fmtMmSs = (ms: number) => {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+};
+/** "↻ 12s ago" that counts up every second. */
+function LiveAgo({ since }: { since: number }) {
+  const { t } = useTranslation();
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => { const id = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(id); }, []);
+  return <span className="cw-updated">↻ {t("candleInsights.desk.secondsAgo", { n: Math.max(0, Math.floor((now - since) / 1000)) })}</span>;
+}
+/** Counts down to `until` every second; renders nothing once it's over. */
+function AiCooldown({ until, coin, variant }: { until: number; coin: string; variant: "pill" | "note" }) {
+  const { t } = useTranslation();
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    if (until <= Date.now()) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [until]);
+  const left = until - now;
+  if (left <= 0) return null;
+  return variant === "pill"
+    ? <span className="cw-ai-cooldown" role="timer" aria-live="off">{t("candleInsights.ai.nextIn", { time: fmtMmSs(left) })}</span>
+    : <span className="cw-ai-start-note cw-ai-start-note--warn" role="status">{t("candleInsights.ai.cooldown", { coin, time: fmtMmSs(left) })}</span>;
+}
+
 export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpenUpgrade, onReady, visible = true, ticker, onOpenCoinPicker }) => {
   const { tier, user, profile } = useAuth();
   // Named tA (not t): this component uses `t` for local timers/counters.
@@ -4146,8 +4175,8 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     // the AI API wasn't being touched at all.
     if (!cached && !inCooldown) setAiLoading(true);
     if (inCooldown) {
-      const leftSec = Math.ceil((AI_COOLDOWN_MS - (Date.now() - (lastAiCallAtRef.current.get(throttleKey) ?? 0))) / 1000);
-      setAiNotice(T("ai.cooldown", { coin, time: `${Math.floor(leftSec / 60)}:${String(leftSec % 60).padStart(2, "0")}` }));
+      // Shown as a live countdown (AiCooldown), not a frozen time string.
+      setAiNotice(COOLDOWN_NOTICE);
     } else {
       setAiNotice(null);
     }
@@ -4351,7 +4380,9 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   // track length after each render
   useEffect(() => { prevFeedLen.current = feedCandles.length; }, [feedCandles.length]);
 
-  const secondsAgo = refreshedAt ? Math.floor((Date.now() - refreshedAt.getTime()) / 1000) : null;
+  // When this coin's AI cooldown ends (0 = none). Recomputed on every render
+  // — the page re-renders after each AI call, which is when it changes.
+  const aiCooldownUntil = (lastAiCallAtRef.current.get(coin as string) ?? 0) + AI_COOLDOWN_MS;
 
   // Desktop right-panel tabs — shared by the tab row and, when the panel
   // is hidden, the slim icon rail.
@@ -6275,9 +6306,10 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
               <div className="cw-ai-header">
                 <span className="cw-desk-title">{tC("desk.title")}</span>
                 <div className="cw-ai-header-refresh">
-                  {secondsAgo !== null && (
-                    <span className="cw-updated">↻ {tC("desk.secondsAgo", { n: secondsAgo })}</span>
-                  )}
+                  {/* Live: next-AI-read countdown (while the cooldown runs)
+                      and the "updated … ago" counter, both ticking every second. */}
+                  <AiCooldown until={aiCooldownUntil} coin={coin as string} variant="pill" />
+                  {refreshedAt && <LiveAgo since={refreshedAt.getTime()} />}
                   <button
                     className={`cw-refresh-btn${refreshSpinning ? " cw-refresh-btn--spinning" : ""}`}
                     onClick={handleManualRefresh}
@@ -6502,9 +6534,13 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                   >
                     {refreshSpinning ? tC("start.starting") : `✦ ${tC("start.run")}`}
                   </button>
-                  {aiNotice
-                    ? <span className="cw-ai-start-note cw-ai-start-note--warn" role="status">{aiNotice}</span>
-                    : <span className="cw-ai-start-note">{tC("start.uses")}</span>}
+                  {aiNotice === COOLDOWN_NOTICE
+                    ? (aiCooldownUntil > Date.now()
+                        ? <AiCooldown until={aiCooldownUntil} coin={coin as string} variant="note" />
+                        : <span className="cw-ai-start-note">{tC("start.uses")}</span>)
+                    : aiNotice
+                      ? <span className="cw-ai-start-note cw-ai-start-note--warn" role="status">{aiNotice}</span>
+                      : <span className="cw-ai-start-note">{tC("start.uses")}</span>}
                 </div>
               )}
             </div>

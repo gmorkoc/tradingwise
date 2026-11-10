@@ -1021,6 +1021,35 @@ function notifySparks() {
   }, 60);
 }
 
+/** 7-day hourly closes from OKX or Gate.io for coins Binance doesn't list.
+ *  Only accepted if the latest close is within 15% of the coin's known price
+ *  (so a different coin that shares the ticker can't slip in). */
+async function altExchangeSpark(symbol: string, price: number | null): Promise<number[]> {
+  const ok = (pts: number[]) =>
+    pts.length > 1 && (!price || Math.abs(pts[pts.length - 1] / price - 1) < 0.15);
+  const get = async (url: string) => {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000);
+    try {
+      const r = await fetch(url, { signal: ctrl.signal });
+      return r.ok ? await r.json() : null;
+    } catch { return null; } finally { clearTimeout(timer); }
+  };
+  // OKX: [ts, o, h, l, c, …], newest first.
+  const okx = await get(`https://www.okx.com/api/v5/market/candles?instId=${symbol}-USDT&bar=1H&limit=168`);
+  if (okx?.code === "0" && Array.isArray(okx.data)) {
+    const pts = (okx.data as string[][]).map((r) => parseFloat(r[4])).filter((v) => v > 0).reverse();
+    if (ok(pts)) return pts;
+  }
+  // Gate.io: [ts, quoteVol, close, high, low, open, baseVol, closed], oldest first.
+  const gate = await get(`https://api.gateio.ws/api/v4/spot/candlesticks?currency_pair=${symbol}_USDT&interval=1h&limit=168`);
+  if (Array.isArray(gate)) {
+    const pts = (gate as string[][]).map((r) => parseFloat(r[2])).filter((v) => v > 0);
+    if (ok(pts)) return pts;
+  }
+  return [];
+}
+
 const sparkQueue: { symbol: string; price: number | null }[] = [];
 let sparkActive = 0;
 const SPARK_CONCURRENCY = 6;
@@ -1033,7 +1062,9 @@ function pumpSparks() {
       try {
         const pair = await binancePair(job.symbol, job.price);
         if (pair) pts = (await klines(pair, "1h", 168)).map(([, v]) => v).filter((v) => v > 0);
-      } catch { /* no sparkline for this one */ }
+      } catch { /* try the next exchange */ }
+      // Not on Binance: OKX, then Gate.io (both public + CORS-open).
+      if (pts.length < 2) pts = await altExchangeSpark(job.symbol, job.price);
       sparks.set(job.symbol, { pts, ts: Date.now() });
       sparkPending.delete(job.symbol);
       notifySparks();

@@ -1,6 +1,9 @@
 {
   "orderFlowGuide": {
     "guideAria": "{{tab}} rehberi",
+    "aboutTab": "{{tab}} hakkında",
+    "show": "Göster",
+    "hide": "Gizle",
     "rowWhat": "Ne",
     "rowHow": "Nasıl",
     "rowUse": "Nasıl okunur",

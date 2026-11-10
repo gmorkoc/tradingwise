@@ -219,6 +219,21 @@
 .fb-rate--pos { color: #f87171; }
 .fb-rate--neg { color: #4ade80; }
 
+/* Per-exchange rate columns + spread (smaller, so the row stays scannable). */
+.fb-col-ex { white-space: nowrap; }
+.fb-td-ex {
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+  font-family: monospace;
+  white-space: nowrap;
+  color: var(--color-text-muted);
+}
+.fb-td-ex.fb-rate--pos { color: #f87171; }
+.fb-td-ex.fb-rate--neg { color: #4ade80; }
+.fb-td-spread { color: var(--color-text-muted); }
+/* A gap of ≥ 0.01% per 8h between exchanges: worth a look. */
+.fb-td-spread--hot { color: #f59e0b; font-weight: 700; }
+
 /* Bar column */
 .fb-td-bar {
   min-width: 120px;

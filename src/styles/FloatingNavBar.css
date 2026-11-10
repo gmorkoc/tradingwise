@@ -121,6 +121,10 @@ html[data-theme="light"] .fnb-bar {
     inset -1px 0 0 rgba(255, 255, 255, 0.3);
 }
 .fnb-item {
+  /* No iOS long-press callout/selection (Home's long-press opens the menu). */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
   position: relative;
   z-index: 1;
   display: flex;
@@ -397,3 +401,23 @@ html[data-theme="light"] .fnb-bar--expand .fnb-item--active { background-color: 
    Position/width transitions are set inline from FloatingNavBar.tsx; the
    pill keeps its flat rest look (no glass lift). */
 .fnb-bar--stretch .fnb-item-icon-wrap { transform: none !important; }
+
+/* One-time hint that Home can be held: soft pulsing rings on its icon. */
+.fnb-item--hint .fnb-item-icon-wrap::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.55);
+  animation: fnb-hold-home 1.8s ease-out infinite;
+  pointer-events: none;
+}
+.fnb-item--hint .fnb-item-icon-wrap { position: relative; }
+@keyframes fnb-hold-home {
+  0%, 25% { opacity: 0; transform: scale(0.8); }
+  40%     { opacity: 1; }
+  80%, 100% { opacity: 0; transform: scale(1.35); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fnb-item--hint .fnb-item-icon-wrap::after { animation: none; }
+}

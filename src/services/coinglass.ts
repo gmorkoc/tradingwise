@@ -1627,6 +1627,31 @@ export async function getPriceLSHistory(
   return points.sort((a, b) => a.time - b.time);
 }
 
+// ── Funding rates for every coin, from Binance / Bybit / Bitget / Coinbase ──
+// One call to the exchange-funding server function in "all" mode (one bulk
+// request per exchange, run outside the US so Binance/Bybit answer; cached
+// 30s there). OKX has no bulk endpoint — callers fetch it per coin directly.
+export type FundingExchange = "Binance" | "Bybit" | "OKX" | "Bitget" | "Coinbase";
+export const FUNDING_EXCHANGES: FundingExchange[] = ["Binance", "Bybit", "OKX", "Bitget", "Coinbase"];
+
+export async function getAllExchangeFunding(): Promise<Record<string, Partial<Record<FundingExchange, number>>>> {
+  try {
+    const { supabase } = await import('./supabase');
+    const { FunctionRegion } = await import('@supabase/supabase-js');
+    let best: Record<string, Partial<Record<FundingExchange, number>>> = {};
+    for (const region of [FunctionRegion.EuCentral1, FunctionRegion.ApNortheast1]) {
+      const { data } = await supabase.functions.invoke('exchange-funding', { body: { all: true }, region });
+      const all = (data as { all?: Record<string, Partial<Record<FundingExchange, number>>> } | null)?.all;
+      if (all && Object.keys(all).length > Object.keys(best).length) best = all;
+      // Binance answered → this region is fine.
+      if (best.BTC?.Binance != null) break;
+    }
+    return best;
+  } catch {
+    return {};
+  }
+}
+
 // ── Long/short bundle from exchanges' own APIs (long-short server function) ──
 // CoinGlass's long/short + taker endpoints aren't on our plan (they all fail),
 // so the Positions page reads Binance / OKX / Bybit / Bitget / Gate directly

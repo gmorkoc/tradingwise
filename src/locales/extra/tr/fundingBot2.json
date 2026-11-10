@@ -1,6 +1,10 @@
 {
   "fundingBot2": {
     "signIn": "Giriş yap",
+    "avgRate": "Ort. oran",
+    "avgRateTip": "Binance, Bybit, OKX, Bitget ve Coinbase'deki (listelendiği yerlerde) ortalama fonlama oranı, 8 saatlik.",
+    "spread": "Fark",
+    "spreadTip": "Borsalar arasındaki en yüksek ile en düşük oran farkı. Büyük bir fark, fonlama arbitrajı fırsatıdır.",
     "signInSignal": "Sinyali görmek için giriş yapın",
     "insightTitle": "Fonlama Analizi",
     "whoPays": "Kim ödüyor",

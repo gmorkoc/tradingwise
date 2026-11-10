@@ -1,6 +1,10 @@
 {
   "fundingBot2": {
     "signIn": "Iniciar sesión",
+    "avgRate": "Tasa media",
+    "avgRateTip": "Tasa de financiación media entre Binance, Bybit, OKX, Bitget y Coinbase (donde cotiza), cada 8 horas.",
+    "spread": "Diferencial",
+    "spreadTip": "Tasa más alta menos la más baja entre exchanges. Una gran diferencia es una oportunidad de arbitraje de financiación.",
     "signInSignal": "Inicia sesión para ver la señal",
     "insightTitle": "Análisis de financiación",
     "whoPays": "Quién paga",

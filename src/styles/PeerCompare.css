@@ -23,11 +23,11 @@
 }
 .pc-head-btn--clear { border-color: var(--pc-line); color: var(--color-text-muted); }
 
-/* One slim scrolling row of chips: logo · ticker · 24h %. Picked chips fill
-   with their comparison-line colour. */
+/* One horizontally scrolling row of mini cards: logo · ticker · ☐ on top,
+   price, then 24h %. A picked card takes its comparison-line colour. */
 .pc-chips {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   overflow-x: auto;
   scrollbar-width: none;
   padding: 2px 0 4px;
@@ -39,47 +39,53 @@
 .pc-chip,
 .pc-chip:hover {
   all: unset;
+  box-sizing: border-box;
   flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 32px;
-  padding: 0 11px 0 6px;
-  border-radius: 999px;
-  background: var(--pc-fill);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 128px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 9%, transparent);
+  background: var(--color-surface, #fff);
   font-size: 0.78rem;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease;
   -webkit-tap-highlight-color: transparent;
 }
+html:not([data-theme="light"]) .pc-chip { background: rgba(255, 255, 255, 0.03); }
 @media (hover: hover) {
-  .pc-chip:not(:disabled):not(.pc-chip--on):hover { background: color-mix(in srgb, var(--color-text) 9%, transparent); }
+  .pc-chip:not(:disabled):not(.pc-chip--on):hover { border-color: color-mix(in srgb, var(--color-text) 20%, transparent); }
 }
 .pc-chip:focus-visible { outline: 2px solid #2962ff; outline-offset: 2px; }
-.pc-chip b { font-weight: 700; color: var(--color-text); }
+.pc-chip-top { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.pc-chip b { flex: 1; min-width: 0; font-size: 0.86rem; font-weight: 700; color: var(--color-text); overflow: hidden; text-overflow: ellipsis; }
 .pc-chip .pc-logo { width: 20px; height: 20px; }
-.pc-chip-price { font-weight: 500; color: var(--color-text); }
-.pc-chip--on .pc-chip-price { color: rgba(255, 255, 255, 0.9); }
-.pc-chip-chg { font-weight: 600; color: var(--color-text-muted); }
+.pc-chip-price { margin-top: 2px; font-size: 0.9rem; font-weight: 600; color: var(--color-text); overflow: hidden; text-overflow: ellipsis; }
+.pc-chip-chg { font-size: 0.76rem; font-weight: 600; color: var(--color-text-muted); }
 .pc-chip-chg.up { color: #16a34a; }
 .pc-chip-chg.down { color: #dc2626; }
-.pc-chip--on { background: var(--pc-c); }
-.pc-chip--on b,
-.pc-chip--on .pc-chip-chg { color: #fff; }
-.pc-chip-check {
-  width: 20px;
-  height: 20px;
+/* Picked: border + light tint in the line colour; the checkbox fills with it. */
+.pc-chip--on {
+  border-color: var(--pc-c);
+  background: color-mix(in srgb, var(--pc-c) 8%, var(--color-surface, #fff));
+}
+html:not([data-theme="light"]) .pc-chip--on { background: color-mix(in srgb, var(--pc-c) 14%, transparent); }
+.pc-chip-box {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  font-size: 0.7rem;
-  font-weight: 800;
-  color: var(--pc-c);
-  background: #fff;
+  border-radius: 5px;
+  box-sizing: border-box;
+  border: 1.5px solid color-mix(in srgb, var(--color-text) 30%, transparent);
 }
+.pc-chip--on .pc-chip-box { border-color: var(--pc-c); background: var(--pc-c); }
 /* 4 already picked: the rest can't be added. */
 .pc-chip:disabled { cursor: not-allowed; opacity: 0.4; }
 
@@ -134,4 +140,35 @@ html:not([data-theme="light"]) .pc-range.on { background: #262a36; }
 @media (max-width: 640px) {
   .pc-chart-box { height: 220px; }
   .pc-title { font-size: 1rem; }
+  /* Phones: no section on the page — peers live behind the chart's
+     Compare (⇄) button, in a bottom sheet. */
+  .pc--page { display: none; }
 }
+/* Inside the Compare sheet: 16px padding; the checkbox pills stay in one
+   horizontally scrolling row (fading at the right edge). */
+.pc--sheet { margin: 0; padding: 0 16px 16px; }
+/* Sheet layout: one-line header (hint · small text link), cards, then the
+   chart with no box — legend left, ranges right on one row, more air. */
+.pc--sheet .pc-head { align-items: center; margin: 4px 0 16px; }
+.pc--sheet .pc-chips { gap: 10px; padding-bottom: 6px; }
+.pc--sheet .pc-hint { font-size: 0.8rem; }
+.pc--sheet .pc-head-btn,
+.pc--sheet .pc-head-btn:hover {
+  padding: 4px 0;
+  border: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #2563eb;
+}
+html:not([data-theme="light"]) .pc--sheet .pc-head-btn { color: #60a5fa; }
+.pc--sheet .pc-head-btn--clear { color: var(--color-text-muted); }
+.pc--sheet .pc-chart { margin-top: 28px; padding: 0; background: none; border-radius: 0; }
+.pc--sheet .pc-chart-bar { flex-wrap: nowrap; align-items: center; gap: 10px; }
+.pc--sheet .pc-legend { flex-direction: row; flex-wrap: wrap; gap: 4px 12px; min-width: 0; }
+.pc--sheet .pc-ranges { flex-shrink: 0; }
+.pc--sheet .pc-range,
+.pc--sheet .pc-range:hover { padding: 4px 7px; font-size: 0.7rem; }
+.pc--sheet .pc-chart-box { height: 300px; margin-top: 18px; }
+/* The Compare sheet opens more than halfway up (not just content-sized). */
+.bs-sheet.pc-sheet:not(.bs-sheet--full) { min-height: 80vh; }
+.pc--sheet .pc-head { margin-bottom: 10px; }

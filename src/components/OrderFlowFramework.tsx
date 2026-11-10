@@ -30,6 +30,14 @@ interface Props { coin: string; onOpenAuth?: (view?: "login" | "signup") => void
 export function OrderFlowFramework({ coin, onOpenAuth }: Props) {
   const { t } = useTranslation();
   const [tab, setTab] = useState<Tab>("flow");
+  // Phones: the guide can be hidden (remembered on this device).
+  const [guideHidden, setGuideHidden] = useState(() => {
+    try { return localStorage.getItem("off-guide-hidden") === "1"; } catch { return false; }
+  });
+  const toggleGuide = () => setGuideHidden(h => {
+    try { localStorage.setItem("off-guide-hidden", h ? "0" : "1"); } catch { /* private mode */ }
+    return !h;
+  });
   const info = TAB_INFO[tab];
   const tabName = t(TAB_IDS.find(d => d.id === tab)!.labelKey);
 
@@ -55,8 +63,13 @@ export function OrderFlowFramework({ coin, onOpenAuth }: Props) {
         </div>
       </div>
 
-      {/* What this tab is, how it works and how to read it — always shown. */}
-      <div className="off-info">
+      {/* What this tab is, how it works and how to read it. Desktop: always
+          shown. Phones: can be hidden (remembered on this device). */}
+      <div className={`off-info${guideHidden ? " off-info--hidden" : ""}`}>
+        <button type="button" className="off-guide-toggle" aria-expanded={!guideHidden} onClick={toggleGuide}>
+          <span>{t("orderFlowGuide.aboutTab", { tab: tabName })}</span>
+          <em>{guideHidden ? t("orderFlowGuide.show") : t("orderFlowGuide.hide")}</em>
+        </button>
         <dl className="off-guide" aria-label={t("orderFlowGuide.guideAria", { tab: tabName })}>
           <div className="off-guide-row"><dt>{t("orderFlowGuide.rowWhat")}</dt><dd>{t(info.what)}</dd></div>
           <div className="off-guide-row"><dt>{t("orderFlowGuide.rowHow")}</dt><dd>{t(info.how)}</dd></div>

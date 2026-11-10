@@ -1,6 +1,9 @@
 {
   "orderFlowGuide": {
     "guideAria": "{{tab}} guide",
+    "aboutTab": "About {{tab}}",
+    "show": "Show",
+    "hide": "Hide",
     "rowWhat": "What",
     "rowHow": "How",
     "rowUse": "Read it",

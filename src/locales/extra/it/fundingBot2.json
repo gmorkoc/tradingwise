@@ -1,6 +1,10 @@
 {
   "fundingBot2": {
     "signIn": "Accedi",
+    "avgRate": "Tasso medio",
+    "avgRateTip": "Funding rate medio tra Binance, Bybit, OKX, Bitget e Coinbase (dove quotato), ogni 8 ore.",
+    "spread": "Spread",
+    "spreadTip": "Tasso più alto meno il più basso tra gli exchange. Un divario ampio è un'opportunità di arbitraggio sul funding.",
     "signInSignal": "Accedi per vedere il segnale",
     "insightTitle": "Analisi del funding",
     "whoPays": "Chi paga",

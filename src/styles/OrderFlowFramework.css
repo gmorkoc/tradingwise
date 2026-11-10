@@ -101,9 +101,50 @@
   color: var(--color-text-muted);
 }
 .off-guide-row dd { margin: 0; max-width: 980px; }
+/* Hide/Show toggle — phones only (desktop always shows the guide). */
+.off-guide-toggle { display: none; }
 @media (max-width: 640px) {
   .off-info { padding: 10px 0 0; }
   .off-guide-row { grid-template-columns: 1fr; gap: 2px; }
+  .off-guide-toggle,
+  .off-guide-toggle:hover {
+    all: unset;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 4px 0 6px;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .off-guide-toggle em {
+    font-style: normal;
+    letter-spacing: 0;
+    text-transform: none;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--color-primary, #4f46e5);
+  }
+  .off-info--hidden .off-guide { display: none; }
+  /* The whole page scrolls on phones (the guide was stuck in a fixed-height
+     box above a small scrolling panel, so it couldn't be scrolled). */
+  html .off-root { height: auto; min-height: 100%; overflow: visible; }
+  html .off-body { flex: none; overflow: visible; }
+  /* Volume Profile: no side padding on phones (the page has its own gutter). */
+  /* `html` prefix: these sit above the panels' own padding rules in this
+     file, so they need the extra weight to win. */
+  html .vp-root,
+  html .ep-root,
+  html .tm-root { padding-left: 0; padding-right: 0; }
+  /* The trade list keeps its own scroll box instead of growing forever. */
+  html .oft-root { height: auto; }
+  html .oft-tape { flex: none; height: 60vh; }
 }
 
 .off-body {

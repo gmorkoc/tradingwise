@@ -189,6 +189,70 @@
 .cf-submit:disabled { opacity: 0.55; cursor: not-allowed; }
 
 /* ── Success state ────────────────────────────────────────────────────────── */
+/* Phones / iOS: inside the shared BottomSheet (16px side padding). */
+.cf-sheet-body .cf-sheet-subtitle { padding: 0 16px; }
+.cf-sheet-body .cf-form {
+  padding: 16px 16px calc(24px + env(safe-area-inset-bottom, 0px));
+}
+.cf-sheet-body .cf-success {
+  padding: 32px 16px calc(24px + env(safe-area-inset-bottom, 0px));
+}
+.cf-select-wrap { position: relative; }
+.cf-select {
+  width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 36px;
+  cursor: pointer;
+  text-align: left;
+  color: var(--color-text-primary);
+}
+.cf-select-chev { transition: transform 0.2s ease; }
+.cf-select--open + .cf-select-chev { transform: translateY(-50%) rotate(180deg); }
+.cf-select-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 5;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--color-bg-primary, #fff);
+  border: 1px solid var(--color-border, rgba(127, 127, 127, 0.25));
+  border-radius: 12px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+}
+.cf-select-opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+.cf-select-opt:active { background: var(--color-bg-secondary, rgba(127, 127, 127, 0.12)); }
+.cf-select-opt--on { font-weight: 600; }
+.cf-select-opt--on svg { color: #3b82f6; }
+.cf-select-chev {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--color-text-secondary);
+}
+.cf-sheet-body .cf-input,
+.cf-sheet-body .cf-textarea { font-size: 16px; } /* stops iOS zooming on focus */
+
 .cf-success {
   display: flex;
   flex-direction: column;

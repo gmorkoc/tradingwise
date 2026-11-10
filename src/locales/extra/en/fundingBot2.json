@@ -1,6 +1,10 @@
 {
   "fundingBot2": {
     "signIn": "Sign in",
+    "avgRate": "Avg rate",
+    "avgRateTip": "Average funding rate across Binance, Bybit, OKX, Bitget and Coinbase (where listed), per 8 hours.",
+    "spread": "Spread",
+    "spreadTip": "Highest minus lowest exchange rate. A big gap is a funding-arbitrage opportunity.",
     "signInSignal": "Sign in to see the signal",
     "insightTitle": "Funding Insight",
     "whoPays": "Who pays",

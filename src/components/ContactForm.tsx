@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../services/supabase";
+import { BottomSheet } from "./BottomSheet";
 import "../styles/ContactForm.css";
 
 interface Props {
@@ -22,6 +23,25 @@ export const ContactForm: React.FC<Props> = ({ isOpen, onClose }) => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const backdropRef = useRef<HTMLDivElement>(null);
+  const catRef = useRef<HTMLDivElement>(null);
+  const [catOpen, setCatOpen] = useState(false);
+  useEffect(() => {
+    if (!catOpen) return;
+    const away = (e: PointerEvent) => {
+      if (catRef.current && !catRef.current.contains(e.target as Node)) setCatOpen(false);
+    };
+    document.addEventListener("pointerdown", away);
+    return () => document.removeEventListener("pointerdown", away);
+  }, [catOpen]);
+  useEffect(() => { if (!isOpen) setCatOpen(false); }, [isOpen]);
+  const [isPhone, setIsPhone] = useState(() =>
+    typeof window !== "undefined" && window.matchMedia("(max-width: 900px)").matches);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 900px)");
+    const on = () => setIsPhone(mq.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
 
   const [category, setCategory] = useState("feedback");
   const [email,    setEmail]    = useState("");
@@ -98,21 +118,7 @@ export const ContactForm: React.FC<Props> = ({ isOpen, onClose }) => {
     if (e.target === backdropRef.current) onClose();
   };
 
-  if (!isOpen) return null;
-
-  return (
-    <div className="cf-overlay" ref={backdropRef} onClick={handleBackdrop}>
-      <div className="cf-panel" role="dialog" aria-modal="true">
-        {/* Header */}
-        <div className="cf-header">
-          <div>
-            <h2 className="cf-title">{t("contactForm.title")}</h2>
-            <p className="cf-subtitle">{t("contactForm.subtitle")}</p>
-          </div>
-          <button className="cf-close" onClick={onClose} aria-label={t("contactForm.close")}>✕</button>
-        </div>
-
-        {sent ? (
+  const body = sent ? (
           <div className="cf-success">
             <span className="cf-success-icon">✅</span>
             <p className="cf-success-title">{t("contactForm.sentTitle")}</p>
@@ -123,7 +129,43 @@ export const ContactForm: React.FC<Props> = ({ isOpen, onClose }) => {
           <form className="cf-form" onSubmit={handleSubmit} noValidate>
             {/* Category */}
             <div className="cf-field">
-              <label className="cf-label">{t("contactForm.category")}</label>
+              <label className="cf-label" htmlFor="cf-category">{t("contactForm.category")}</label>
+              {isPhone ? (
+                <div className="cf-select-wrap" ref={catRef}>
+                  <button
+                    type="button"
+                    id="cf-category"
+                    className={`cf-input cf-select${catOpen ? " cf-select--open" : ""}`}
+                    aria-haspopup="listbox"
+                    aria-expanded={catOpen}
+                    onClick={() => setCatOpen((v) => !v)}
+                  >
+                    {(() => { const c = CATEGORIES.find((x) => x.value === category) ?? CATEGORIES[0];
+                      return <>{c.icon}  {t(`contactForm.categories.${c.value}`)}</>; })()}
+                  </button>
+                  <svg className="cf-select-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
+                  {catOpen && (
+                    <ul className="cf-select-list" role="listbox">
+                      {CATEGORIES.map((c) => (
+                        <li key={c.value}>
+                          <button
+                            type="button"
+                            role="option"
+                            aria-selected={category === c.value}
+                            className={`cf-select-opt${category === c.value ? " cf-select-opt--on" : ""}`}
+                            onClick={() => { setCategory(c.value); setCatOpen(false); }}
+                          >
+                            <span>{c.icon}  {t(`contactForm.categories.${c.value}`)}</span>
+                            {category === c.value && (
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+                            )}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ) : (
               <div className="cf-category-grid">
                 {CATEGORIES.map((c) => (
                   <button
@@ -136,6 +178,7 @@ export const ContactForm: React.FC<Props> = ({ isOpen, onClose }) => {
                   </button>
                 ))}
               </div>
+              )}
             </div>
 
             {/* Email */}
@@ -173,7 +216,40 @@ export const ContactForm: React.FC<Props> = ({ isOpen, onClose }) => {
               {busy ? t("contactForm.sending") : t("contactForm.send")}
             </button>
           </form>
-        )}
+        );
+
+  // Phones and the iOS app get the shared bottom sheet; desktop keeps the modal.
+  if (isPhone) {
+    return (
+      <BottomSheet
+        open={isOpen}
+        onClose={onClose}
+        title={t("contactForm.title")}
+        className="cf-sheet"
+        bodyClassName="cf-sheet-body"
+        ariaLabel={t("contactForm.title")}
+      >
+        <p className="cf-subtitle cf-sheet-subtitle">{t("contactForm.subtitle")}</p>
+        {body}
+      </BottomSheet>
+    );
+  }
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="cf-overlay" ref={backdropRef} onClick={handleBackdrop}>
+      <div className="cf-panel" role="dialog" aria-modal="true">
+        {/* Header */}
+        <div className="cf-header">
+          <div>
+            <h2 className="cf-title">{t("contactForm.title")}</h2>
+            <p className="cf-subtitle">{t("contactForm.subtitle")}</p>
+          </div>
+          <button className="cf-close" onClick={onClose} aria-label={t("contactForm.close")}>✕</button>
+        </div>
+
+        {body}
       </div>
     </div>
   );

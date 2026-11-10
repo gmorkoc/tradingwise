@@ -13,6 +13,9 @@ import "../styles/PeerCompare.css";
 interface Props {
   coin: string;
   theme?: "dark" | "light";
+  /** "page" = the section on the chart page (desktop only); "sheet" = inside
+   *  the phone chart's Compare bottom sheet (the sheet shows the title). */
+  variant?: "page" | "sheet";
 }
 
 const MAX_SELECTED = 4;
@@ -41,7 +44,7 @@ function CoinLogo({ symbol }: { symbol: string }) {
     : <img className="pc-logo" src={logo(symbol)} alt="" onError={() => setErr(true)} />;
 }
 
-export function PeerCompare({ coin, theme = "light" }: Props) {
+export function PeerCompare({ coin, theme = "light", variant = "page" }: Props) {
   const { t } = useTranslation();
   const peers = useMemo(
     () => COINS.filter(c => c.symbol !== coin && !NO_SPOT.has(c.symbol)).slice(0, PEER_COUNT),
@@ -69,10 +72,10 @@ export function PeerCompare({ coin, theme = "light" }: Props) {
     setSelected(cur => cur.includes(s) ? cur.filter(x => x !== s) : cur.length >= MAX_SELECTED ? cur : [...cur, s]);
 
   return (
-    <section className={`pc pc--${theme}`} aria-label={t("peerCompare.title")}>
+    <section className={`pc pc--${theme} pc--${variant}`} aria-label={t("peerCompare.title")}>
       <div className="pc-head">
         <div className="pc-head-text">
-          <h2 className="pc-title">{t("peerCompare.title")}</h2>
+          {variant === "page" && <h2 className="pc-title">{t("peerCompare.title")}</h2>}
           <span className="pc-hint">{t("peerCompare.hint", { n: MAX_SELECTED, coin })}</span>
         </div>
         <button
@@ -84,12 +87,9 @@ export function PeerCompare({ coin, theme = "light" }: Props) {
         </button>
       </div>
 
-      {/* One card, news-stories style: coin panels side by side (dividers,
-          faded edges, arrows). Tapping a panel adds/removes it from the
-          comparison — it never switches the main chart's coin. */}
-      {/* One slim row of chips: logo · ticker · 24h %. Tap to add/remove from
-          the comparison (a picked chip fills with its line colour) — never
-          switches the main chart's coin. */}
+      {/* One horizontally scrolling row of checkbox pills: ☐ · logo · ticker
+          · price · 24h %. Tap to add/remove from the comparison (a picked pill
+          ticks its box in the line colour) — never switches the main chart. */}
       <div className="pc-chips" role="group" aria-label={t("peerCompare.title")}>
         {peers.map(p => {
           const tk = tickers.get(p.symbol);
@@ -109,18 +109,25 @@ export function PeerCompare({ coin, theme = "light" }: Props) {
                 : `${p.name}${rel == null ? "" : ` · ${t("peerCompare.vs", { pct: fmtPct(rel), coin })}`}`}
               onClick={() => toggle(p.symbol)}
             >
-              {on
-                ? <span className="pc-chip-check" aria-hidden="true">✓</span>
-                : <CoinLogo symbol={p.symbol} />}
-              <b>{p.symbol}</b>
-              {tk && <span className="pc-chip-price">{fmtPrice(tk.price)}</span>}
+              {/* Mini card: ☐ logo TICKER / price / 24h % */}
+              <span className="pc-chip-top">
+                <CoinLogo symbol={p.symbol} />
+                <b>{p.symbol}</b>
+                <span className="pc-chip-box" aria-hidden="true">
+                  {on && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 7" /></svg>}
+                </span>
+              </span>
+              <span className="pc-chip-price">{tk ? fmtPrice(tk.price) : "—"}</span>
               <span className={`pc-chip-chg${tk ? (tk.change >= 0 ? " up" : " down") : ""}`}>{tk ? fmtPct(tk.change) : "—"}</span>
             </button>
           );
         })}
       </div>
 
-      {selected.length > 0 && (
+      {/* Sheet: the chart shows straight away with the current coin, and
+          each peer picked is added as another line. Page: only once a peer
+          is picked (the main chart already shows the coin). */}
+      {(selected.length > 0 || variant === "sheet") && (
         <CompareChart coin={coin} peers={selected} range={range} theme={theme}>
           <div className="pc-ranges" role="tablist" aria-label={t("peerCompare.rangeAria")}>
             {RANGES.map(r => (

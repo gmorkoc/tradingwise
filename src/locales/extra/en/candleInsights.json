@@ -15,6 +15,7 @@
     },
     "ai": {
       "cooldown": "Next AI read for {{coin}} in {{time}} — one read per coin every 5 minutes.",
+      "nextIn": "Next AI read {{time}}",
       "noRead": "The AI didn't return a read this time. Please try again.",
       "signIn": "Sign in to run the AI read.",
       "limit": "You've used all your AI requests for now.",

@@ -15,6 +15,7 @@
     },
     "ai": {
       "cooldown": "Prossima lettura IA per {{coin}} tra {{time}} — una lettura per coin ogni 5 minuti.",
+      "nextIn": "Prossima lettura IA {{time}}",
       "noRead": "L'IA non ha restituito una lettura questa volta. Riprova.",
       "signIn": "Accedi per avviare la lettura IA.",
       "limit": "Hai esaurito le tue richieste IA per ora.",

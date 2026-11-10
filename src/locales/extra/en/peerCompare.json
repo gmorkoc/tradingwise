@@ -12,6 +12,8 @@
     "loading": "Loading…",
     "hint": "Pick up to {{n}} to compare with {{coin}}",
     "compare": "Compare",
+    "compareCoin": "Compare {{coin}}",
+    "hidePeers": "Hide comparison",
     "comparing": "Comparing",
     "vs": "{{pct}} vs {{coin}}",
     "vsTitle": "24h change compared with {{coin}}"

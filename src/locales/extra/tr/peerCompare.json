@@ -12,6 +12,8 @@
     "loading": "Yükleniyor…",
     "hint": "{{coin}} ile karşılaştırmak için en fazla {{n}} tane seç",
     "compare": "Karşılaştır",
+    "compareCoin": "{{coin}} karşılaştır",
+    "hidePeers": "Karşılaştırmayı gizle",
     "comparing": "Karşılaştırılıyor",
     "vs": "{{coin}} karşısında {{pct}}",
     "vsTitle": "{{coin}} ile karşılaştırmalı 24 saatlik değişim"

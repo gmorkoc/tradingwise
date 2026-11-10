@@ -4877,6 +4877,55 @@ html[data-theme="light"] .main-coin-header {
   padding: 0;
   -webkit-tap-highlight-color: transparent;
 }
+/* ‹ Back before the burger (iOS style). English shows the word "Back"
+   next to the chevron; other languages just the chevron. */
+/* Two-class selectors so the phone rule that makes every header button 42px
+   wide doesn't squeeze the label onto the burger. */
+/* Chevron glyph and burger glyph end up ~10px apart (the chevron's svg is
+   wider than its drawing, so the button itself is narrow). */
+/* ☰ ⇄ ‹ morph (one button). The burger's top and bottom lines rotate about
+   their left ends into the chevron's arms (meeting at 8,12), the middle
+   line shrinks away; reversed when returning to Markets. */
+/* Same 24px icon and 2px stroke as the burger in both states; the chevron
+   spans exactly the burger's height (y 6→18). */
+.mch-menu-btn.mch-nav-btn svg { width: 24px; height: 24px; overflow: visible; }
+.mch-nav-ic line {
+  transform-box: view-box;
+  transition: transform 0.36s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.2s ease;
+}
+.mch-nav-ic .mch-nav-l1 { transform-origin: 4px 6px; }
+.mch-nav-ic .mch-nav-l2 { transform-origin: 12px 12px; }
+.mch-nav-ic .mch-nav-l3 { transform-origin: 4px 18px; }
+/* Burger → chevron: opening a page is heavy (the chart page builds right
+   then), which would swallow the morph — so this direction starts a beat
+   later and runs a touch slower, after that work, and stays visible. */
+.mch-nav-btn--back .mch-nav-ic line {
+  /* Starts just after the page's 0.38s slide-in has finished. */
+  transition: transform 0.46s cubic-bezier(0.32, 0.72, 0, 1) 0.42s, opacity 0.24s ease 0.42s;
+}
+/* Arms from (6,12) to (14,4) and (14,20): 11.3 long = 0.71 × the 16px line —
+   a taller iOS-style chevron that reads as big as the burger next to it
+   (the same 12px height looked smaller, being only 6px wide). */
+.mch-nav-btn--back .mch-nav-l1 { transform: translate(2px, 6px) rotate(-45deg) scaleX(0.71); }
+.mch-nav-btn--back .mch-nav-l2 { transform: scaleX(0.1); opacity: 0; }
+.mch-nav-btn--back .mch-nav-l3 { transform: translate(2px, -6px) rotate(45deg) scaleX(0.71); }
+@media (prefers-reduced-motion: reduce) { .mch-nav-ic line, .mch-nav-btn--back .mch-nav-ic line { transition: none; } }
+.mch-back-label { font-size: 16px; font-weight: 500; letter-spacing: -0.01em; white-space: nowrap; }
+
+/* iOS-style "pop": after the back chevron, the page you return to slides in
+   from the left (parallax start) and fades up — same curve as UIKit. */
+.main-content.page-pop { animation: page-pop-in 0.38s cubic-bezier(0.32, 0.72, 0, 1); }
+@keyframes page-pop-in {
+  from { transform: translateX(-28%); opacity: 0.55; }
+  to { transform: none; opacity: 1; }
+}
+/* Opening a page ("push"): it slides in from the right, same curve. */
+.main-content.page-push { animation: page-push-in 0.38s cubic-bezier(0.32, 0.72, 0, 1); }
+@keyframes page-push-in {
+  from { transform: translateX(32%); opacity: 0.55; }
+  to { transform: none; opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) { .main-content.page-pop, .main-content.page-push { animation: none; } }
 
 .mch-coin-btn {
   display: flex;
@@ -7974,11 +8023,11 @@ html[data-theme="light"] .wallet-chip-sub { color: #6d28d9; }
     mode-glint-spin 4s linear infinite,
     mode-glint-show 180s ease-in-out 6s infinite;
 }
-/* Inner fill (the pill's own colour, opaque) leaves a 1.5px rim. */
+/* Inner fill (the pill's own colour, opaque) leaves a thin 1px rim. */
 .mode-switch-pill--glint::after {
   content: "";
   position: absolute;
-  inset: 1.5px;
+  inset: 1px;
   z-index: 0;
   border-radius: inherit;
   background: #141414;
@@ -7991,10 +8040,11 @@ html[data-theme="light"] .mode-switch-pill--glint::after { background: #f5f6f7; 
 /* Unread dot: above the fill, nudged inside the rounded clip. */
 .mode-switch-pill--glint > .chart-mobile-tab-dot { z-index: 2; top: 5px; right: 10px; }
 @keyframes mode-glint-spin { to { transform: rotate(360deg); } }
+/* Peaks at 55% — a soft, see-through rim rather than a solid one. */
 @keyframes mode-glint-show {
   0% { opacity: 0; }
-  0.5% { opacity: 1; }
-  2.5% { opacity: 1; }
+  0.5% { opacity: 0.55; }
+  2.5% { opacity: 0.55; }
   3.2% { opacity: 0; }
   100% { opacity: 0; }
 }
@@ -8033,7 +8083,8 @@ html[data-theme="light"] .mode-switch-badge--c {
 .mode-switch-pill--paper .mode-switch-sub { color: #c4b5fd; }
 html[data-theme="light"] .mode-switch-pill--paper .mode-switch-sub { color: #6d28d9; }
 .mode-switch-chev { flex-shrink: 0; color: var(--color-text-muted); }
-.mode-switch-pill .chart-mobile-tab-dot { top: 2px; right: 2px; }
+/* Inside the pill's rounded corner, so its edge never clips the dot. */
+.mode-switch-pill .chart-mobile-tab-dot { top: 6px; right: 9px; }
 
 .mode-switch-scrim { position: fixed; inset: 0; z-index: 290; }
 .mode-switch-menu {
@@ -8284,3 +8335,22 @@ html[data-theme="light"] .pv-toggle--on .pv-toggle-label-accent {
 }
 .icon-strip-pv--on .pv-toggle-knob { transform: translateX(14px); color: #7c3aed; }
 .icon-strip-pv--on .pv-toggle-knob svg { transform: rotate(180deg) scale(1.15); }
+
+/* Native app: no web-style text selection, copy callout or image drag.
+   Inputs and editable fields stay selectable so typing still works. */
+html.is-native-app,
+html.is-native-app * {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+html.is-native-app img { -webkit-user-drag: none; }
+html.is-native-app input,
+html.is-native-app textarea,
+html.is-native-app select,
+html.is-native-app [contenteditable="true"],
+html.is-native-app [contenteditable="true"] * {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}

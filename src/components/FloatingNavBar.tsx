@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { hapticTap } from "../utils/haptics";
 import "../styles/FloatingNavBar.css";
 
 interface Props {
@@ -33,6 +34,8 @@ interface Props {
   onAgentLocked: () => void;
   // Closes whichever panel is open and returns to the chart page.
   onGoHome: () => void;
+  /** Long-press on Home: opens the app menu. */
+  onHomeLongPress?: () => void;
   // True only when genuinely at rest on the chart page with nothing else
   // open — not a panel of its own, so it needs its own computed flag
   // rather than mirroring a single piece of open/closed state.
@@ -64,6 +67,11 @@ interface Props {
 //   "expand"  = only the active tab shows its label; its pill widens to fit.
 //   "glass"   = liquid-glass lift/slide pill (iOS 26 style).
 const NAV_STYLE = "stretch" as "glass" | "expand" | "stretch";
+
+// localStorage keys for the one-time "Hold for menu" tip.
+const HOLD_TIP_DONE = "fnb-hold-tip-done";
+const HOLD_TIP_OPENS = "fnb-hold-tip-opens";
+const HOLD_TIP_SHOWN = "fnb-hold-tip-shown";
 
 function useItems({
   signalsOpen, onOpenDailyBrief, dailyBriefOpen, onSearch, searchOpen, onGoHome, homeActive,
@@ -125,7 +133,7 @@ function useItems({
 export function FloatingNavBar({
   signalsOpen, onSearch, searchOpen,
   profileOpen, agentUnread, onOpenDailyBrief, dailyBriefOpen,
-  agentLocked, onAgentLocked, onGoHome, homeActive, showAgentShowcase,
+  agentLocked, onAgentLocked, onGoHome, homeActive, showAgentShowcase, onHomeLongPress,
 }: Props) {
   const { t } = useTranslation();
   // Same ~5s one-shot as TradingAgent.tsx's own showcasePlaying — stops
@@ -347,17 +355,66 @@ export function FloatingNavBar({
     return () => ro.disconnect();
   }, [activeLabel]);
 
+  // One-time hint: pulsing rings on Home (long-press opens the menu). From
+  // the 3rd app open, shown at most twice, never again once it's been used.
+  const [holdTip, setHoldTip] = useState(false);
+  const markHoldTipDone = () => {
+    try { localStorage.setItem(HOLD_TIP_DONE, "1"); } catch { /* storage off */ }
+    setHoldTip(false);
+  };
+  useEffect(() => {
+    if (!onHomeLongPress) return;
+    let opens = 0, shown = 0;
+    try {
+      if (localStorage.getItem(HOLD_TIP_DONE)) return;
+      opens = Number(localStorage.getItem(HOLD_TIP_OPENS) || 0) + 1;
+      shown = Number(localStorage.getItem(HOLD_TIP_SHOWN) || 0);
+      localStorage.setItem(HOLD_TIP_OPENS, String(opens));
+    } catch { return; }
+    if (opens < 3 || shown >= 2) return;
+    let hideId = 0;
+    const showId = window.setTimeout(() => {
+      setHoldTip(true);
+      try { localStorage.setItem(HOLD_TIP_SHOWN, String(shown + 1)); } catch { /* storage off */ }
+      hideId = window.setTimeout(() => setHoldTip(false), 6000);
+    }, 2500);
+    return () => { clearTimeout(showId); clearTimeout(hideId); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Long-press Home (~450ms) opens the menu; a normal tap still goes Home.
+  const homeHoldRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const holdFiredRef = useRef(false);
+  const startHold = (label: string) => {
+    holdFiredRef.current = false;
+    if (label !== "Home" || !onHomeLongPress) return;
+    if (homeHoldRef.current) clearTimeout(homeHoldRef.current);
+    homeHoldRef.current = setTimeout(() => {
+      homeHoldRef.current = null;
+      holdFiredRef.current = true;
+      hapticTap();
+      release();
+      markHoldTipDone();
+      onHomeLongPress();
+    }, 450);
+  };
+  const cancelHold = () => {
+    if (homeHoldRef.current) { clearTimeout(homeHoldRef.current); homeHoldRef.current = null; }
+  };
+
   const renderItem = (item: (typeof items)[number]) => (
     <button
       key={item.label}
       ref={(el) => { itemRefs.current[item.label] = el; }}
       type="button"
-      className={`fnb-item${item.isActive ? " fnb-item--active" : ""}${pressedLabel === item.label ? " fnb-item--pressed" : ""}`}
-      onClick={item.action}
-      onPointerDown={() => press(item.label)}
-      onPointerUp={release}
-      onPointerCancel={release}
-      onPointerLeave={() => { if (pressedRef.current === item.label) release(); }}
+      className={`fnb-item${item.isActive ? " fnb-item--active" : ""}${pressedLabel === item.label ? " fnb-item--pressed" : ""}${holdTip && item.label === "Home" ? " fnb-item--hint" : ""}`}
+      // A long-press already opened the menu → swallow the click that follows.
+      onClick={() => { if (holdFiredRef.current) { holdFiredRef.current = false; return; } item.action(); }}
+      onPointerDown={() => { press(item.label); startHold(item.label); }}
+      onPointerUp={() => { cancelHold(); release(); }}
+      onPointerCancel={() => { cancelHold(); release(); }}
+      onPointerLeave={() => { cancelHold(); if (pressedRef.current === item.label) release(); }}
+      onContextMenu={(e) => { if (item.label === "Home") e.preventDefault(); }}
       aria-label={t(`floatingNav.${item.label.toLowerCase()}`)}
       aria-current={item.isActive ? "page" : undefined}
     >

@@ -8,6 +8,8 @@ import {
   getCoinRow, getGlobal, getCoinDetails, requestSparklines, useSparklines, withSparklines, usePaprikaShown,
   type CoinDetails,
 } from "../services/marketData";
+import { BottomSheet } from "./BottomSheet";
+import { PeerCompare } from "./PeerCompare";
 import "../styles/CoinInfoPanel.css";
 
 // Chart page (desktop) left column — a copy of CoinMarketCap's coin
@@ -62,8 +64,12 @@ function readWatch(): string[] {
   try { const v = JSON.parse(localStorage.getItem(WATCH_KEY) ?? "null"); return Array.isArray(v) ? v : []; } catch { return []; }
 }
 
-export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone }: {
+export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone, onCompare, peersShown }: {
   coin: string;
+  /** Desktop: the panel's main button becomes "Compare {coin}" (toggles the
+   *  Peers for comparison section) instead of Paper trade. */
+  onCompare?: () => void;
+  peersShown?: boolean;
   /** Phones: shown under the chart — skips the name/price rows (the chart
    *  header already has them) and lays the cards out full width. */
   phone?: boolean;
@@ -77,6 +83,7 @@ export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone 
 }) {
   const name = COINS.find((c) => c.symbol === coin)?.name ?? coin;
   const { t } = useTranslation();
+  const [compareOpen, setCompareOpen] = useState(false);
 
   // Top-250 list (shared cache with Markets) + global stats (dominance).
   const [rows, setRows] = useState<MarketRow[] | null>(null);
@@ -318,6 +325,22 @@ export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone 
         )}
       </div>
 
+      {/* Phones: "Compare BTC" → peers comparison in a bottom sheet (same
+          look as the chart's green "Trade BTC" button). */}
+      {phone && (
+        <>
+          <button type="button" className="chart-trade-cta cmch-cta cip-compare" onClick={() => setCompareOpen(true)}>
+            {t("peerCompare.compareCoin", { coin })}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M7 4 3 8l4 4" /><path d="M3 8h13" /><path d="m17 20 4-4-4-4" /><path d="M21 16H8" />
+            </svg>
+          </button>
+          <BottomSheet open={compareOpen} onClose={() => setCompareOpen(false)} title={t("peerCompare.title")} ariaLabel={t("peerCompare.title")} className="pc-sheet">
+            <PeerCompare coin={coin} theme={document.documentElement.dataset.theme === "light" ? "light" : "dark"} variant="sheet" />
+          </BottomSheet>
+        </>
+      )}
+
       {/* Signal score (in place of CMC's Profile Score) */}
       <div className={`cip-score cip-score--${sig?.tone ?? "none"}`}>
         <span className="cip-score-k">{t("coinInfo.signalScore")} <Info tip={t("coinInfo.signalScoreTip")} /></span>
@@ -327,8 +350,17 @@ export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone 
         </span>
       </div>
 
-      {/* Paper trade (in place of CMC's Boost) */}
-      {onTrade && (
+      {/* Desktop: "Compare {coin}" (in place of CMC's Boost) — shows/hides
+          Peers for comparison under the chart. Falls back to Paper trade
+          where no compare handler is given. */}
+      {onCompare ? (
+        <button type="button" className={`cip-cta${peersShown ? " cip-cta--on" : ""}`} onClick={onCompare} aria-expanded={!!peersShown}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M7 4 3 8l4 4" /><path d="M3 8h13" /><path d="m17 20 4-4-4-4" /><path d="M21 16H8" />
+          </svg>
+          {peersShown ? t("peerCompare.hidePeers") : t("peerCompare.compareCoin", { coin })}
+        </button>
+      ) : onTrade && (
         <button type="button" className="cip-cta" onClick={onTrade}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8" /><path d="M15 7h6v6" /></svg>
           {t("coinInfo.paperTrade", { coin })}

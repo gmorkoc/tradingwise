@@ -105,6 +105,11 @@ function hapticTap() {
   }
 }
 
+// Native app: flag <html> so CSS can turn off web-style text selection/copy.
+if (Capacitor.isNativePlatform() && typeof document !== "undefined") {
+  document.documentElement.classList.add("is-native-app");
+}
+
 // Mobile header pill only — drops the decimal portion for prices >= $1000
 // (e.g. "$83,646" instead of "$83,646.00") to keep the pill on one row.
 // Desktop keeps formatLivePrice's full precision everywhere else.
@@ -1844,7 +1849,6 @@ function AppDashboard({
     startPos: 0,
     startSize: 0,
   });
-  const [swipeHint, setSwipeHint] = useState(false);
   const mobileNavOpenRef = useRef(false);
   mobileNavOpenRef.current = mobileNavOpen;
   const coinPickerBtnRef = useRef<HTMLButtonElement>(null);
@@ -2212,6 +2216,10 @@ function AppDashboard({
   // tabs — Paper Trading | Order Book (CMC's "Community | Trade" look).
   // Both panels stay mounted so each keeps its live state across switches.
   type TradeColTab = "paper" | "posintel" | "orderbook" | "flow";
+  // Desktop chart page: "Peers for comparison" shows only after the coin
+  // panel's "Compare {coin}" button is clicked.
+  const [peersOpen, setPeersOpen] = useState(false);
+  const peersRef = useRef<HTMLDivElement>(null);
   const [tradeColTab, setTradeColTab] = useState<TradeColTab>(() => {
     const v = localStorage.getItem("tradeColTab");
     return v === "posintel" || v === "orderbook" || v === "flow" ? v : "paper";
@@ -2439,6 +2447,24 @@ function AppDashboard({
   // Position in the app's own page history (0 = the page the app opened
   // on) — lets the edge swipe know whether there's anything to go back to.
   const historyIdxRef = useRef(0);
+  // iOS-style page transitions on every page change (not the first render):
+  //  • going back (header chevron or browser/system back) → "pop": the page
+  //    you return to slides in from the left;
+  //  • opening a page → "push": it slides in from the right.
+  const navBackRef = useRef(false);
+  const firstPageAnimRef = useRef(true);
+  useEffect(() => {
+    if (firstPageAnimRef.current) { firstPageAnimRef.current = false; return; }
+    const back = navBackRef.current;
+    navBackRef.current = false;
+    const el = mainContentRef.current;
+    if (!el) return;
+    el.classList.remove("page-pop", "page-push");
+    void el.offsetWidth; // restart the animation
+    el.classList.add(back ? "page-pop" : "page-push");
+    const id = window.setTimeout(() => el.classList.remove("page-pop", "page-push"), 450);
+    return () => window.clearTimeout(id);
+  }, [activeSection]);
   // The chart page's URL is /chart/<coin> (see urlFor), so it follows the
   // coin too: switching coins on the chart page replaces the entry (no
   // extra Back step per coin); changing page pushes a new one.
@@ -2486,6 +2512,8 @@ function AppDashboard({
       const loc = readLocation();
       const sec = loc.section ?? "markets";
       skipNextHistoryPushRef.current = true;
+      // Browser/system back (and forward) → animate as "back" (from the left).
+      navBackRef.current = true;
       setActiveSection(sec);
       if (loc.coin) {
         setCoin(loc.coin as CoinSymbol);
@@ -2620,28 +2648,6 @@ function AppDashboard({
     setDailyBriefPanelOpen(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSection]);
-
-  // First-visit swipe intro
-  useEffect(() => {
-    if (window.innerWidth > 640) return;
-    if (localStorage.getItem("swipe-hint-seen")) return;
-    const t1 = setTimeout(() => {
-      setMobileNavOpen(true);
-      setSwipeHint(true);
-    }, 800);
-    const t2 = setTimeout(() => {
-      setMobileNavOpen(false);
-    }, 2200);
-    const t3 = setTimeout(() => {
-      setSwipeHint(false);
-      localStorage.setItem("swipe-hint-seen", "1");
-    }, 2800);
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
-    };
-  }, []);
 
   // Left-edge swipe right = Back (like a browser / iOS), with a round ←
   // indicator that follows the finger. On the first page (nothing to go
@@ -4007,28 +4013,37 @@ function AppDashboard({
           {!(isDesktopWidth && !Capacitor.isNativePlatform()) && (
           <div ref={mchRef} className="main-coin-header">
             <div className="mch-left">
-              <button
-                className="mch-menu-btn"
-                onClick={() => {
-                  if (!mobileNavOpen) hapticTap();
-                  setMobileNavOpen((v) => !v);
-                }}
-                aria-label={t("appShell.topNav.openMenu")}
-              >
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                >
-                  <line x1="3" y1="6" x2="21" y2="6" />
-                  <line x1="3" y1="12" x2="21" y2="12" />
-                  <line x1="3" y1="18" x2="21" y2="18" />
-                </svg>
-              </button>
+              {/* One button, iOS pattern: ☰ menu on the top-level page
+                  (Markets); ‹ back on pages opened from it. Its three lines
+                  morph between the two (top/bottom rotate into the chevron,
+                  middle fades). Back goes to the previous page in the app's
+                  own history, or Markets; that page slides in from the left. */}
+              {(() => {
+                const isBack = activeSection !== "markets";
+                return (
+                  <button
+                    type="button"
+                    className={`mch-menu-btn mch-nav-btn${isBack ? " mch-nav-btn--back" : ""}`}
+                    onClick={() => {
+                      hapticTap();
+                      if (isBack) {
+                        navBackRef.current = true;
+                        if (historyIdxRef.current > 0) window.history.back();
+                        else setActiveSection("markets");
+                      } else {
+                        setMobileNavOpen((v) => !v);
+                      }
+                    }}
+                    aria-label={isBack ? t("appShell.topNav.backToMarkets") : t("appShell.topNav.openMenu")}
+                  >
+                    <svg className="mch-nav-ic" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                      <line className="mch-nav-l1" x1="4" y1="6" x2="20" y2="6" />
+                      <line className="mch-nav-l2" x1="4" y1="12" x2="20" y2="12" />
+                      <line className="mch-nav-l3" x1="4" y1="18" x2="20" y2="18" />
+                    </svg>
+                  </button>
+                );
+              })()}
               {/* Chart/Advance Chart pages: PriceChart.tsx's own
                   chart-hero-id-row is now the coin selector there too
                   (desktop included, not just mobile) — this button would
@@ -4319,8 +4334,12 @@ function AppDashboard({
                             coin table (desktop has them in the left column). */}
                         {/* Peers for comparison: tick coins to overlay them
                             on a % comparison chart against this one. */}
-                        {activeSection === "chart" && (
-                          <PeerCompare coin={coin} theme={theme} />
+                        {/* Desktop: hidden until "Compare {coin}" in the coin
+                            panel is clicked. (Phones use the Compare sheet.) */}
+                        {activeSection === "chart" && peersOpen && (
+                          <div ref={peersRef}>
+                            <PeerCompare coin={coin} theme={theme} />
+                          </div>
                         )}
                         {activeSection === "chart" && !isDesktopWidth && (
                           <>
@@ -4432,6 +4451,15 @@ function AppDashboard({
                           onPickCoin={(el) => openCoinPicker(el)}
                           // "Paper trade" button → open the Paper Trading tab on the right.
                           onTrade={() => setTradeColTab("paper")}
+                          // Desktop: the panel's button is "Compare {coin}" —
+                          // shows/hides Peers for comparison and scrolls to it.
+                          peersShown={peersOpen}
+                          onCompare={() => {
+                            setPeersOpen((o) => {
+                              if (!o) setTimeout(() => peersRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+                              return !o;
+                            });
+                          }}
                         />
                       </div>
                       {chartColumnEl}
@@ -4935,25 +4963,6 @@ function AppDashboard({
         <div ref={backSwipeRef} className="back-swipe" aria-hidden="true">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
         </div>
-        {swipeHint && (
-          <div className="swipe-hint">
-            <div className="swipe-hint-hand">
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M5 12h14M12 5l7 7-7 7" />
-              </svg>
-            </div>
-            <span>{t("nav.swipeHint")}</span>
-          </div>
-        )}
       </div>
       {/* end app-shell-body */}
 
@@ -5038,6 +5047,8 @@ function AppDashboard({
           }}
           homeActive={activeSection === "markets" && mobileChartTab === "chart" && !signalsOpen && !assetPanelOpen && !globalSearch && !profileOpen && !dailyBriefPanelOpen}
           showAgentShowcase={showAgentShowcase}
+          // Long-press Home → open the app menu (same as ☰ on Markets).
+          onHomeLongPress={() => setMobileNavOpen(true)}
         />
       )}
       {/* Agent Ready is elite-only (see hasAccess(tier, "elite") above) —

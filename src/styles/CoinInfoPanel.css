@@ -330,6 +330,9 @@ html:not([data-theme="light"]) .cip { --cip-blue: #6188ff; }
 }
 .cip-cta:hover { filter: brightness(1.05); }
 .cip-cta:active { filter: brightness(0.95); }
+/* Comparison open: softer "Hide comparison" state. */
+.cip-cta.cip-cta--on,
+.cip-cta.cip-cta--on:hover { background: rgba(247, 115, 90, 0.12); color: #e5533a; box-shadow: inset 0 0 0 1px rgba(247, 115, 90, 0.45); }
 
 /* Link rows */
 .cip-rows { margin-top: 26px; display: flex; flex-direction: column; gap: 14px; }
@@ -487,3 +490,16 @@ html:not([data-theme="light"]) .cip { --cip-blue: #6188ff; }
 .cip-source-note { font-size: 11px; color: var(--cip-muted); opacity: 0.8; text-align: right; }
 .cip-link,
 .cip-link:hover { all: unset; align-self: flex-start; font-size: 13px; font-weight: 600; color: var(--cip-blue); cursor: pointer; }
+/* Phones: "Compare BTC ⇄" above the Signal score (green Trade-button look). */
+.cip-compare { gap: 8px; margin: 0 0 4px; }
+/* Secondary look (soft blue) so it doesn't compete with the green Trade
+   button; extra selectors beat the Trade button's own theme rules. */
+html .chart-trade-cta.cmch-cta.cip-compare,
+html[data-theme] .chart-trade-cta.cmch-cta.cip-compare {
+  background: rgba(37, 99, 235, 0.1);
+  color: #2563eb;
+}
+html:not([data-theme="light"]) .chart-trade-cta.cmch-cta.cip-compare {
+  background: rgba(96, 165, 250, 0.14);
+  color: #93c5fd;
+}

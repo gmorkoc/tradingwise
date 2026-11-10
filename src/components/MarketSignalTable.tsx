@@ -9,6 +9,8 @@ import { useProVisionGate, openProVisionPaywall } from "../hooks/useProVisionGat
 import { COINS } from "../services/coinglass";
 import { fetchPortfolio } from "../services/paperTrading";
 import { BottomSheet } from "./BottomSheet";
+import { hapticTap } from "../utils/haptics";
+import { isRealTap } from "../utils/tapGuard";
 import "../styles/MarketSignalTable.css";
 
 // Markets (home) coin table with a per-coin signal column. The signal is
@@ -659,7 +661,7 @@ export function MarketSignalTable({ coins: coinsProp, onSelectCoin, onOpenAuth, 
               role="button"
               tabIndex={0}
               className="mst-row"
-              onClick={() => onSelectCoin?.(sym)}
+              onClick={() => { if (!isRealTap()) return; hapticTap(); onSelectCoin?.(sym); }}
               onKeyDown={(e) => { if (e.key === "Enter") onSelectCoin?.(sym); }}
             >
               <span className="mst-c-rank">
@@ -667,7 +669,7 @@ export function MarketSignalTable({ coins: coinsProp, onSelectCoin, onOpenAuth, 
                   type="button"
                   className={`mst-star${on ? " on" : ""}`}
                   aria-label={on ? t("marketSignals.removeWatch", { name: c.name }) : t("marketSignals.addWatch", { name: c.name })}
-                  onClick={(e) => { e.stopPropagation(); toggleWatch(c.id); }}
+                  onClick={(e) => { e.stopPropagation(); if (!isRealTap()) return; hapticTap(); toggleWatch(c.id); }}
                 >
                   {on ? "★" : "☆"}
                 </button>
@@ -691,7 +693,7 @@ export function MarketSignalTable({ coins: coinsProp, onSelectCoin, onOpenAuth, 
                     type="button"
                     className={`mst-trade${paperOn ? " mst-trade--on" : ""}`}
                     title={!user ? t("marketSignals.tradeSignIn") : paperOn ? t("marketSignals.tradeCoin", { sym }) : t("marketSignals.tradeActivate")}
-                    onClick={(e) => { e.stopPropagation(); trade(sym); }}
+                    onClick={(e) => { e.stopPropagation(); if (!isRealTap()) return; hapticTap(); trade(sym); }}
                   >
                     {t("marketSignals.trade")}
                   </button>
@@ -721,7 +723,7 @@ export function MarketSignalTable({ coins: coinsProp, onSelectCoin, onOpenAuth, 
                     <button
                       type="button"
                       className="mst-lock"
-                      onClick={(e) => { e.stopPropagation(); onOpenAuth?.(); }}
+                      onClick={(e) => { e.stopPropagation(); hapticTap(); onOpenAuth?.(); }}
                     >
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
                       {t("marketSignals.signUp")}
@@ -733,7 +735,7 @@ export function MarketSignalTable({ coins: coinsProp, onSelectCoin, onOpenAuth, 
                         <button
                           type="button"
                           className="mst-pv"
-                          onClick={(e) => { e.stopPropagation(); openPv(sym); }}
+                          onClick={(e) => { e.stopPropagation(); hapticTap(); openPv(sym); }}
                         >
                           ProVision ›
                         </button>

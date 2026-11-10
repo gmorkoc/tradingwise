@@ -15,6 +15,7 @@
     },
     "ai": {
       "cooldown": "Próxima lectura IA de {{coin}} en {{time}} — una lectura por moneda cada 5 minutos.",
+      "nextIn": "Próxima lectura IA {{time}}",
       "noRead": "La IA no devolvió una lectura esta vez. Inténtalo de nuevo.",
       "signIn": "Inicia sesión para ejecutar la lectura IA.",
       "limit": "Has usado todas tus solicitudes de IA por ahora.",
