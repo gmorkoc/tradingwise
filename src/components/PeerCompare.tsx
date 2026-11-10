@@ -6,12 +6,12 @@ import "../styles/PeerCompare.css";
 
 // Chart page: "Peers for comparison" — a row of peer coins (live price, 24h
 // change) you can tick to overlay on a % comparison chart against the coin
-// you're viewing, like TradingView's compare. Tapping a card opens that coin.
+// you're viewing, like TradingView's compare. Tapping a card (or its ⊕)
+// adds/removes it from the comparison; it never changes the main chart.
 
 interface Props {
   coin: string;
   theme?: "dark" | "light";
-  onSelectCoin?: (symbol: string) => void;
 }
 
 const MAX_SELECTED = 4;
@@ -60,7 +60,7 @@ function TickPrice({ price }: { price: number }) {
   return <>{text.slice(0, flash.from)}<span className={`pc-tick pc-tick--${flash.dir}`}>{text.slice(flash.from)}</span></>;
 }
 
-export function PeerCompare({ coin, theme = "light", onSelectCoin }: Props) {
+export function PeerCompare({ coin, theme = "light" }: Props) {
   const peers = useMemo(
     () => COINS.filter(c => c.symbol !== coin && !NO_SPOT.has(c.symbol)).slice(0, PEER_COUNT),
     [coin],
@@ -119,12 +119,15 @@ export function PeerCompare({ coin, theme = "light", onSelectCoin }: Props) {
             return (
               <div
                 key={p.symbol}
-                className={`pc-card${on ? " pc-card--on" : ""}`}
+                className={`pc-card${on ? " pc-card--on" : ""}${full ? " pc-card--full" : ""}`}
                 style={color ? ({ "--pc-c": color } as React.CSSProperties) : undefined}
                 role="button"
                 tabIndex={0}
-                onClick={() => onSelectCoin?.(p.symbol)}
-                onKeyDown={e => { if (e.key === "Enter") onSelectCoin?.(p.symbol); }}
+                aria-pressed={on}
+                // Card and ⊕ do the same thing: add/remove it from the
+                // comparison (never switch the main chart's coin).
+                onClick={() => { if (!full) toggle(p.symbol); }}
+                onKeyDown={e => { if ((e.key === "Enter" || e.key === " ") && !full) { e.preventDefault(); toggle(p.symbol); } }}
               >
                 <div className="pc-card-top">
                   <CoinLogo symbol={p.symbol} />

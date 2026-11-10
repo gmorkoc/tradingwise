@@ -4291,16 +4291,7 @@ function AppDashboard({
                         {/* Peers for comparison: tick coins to overlay them
                             on a % comparison chart against this one. */}
                         {activeSection === "chart" && (
-                          <PeerCompare
-                            coin={coin}
-                            theme={theme}
-                            onSelectCoin={(symbol) => {
-                              openChartCoin(symbol, { recent: true });
-                              requestAnimationFrame(() => {
-                                document.querySelector(".price-chart-container")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                              });
-                            }}
-                          />
+                          <PeerCompare coin={coin} theme={theme} />
                         )}
                         {activeSection === "chart" && !isDesktopWidth && (
                           <>
