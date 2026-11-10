@@ -9,35 +9,18 @@ import "../styles/GlobalMarkets.css";
 import { fetchBrief, type BriefItem } from "./DailyBrief";
 import { deribit } from "../services/deribit";
 import { MarketSignalTable } from "./MarketSignalTable";
+import {
+  getGlobal, getMarkets, getTrending, getMarketChart, toDaily, requestSparklines, useSparklines, withSparklines,
+  useDataSource, usePaprikaShown, type GlobalStats, type MarketCoin,
+} from "../services/marketData";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
-interface GlobalData {
-  active_cryptocurrencies: number;
-  markets: number;
-  total_market_cap: { usd: number };
-  total_volume: { usd: number };
-  market_cap_percentage: { btc: number; eth: number; [k: string]: number };
-  market_cap_change_percentage_24h_usd: number;
-  defi_market_cap: string;
-  defi_to_eth_ratio: string;
-  trading_volume_24h: string;
-  defi_volume_24h: string;
-}
+type GlobalData = GlobalStats;
 
 interface ChartPoint { time: string; value: number; raw: number; }
-export interface CoinRow {
-  id: string; symbol: string; name: string; image: string;
-  market_cap_rank: number; current_price: number;
-  price_change_percentage_24h: number;
-  price_change_percentage_7d_in_currency: number;
-  price_change_percentage_30d_in_currency?: number;
-  price_change_percentage_1y_in_currency?: number;
-  price_change_percentage_1h_in_currency?: number;
-  circulating_supply?: number | null;
-  max_supply?: number | null;
-  market_cap: number; total_volume: number;
-  sparkline_in_7d?: { price: number[] };
-}
+// Market list row (CoinGecko's shape, whichever source answered — see
+// services/marketData.ts).
+export type CoinRow = MarketCoin;
 
 interface FearGreedPoint { value: string; value_classification: string; timestamp: string; }
 
@@ -65,9 +48,8 @@ const MCAP_PERIODS = [
   { label: "All", days: "max" as const },
 ] as const;
 
-// Altcoin Season's own selectable window — real CoinGecko-sourced price
-// change fields (24h always present, 7d/30d/1y requested in the markets
-// fetch's price_change_percentage param above). Was hardcoded to 30D.
+// Altcoin Season's own selectable window — real price change fields from
+// the market list (24h/7d/30d/1y). Was hardcoded to 30D.
 const ALT_SEASON_PERIODS = [
   { label: "24H", field: (c: CoinRow) => c.price_change_percentage_24h },
   { label: "7D",  field: (c: CoinRow) => c.price_change_percentage_7d_in_currency },
@@ -78,7 +60,7 @@ const ALT_SEASON_PERIODS = [
 // CoinGlass's own liquidation endpoints are all currently rejecting with
 // "Upgrade plan" on the live key (verified directly against the proxy), so
 // the "Market Pulse" section below is an honest substitute built entirely
-// from CoinGecko data actually available: daily BTC price swings (real,
+// from market data actually available: daily BTC price swings (real,
 // derived) standing in for the long/short liquidation histogram, and
 // today's biggest real movers standing in for curated liquidation events.
 const LIQ_RANGES = [
@@ -111,12 +93,12 @@ function fmtDate(ts: number, days: number): string {
 }
 
 // ── Cache ──────────────────────────────────────────────────────────────────────
+// Market data (coin list, global stats, history) goes through
+// services/marketData.ts (CoinGecko → CoinPaprika → CoinLore, with its own
+// cache); this one is for the other public
+// APIs below (alternative.me, Coinalyze).
 const cache: Record<string, { data: unknown; ts: number }> = {};
-// The top-250 coin list (one cached request, shared by Markets, the coin
-// table and the chart page's info column).
-export const COINS_MARKETS_URL =
-  "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&price_change_percentage=1h,7d,30d,1y&sparkline=true";
-export const TTL = { global: 60_000, chart: 120_000, coins: 90_000, trending: 300_000, fng: 300_000, oi: 60_000, fngHistory: 600_000 };
+export const TTL ={ global: 60_000, chart: 120_000, coins: 90_000, trending: 300_000, fng: 300_000, oi: 60_000, fngHistory: 600_000 };
 // alternative.me's full Fear & Greed history (back to Feb 2018) in one
 // request — limit=0 means "no limit", not "zero rows". Small per-row
 // (value/classification/timestamp only), so fetching everything once and
@@ -127,50 +109,18 @@ const FNG_PERIODS = [
   { label: "1Y",  days: 365 },
   { label: "All", days: Infinity },
 ] as const;
-const CG_API_KEY = import.meta.env.VITE_COINGECKO_API_KEY as string | undefined;
 // Same gap BN_BASE (coinglass.ts) and API_BASE (openai.ts) already work
 // around: the native app loads its bundled web content from a local
 // capacitor:// origin, not https://www.coinhintz.io, so a relative
 // /coinalyze-api/* fetch resolves to nothing on-device — there's no
-// server there to proxy it. Unlike CoinGecko (open CORS, called directly
-// elsewhere in this file), Coinalyze's key is only added server-side by
+// server there to proxy it. Unlike the market-data APIs (open CORS, called
+// directly by services/marketData.ts), Coinalyze's key is only added server-side by
 // middleware.ts, so native has to reach that middleware via the real
 // production domain instead of calling Coinalyze directly.
 const COINALYZE_BASE = Capacitor.isNativePlatform() ? "https://www.coinhintz.io/coinalyze-api" : "/coinalyze-api";
 
-// timeoutMs is opt-in (existing callers are unaffected) — added for the
-// market_chart calls specifically, which have been observed hanging
-// forever on-device (native fetch() never resolving OR rejecting, so
-// .then/.catch never fire and the loading skeleton is stuck permanently)
-// even though the identical request succeeds instantly from curl and from
-// this file's other CoinGecko calls (global/coins/markets/trending/
-// sentiment). Root cause unconfirmed (couldn't get live device console
-// access to see the actual native networking error) — this bounds the
-// damage regardless of cause: a hang becomes a clean, retriable failure
-// instead of an infinite stuck skeleton.
-export async function cgFetch<T>(url: string, ttl: number, timeoutMs?: number): Promise<T> {
-  const now = Date.now();
-  if (cache[url] && now - cache[url].ts < ttl) return cache[url].data as T;
-  // Key goes in the query string, not an x-cg-demo-api-key header — a
-  // custom header triggers a CORS preflight that CoinGecko's own
-  // Access-Control-Allow-Headers doesn't list, so the browser blocks the
-  // real request before it goes out. The query param needs no preflight.
-  const fetchUrl = CG_API_KEY ? `${url}${url.includes("?") ? "&" : "?"}x_cg_demo_api_key=${CG_API_KEY}` : url;
-  const controller = timeoutMs ? new AbortController() : undefined;
-  const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : undefined;
-  try {
-    const res = await fetch(fetchUrl, { headers: { accept: "application/json" }, signal: controller?.signal });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    cache[url] = { data, ts: now };
-    return data as T;
-  } finally {
-    if (timer) clearTimeout(timer);
-  }
-}
-
-// Plain fetch (no CoinGecko key appended) for other public APIs sharing
-// the same in-memory TTL cache — alternative.me's Fear & Greed index.
+// Plain cached fetch for the other public APIs — alternative.me's Fear &
+// Greed index, Coinalyze open interest.
 async function plainFetch<T>(url: string, ttl: number): Promise<T> {
   const now = Date.now();
   if (cache[url] && now - cache[url].ts < ttl) return cache[url].data as T;
@@ -180,6 +130,12 @@ async function plainFetch<T>(url: string, ttl: number): Promise<T> {
   cache[url] = { data, ts: now };
   return data as T;
 }
+
+// Pool of 10 each for the Gainers/Losers banner.
+const topGainers = (coins: CoinRow[]) =>
+  [...coins].sort((a, b) => (b.price_change_percentage_24h ?? -999) - (a.price_change_percentage_24h ?? -999)).slice(0, 10);
+const topLosers = (coins: CoinRow[]) =>
+  [...coins].sort((a, b) => (a.price_change_percentage_24h ?? 999) - (b.price_change_percentage_24h ?? 999)).slice(0, 10);
 
 // ── Sparkline ──────────────────────────────────────────────────────────────────
 export function Sparkline({ data, color, width = 90, height = 28 }: { data?: number[]; color: string; width?: number; height?: number }) {
@@ -339,7 +295,7 @@ interface Props {
   // Jumps straight to the Chart page for this coin (App.tsx wires this to
   // setCoin/clearCandleCache/setActiveSection("chart"), same pattern
   // Watchlist/TopMoversCarousel/PriceChart's own hero stack already use).
-  // Any CoinGecko coin can be clicked, not just ones the app's own COINS
+  // Any listed coin can be clicked, not just ones the app's own COINS
   // roster recognizes — App.tsx's openChartCoin shows the "coming soon"
   // sheet (CoinUnavailableSheet) for coins the chart has no data for.
   onSelectCoin?: (symbol: string) => void;
@@ -393,7 +349,7 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
   const [error, setError]         = useState("");
   // "Market Pulse" (Liquidations-style widget substitute, see LIQ_RANGES comment)
   const [liqRange, setLiqRange]   = useState<{ label: string; days: number }>(LIQ_RANGES[1]);
-  // ── Desktop hero (gmh-*): CoinGecko's real trending list + live news ──
+  // ── Desktop hero (gmh-*): trending list (getTrending) + live news ──
   // Shown on every width now (phones: a swipeable card carousel).
   const isHeroDesktop = true;
   // Phones: which carousel card is in view (for the dots).
@@ -406,11 +362,9 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
   });
   useEffect(() => {
     if (!isHeroDesktop) return;
-    type TrendResp = { coins: { item: { id: string; symbol: string; name: string; thumb: string; data?: { price_change_percentage_24h?: { usd?: number } } } }[] };
-    cgFetch<TrendResp>("https://api.coingecko.com/api/v3/search/trending", TTL.trending)
-      .then((d) => setTrending((d.coins ?? []).slice(0, 10).map(({ item }) => ({
-        id: item.id, symbol: item.symbol, name: item.name, thumb: item.thumb,
-        chg: item.data?.price_change_percentage_24h?.usd ?? null,
+    getTrending()
+      .then((rows) => setTrending(rows.slice(0, 10).map((c) => ({
+        id: c.id, symbol: c.symbol, name: c.name, thumb: c.image, chg: c.change24h,
       }))))
       .catch(() => {});
     fetchBrief().then((items) => setNews(items.filter((i) => i.category === "crypto").slice(0, 6))).catch(() => {});
@@ -442,7 +396,7 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
   // reusing the BTC chart's chartData/period above.
   const [mcapPeriod, setMcapPeriod] = useState<typeof MCAP_PERIODS[number]>(MCAP_PERIODS[0]);
   const [altSeasonPeriod, setAltSeasonPeriod] = useState<typeof ALT_SEASON_PERIODS[number]>(ALT_SEASON_PERIODS[2]);
-  const [mcapSeries, setMcapSeries] = useState<{ time: string; mcap: number; vol: number }[]>([]);
+  const [mcapSeries, setMcapSeries] = useState<{ time: string; mcap: number; vol: number | null }[]>([]);
   const [mcapLoading, setMcapLoading] = useState(true);
   const mountedRef = useRef(true);
   // Current BTC dominance fraction — needed by the mcap-card effect below
@@ -461,26 +415,32 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
   useEffect(() => {
     mountedRef.current = true;
     setLoading(true);
-    Promise.all([
-      cgFetch<{ data: GlobalData }>("https://api.coingecko.com/api/v3/global", TTL.global),
-      // 250 is CoinGecko's own hard per_page cap on this endpoint (asking
-      // for more just gets silently clamped back to it) — the real "all
-      // of them" within a single request.
-      cgFetch<CoinRow[]>(COINS_MARKETS_URL, TTL.coins),
-    ])
+    Promise.all([getGlobal(), getMarkets()])
       .then(([g, c]) => {
         if (!mountedRef.current) return;
-        setGlobal(g.data);
+        setGlobal(g);
         setCoins(c);
         setLoading(false);
       })
       .catch(e => {
         if (!mountedRef.current) return;
-        setError(e.message ?? "Failed to load");
+        // Friendly, translated text instead of a raw "HTTP 429".
+        setError(e?.message === "rate-limited" || e?.message === "HTTP 429"
+          ? t("globalMarkets.busy") : t("globalMarkets.loadFailed"));
         setLoading(false);
       });
     return () => { mountedRef.current = false; };
   }, []);
+
+  // 7-day sparklines for the Gainers/Losers banner's coins (Binance, loaded
+  // only for the coins shown — see requestSparklines).
+  useSparklines();
+  useEffect(() => {
+    if (coins.length) requestSparklines([...topGainers(coins), ...topLosers(coins)]);
+  }, [coins]);
+  // Which source answered (Market Pulse label; CoinPaprika credit line).
+  const liqSource = useDataSource(`chart:BTC:${liqRange.days}`);
+  const paprikaShown = usePaprikaShown(["markets", "global", "trending", "chart:BTC:"]);
 
   // Fear & Greed index — alternative.me's free public endpoint, no key.
   useEffect(() => {
@@ -532,19 +492,11 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
       .catch(() => {});
   }, []);
 
-  // Fetch chart data when period or chartKey changes (free-tier BTC market chart)
-  // Straight to CoinGecko, not through /gecko-api — same reasoning
-  // coinMeta.ts/MarketHeatmap.tsx already documented: CoinGecko 403s some
-  // endpoints when hit through Vercel's outbound IP but allows the
-  // identical request from a real browser/device origin. Also sidesteps
-  // the native-app issue the rest of this file's direct CoinGecko calls
-  // (global/coins/markets/trending/sentiment) already avoid by not going
-  // through a relative proxy path at all (BN_BASE in coinglass.ts documents
-  // why a relative path resolves to nothing on native).
+  // Fetch chart data when period or chartKey changes (BTC market cap /
+  // volume history — services/marketData.ts getMarketChart).
   useEffect(() => {
     setChartLoading(true);
-    const url = `https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=${period.days}`;
-    cgFetch<{ prices: [number, number][]; market_caps: [number, number][]; total_volumes: [number, number][] }>(url, TTL.chart, 12_000)
+    getMarketChart("BTC", period.days)
       .then(d => {
         const raw = d[chartKey as keyof typeof d] ?? d.market_caps;
         const pts: ChartPoint[] = (raw as [number, number][]).map(([ts, val]) => ({
@@ -558,46 +510,44 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
       .catch(() => setChartLoading(false));
   }, [period, chartKey]);
 
-  // Standalone "Crypto Market Cap" card's own series — CoinGecko's free
-  // tier has no historical TOTAL-market-cap endpoint (/global/market_cap_
-  // chart is Pro-only — verified live against the proxy, returns
-  // error_code 10005 "limited to PRO API subscribers"), so this derives it
-  // from the real BTC market-cap/volume series ÷ the CURRENT BTC dominance
-  // fraction. An approximation, not exact (dominance drifts day to day
-  // across the window), disclosed via .gm-chart-est-note below rather than
-  // presented as a literal historical total — same house rule as
-  // altcoinStrengthPct/marketActivity elsewhere in this file.
+  // Standalone "Crypto Market Cap" card's own series — no free source has
+  // a historical TOTAL-market-cap series, so this derives it from the real
+  // BTC market-cap/volume series ÷ the CURRENT BTC dominance fraction. An
+  // approximation, not exact (dominance drifts day to day across the
+  // window), disclosed via .gm-chart-est-note below rather than presented
+  // as a literal historical total — same house rule as
+  // altcoinStrengthPct/marketActivity elsewhere in this file. One point per
+  // day; volume history only covers the last year (older bars are empty).
   useEffect(() => {
     setMcapLoading(true);
-    const url = `https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=${mcapPeriod.days}`;
-    cgFetch<{ market_caps: [number, number][]; total_volumes: [number, number][] }>(url, TTL.chart, 12_000)
+    getMarketChart("BTC", mcapPeriod.days)
       .then(d => {
         const divisor = btcDomPct > 0 ? btcDomPct / 100 : 1;
-        const vols = d.total_volumes ?? [];
-        const pts = (d.market_caps ?? []).map(([ts, mcapVal], i) => ({
-          time: fmtDate(ts, typeof mcapPeriod.days === "number" ? mcapPeriod.days : 365),
-          mcap: mcapVal / divisor / 1e9,
-          vol: (vols[i]?.[1] ?? 0) / divisor / 1e9,
-        }));
+        const dayKey = (ts: number) => new Date(ts).toISOString().slice(0, 10);
+        const volByDay = new Map(toDaily(d.total_volumes ?? []).map(([ts, v]) => [dayKey(ts), v]));
+        const pts = toDaily(d.market_caps ?? []).map(([ts, mcapVal]) => {
+          const v = volByDay.get(dayKey(ts));
+          return {
+            time: fmtDate(ts, typeof mcapPeriod.days === "number" ? mcapPeriod.days : 365),
+            mcap: mcapVal / divisor / 1e9,
+            vol: v != null ? v / divisor / 1e9 : null,
+          };
+        });
         setMcapSeries(pts);
         setMcapLoading(false);
       })
       .catch(() => setMcapLoading(false));
   }, [mcapPeriod, btcDomPct]);
 
-  // "Market Pulse" chart data — resample CoinGecko's raw (hourly-for-short-
-  // range) BTC price series down to one point per day, then derive each
-  // day's % swing from consecutive daily closes. Real, computed data, not
-  // CoinGlass's actual long/short liquidation volume (unavailable).
+  // "Market Pulse" chart data — resample the BTC price series down to one
+  // point per day, then derive each day's % swing from consecutive daily
+  // closes. Real, computed data, not CoinGlass's actual long/short
+  // liquidation volume (unavailable).
   useEffect(() => {
     setLiqLoading(true);
-    const url = `https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=${liqRange.days}`;
-    cgFetch<{ prices: [number, number][] }>(url, TTL.chart, 12_000)
+    getMarketChart("BTC", liqRange.days)
       .then(d => {
-        const raw = d.prices ?? [];
-        const isHourly = liqRange.days <= 90;
-        const step = isHourly ? 24 : 1;
-        const daily = step > 1 ? raw.filter((_, i) => i % step === 0) : raw;
+        const daily = toDaily(d.prices ?? []);
         const pts: { time: string; ret: number; price: number }[] = [];
         for (let i = 1; i < daily.length; i++) {
           const prev = daily[i - 1][1];
@@ -641,8 +591,8 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
 
   // Pool of 10 each for the rotating banner to cycle through — no more
   // expand/collapse control now that the old full lists are gone.
-  const gainers = [...coins].sort((a, b) => (b.price_change_percentage_24h ?? -999) - (a.price_change_percentage_24h ?? -999)).slice(0, 10);
-  const losers = [...coins].sort((a, b) => (a.price_change_percentage_24h ?? 999) - (b.price_change_percentage_24h ?? 999)).slice(0, 10);
+  const gainers = withSparklines(topGainers(coins));
+  const losers = withSparklines(topLosers(coins));
 
   // "Market Pulse" stat card + movers list (see LIQ_RANGES comment above)
   const gainersCount = coins.filter(c => (c.price_change_percentage_24h ?? 0) >= 0).length;
@@ -678,15 +628,17 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
   // "Altcoin Strength" — this app's own honest equivalent of
   // blockchaincenter.net's "Altcoin Season Index": there's no free public
   // JSON API for that exact index (checked), and the real methodology
-  // uses a 90-day window CoinGecko's free tier doesn't offer (only
-  // 1h/24h/7d/14d/30d/200d/1y) — so this is a genuinely real, from-real-
+  // uses a 90-day window the market list doesn't offer (only
+  // 1h/24h/7d/30d/1y) — so this is a genuinely real, from-real-
   // data computation over a user-selectable window instead (see
   // ALT_SEASON_PERIODS), labeled as such rather than claiming parity with
   // the original index's name/window.
-  const btcRow = coins.find(c => c.id === "bitcoin");
-  const ethRow = coins.find(c => c.id === "ethereum");
+  // First (best-ranked) row per symbol — the same lookup works whichever
+  // data source answered.
+  const btcRow = coins.find(c => c.symbol === "btc");
+  const ethRow = coins.find(c => c.symbol === "eth");
   const btcAltPct = btcRow ? (altSeasonPeriod.field(btcRow) ?? 0) : 0;
-  const altcoinBasket = coins.filter(c => c.id !== "bitcoin" && c.id !== "tether" && c.id !== "usd-coin").slice(0, 50);
+  const altcoinBasket = coins.filter(c => c !== btcRow && c.symbol !== "usdt" && c.symbol !== "usdc").slice(0, 50);
   const altcoinsBeatingBtc = altcoinBasket.filter(c => (altSeasonPeriod.field(c) ?? -999) > btcAltPct).length;
   const altcoinStrengthPct = altcoinBasket.length > 0 ? Math.round((altcoinsBeatingBtc / altcoinBasket.length) * 100) : null;
 
@@ -889,7 +841,7 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
                 </div>
               </section>
 
-              {/* Trending (CoinGecko search trending) */}
+              {/* Trending (getTrending) */}
               <section className="gmh-card">
                 <div className="gmh-head">
                   {t("globalMarkets.trending")} <span className="gmh-chev">›</span>
@@ -1116,7 +1068,7 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
           </div>
         </div>
 
-        {/* Market Activity — real CoinGecko-sourced volume figures. */}
+        {/* Market Activity — real volume figures (services/marketData.ts). */}
         <div className="gm-status-col">
           <div className="gm-status-col-head"><span className="gm-status-col-icon">{IC.vol}</span>{t("globalMarkets.marketActivity")}</div>
           <div className="gm-activity-grid">
@@ -1422,7 +1374,7 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
       <div className="gm-section gm-liq">
         <div className="gm-section-header">
           <span className="gm-section-title">{IC.vol} {t("globalMarkets.marketPulse")}</span>
-          <span className="gm-section-sub">{t("globalMarkets.liveCoinGecko")}</span>
+          <span className="gm-section-sub">{t(liqSource === "pp" ? "globalMarkets.liveCoinPaprika" : liqSource === "cl" ? "globalMarkets.liveCoinLore" : "globalMarkets.liveCoinGecko")}</span>
         </div>
 
         <div className="gm-liq-grid">
@@ -1529,6 +1481,10 @@ export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props =
 
       {/* Top Cryptocurrencies table moved to the Trade (#chart) page's
           bottom panel (ChartBottomPanel). */}
+
+      {/* CoinPaprika's free tier requires a credit — shown only while some
+          of this page's data came from it (CoinGecko fallback). */}
+      {paprikaShown && <div className="gm-source-note">{t("globalMarkets.dataCoinPaprika")}</div>}
     </div>
   );
 }
@@ -1555,7 +1511,7 @@ function FngHistTooltip({ active, payload, label }: { active?: boolean; payload?
   );
 }
 
-function McapTooltip({ active, payload, label }: { active?: boolean; payload?: { payload: { mcap: number; vol: number } }[]; label?: string }) {
+function McapTooltip({ active, payload, label }: { active?: boolean; payload?: { payload: { mcap: number; vol: number | null } }[]; label?: string }) {
   const { t } = useTranslation();
   if (!active || !payload?.length) return null;
   const d = payload[0].payload;
@@ -1563,7 +1519,7 @@ function McapTooltip({ active, payload, label }: { active?: boolean; payload?: {
     <div className="gm-tooltip">
       <div className="gm-tooltip-label">{label}</div>
       <div className="gm-tooltip-value">${d.mcap.toFixed(0)}B</div>
-      <div style={{ fontSize: "0.72rem", color: "var(--color-text-muted)" }}>{t("globalMarkets.tooltipVol", { value: `$${d.vol.toFixed(1)}B` })}</div>
+      <div style={{ fontSize: "0.72rem", color: "var(--color-text-muted)" }}>{t("globalMarkets.tooltipVol", { value: d.vol != null ? `$${d.vol.toFixed(1)}B` : "—" })}</div>
     </div>
   );
 }

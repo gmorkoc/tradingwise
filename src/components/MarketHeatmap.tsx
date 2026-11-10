@@ -3,11 +3,11 @@ import ReactDOM from "react-dom";
 import { useTranslation } from "react-i18next";
 import { squarify } from "../utils/treemap";
 import "../styles/MarketHeatmap.css";
+import { getMarkets } from "../services/marketData";
 
-// CoinGecko's multi-period request suffixes every field with
-// "_in_currency" (except the bare 24h one, kept for back-compat) once more
-// than one period is requested — fetched together in one call so
-// switching the interval tab is instant, no refetch.
+// Every period's change comes with the one shared market list (CoinGecko's
+// "_in_currency" field names) — switching the interval tab is instant, no
+// refetch.
 type Interval = "1h" | "24h" | "7d" | "30d" | "1y";
 const INTERVALS: { key: Interval; label: string }[] = [
   { key: "1h", label: "1H" },
@@ -43,91 +43,15 @@ function changeForInterval(c: CoinRow, interval: Interval): number {
   return map[interval] ?? 0;
 }
 
-// CoinGecko's free tier is a shared, fairly low per-minute quota across
-// every visitor hitting it directly — a 429 (or even a CORS-less network
-// "Failed to fetch") here is normal under any real traffic, not a broken
-// integration. 5-minute cache plus backed-off retries (covering both 429
-// responses and outright network failures) absorbs that; a localStorage
-// mirror of the cache means a fresh page load — new visitor, hard reload,
-// whatever — has a same-session-or-older fallback to show instead of a
-// blank error the moment the quota's already spent.
+// The app's shared top-250 list (services/marketData.ts: CoinGecko first,
+// CoinPaprika then CoinLore as fallbacks, cached in memory + localStorage,
+// stale copy on errors) — the heatmap shows its first 120. Fallback-only
+// gaps (e.g. CoinLore has no 30d/1y change) come through as null → 0%.
 const TTL = 300_000;
-const cache: Record<string, { data: CoinRow[]; ts: number }> = {};
 const COIN_COUNT = 120;
-const RETRY_DELAYS_MS = [1500, 4000, 8000];
-const LS_KEY = "mhm-coins-cache-v1";
-
-function readLsCache(url: string): { data: CoinRow[]; ts: number } | null {
-  try {
-    const raw = localStorage.getItem(LS_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return parsed?.url === url ? { data: parsed.data, ts: parsed.ts } : null;
-  } catch {
-    return null;
-  }
-}
-
-function writeLsCache(url: string, data: CoinRow[], ts: number) {
-  try {
-    localStorage.setItem(LS_KEY, JSON.stringify({ url, data, ts }));
-  } catch {
-    // Private mode / storage full — in-memory cache still covers this tab.
-  }
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-// Straight to CoinGecko, not through /gecko-api — confirmed live that
-// CoinGecko blocks that server-side Vercel proxy (403, empty body) while
-// happily allowing this exact same request made directly from a real
-// browser origin (200, matches GlobalMarkets.tsx's own already-working
-// call to the same endpoint). Not a CORS workaround; CoinGecko's own edge
-// is what's rejecting Vercel's outbound IP specifically.
-const CG_API_KEY = import.meta.env.VITE_COINGECKO_API_KEY as string | undefined;
 
 async function fetchCoins(): Promise<CoinRow[]> {
-  // Key goes in the query string, not an x-cg-demo-api-key header — a
-  // custom header triggers a CORS preflight, and CoinGecko's own
-  // Access-Control-Allow-Headers response doesn't list it, so the browser
-  // blocks the real request before it ever goes out (confirmed via a
-  // manual OPTIONS preflight: 403). The query param needs no preflight.
-  const keyParam = CG_API_KEY ? `&x_cg_demo_api_key=${CG_API_KEY}` : "";
-  const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=${COIN_COUNT}&page=1&price_change_percentage=1h,24h,7d,30d,1y&sparkline=false${keyParam}`;
-  const now = Date.now();
-  if (cache[url] && now - cache[url].ts < TTL) return cache[url].data;
-  if (!cache[url]) {
-    const ls = readLsCache(url);
-    if (ls) cache[url] = ls;
-    if (ls && now - ls.ts < TTL) return ls.data;
-  }
-
-  let lastError = "";
-  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
-    try {
-      const res = await fetch(url, { headers: { accept: "application/json" } });
-      if (res.ok) {
-        const data = await res.json();
-        cache[url] = { data, ts: now };
-        writeLsCache(url, data, now);
-        return data;
-      }
-      lastError = `HTTP ${res.status}`;
-      if (res.status !== 429) break;
-    } catch (e) {
-      // Network-level failure (CORS block, offline, extension) — fetch()
-      // throws before a status even exists, so this needs its own retry
-      // path rather than falling through the res.ok check above.
-      lastError = e instanceof Error ? e.message : "Network error";
-    }
-    if (attempt < RETRY_DELAYS_MS.length) await sleep(RETRY_DELAYS_MS[attempt]);
-  }
-  // Any cached response — even one older than TTL — beats a hard error
-  // once retries are exhausted; the heatmap just shows slightly stale data.
-  if (cache[url]) return cache[url].data;
-  throw new Error(lastError || "Failed to fetch");
+  return (await getMarkets()).slice(0, COIN_COUNT);
 }
 
 // Stablecoins have no meaningful price change — there's nothing for a

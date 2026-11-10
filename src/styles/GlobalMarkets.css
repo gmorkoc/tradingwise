@@ -952,6 +952,16 @@ html[data-theme="light"] .gm-marketstatus-tile {
   margin-top: -4px;
 }
 
+/* ── Fallback data credit ("Data: CoinPaprika") — only shown while that
+   source's data is on screen. ──────────────────────────────────────────── */
+.gm-source-note {
+  font-size: 0.68rem;
+  color: var(--color-text-secondary);
+  opacity: 0.7;
+  text-align: right;
+  padding: 2px 4px 8px;
+}
+
 /* ── Altcoin Season + Crypto Market Cap standalone cards ─────────────────── */
 /* Same order/visibility on every screen size now (previously mobile-only):
    banner, Crypto Market Cap, Market Status (hero), Fear & Greed chart,

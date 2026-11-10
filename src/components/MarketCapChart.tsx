@@ -1,8 +1,9 @@
-// Desktop #trade "Market cap" view: the coin's market cap history (CoinGecko)
-// as an area chart, shown in place of the price chart.
+// Desktop #trade "Market cap" view: the coin's market cap history
+// (services/marketData.ts — CoinGecko, else CoinPaprika / CoinLore) as an
+// area chart, shown in place of the price chart.
 import { useEffect, useRef, useState } from "react";
 import { createChart, ColorType, AreaSeries, type IChartApi, type UTCTimestamp } from "lightweight-charts";
-import { getCoinGeckoId } from "../services/coinglass";
+import { getMarketChart } from "../services/marketData";
 
 export type McapRange = "1" | "7" | "30" | "365" | "max";
 type Range = McapRange;
@@ -40,11 +41,7 @@ export function MarketCapChart({ coin, theme, range, onStats }: {
     setError(false);
     (async () => {
       try {
-        const id = await getCoinGeckoId(coin);
-        if (!id) throw new Error("no id");
-        const res = await fetch(`https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=${range}`);
-        if (!res.ok) throw new Error(String(res.status));
-        const json = (await res.json()) as { market_caps?: [number, number][] };
+        const json = await getMarketChart(coin, range === "max" ? "max" : Number(range));
         const seen = new Set<number>();
         const pts = (json.market_caps ?? [])
           .map(([ms, v]) => ({ time: Math.floor(ms / 1000) as UTCTimestamp, value: v }))

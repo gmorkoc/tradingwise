@@ -4849,7 +4849,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     Array.from(el.children).forEach((c) => ro.observe(c));
     return () => ro.disconnect();
   }, [mobileTabs, coin, updateBarScroll]);
-  // "16Y old" / "8M old" from CoinGecko's genesis date (when it has one).
+  // "16Y old" / "8M old" from the coin's genesis date (when known).
   const coinAgeLabel = (() => {
     const g = coinMeta?.genesisDate;
     if (!g) return null;

@@ -1,22 +1,22 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import i18n from "../i18n";
-import { CoinRow, COINS_MARKETS_URL, TTL, cgFetch, fmtPrice } from "./GlobalMarkets";
+import { CoinRow, fmtPrice } from "./GlobalMarkets";
 import { signalOf } from "./MarketSignalTable";
 import { fetchBrief, type BriefItem } from "./DailyBrief";
-import { COINS, getCoinGeckoId, fetchFundingRate, getPositionData } from "../services/coinglass";
+import { COINS, fetchFundingRate, getPositionData } from "../services/coinglass";
+import { getCoinRow, getMarketChart, toDaily, requestSparklines, useSparklines, withSparklines } from "../services/marketData";
 import "../styles/TradeInsights.css";
 
 // Chart page right column, under Paper Trading (CMC's "BTC Insights" +
 // "Why Trade on…" block), built from our own data:
 //  - structure: our signal + where price sits vs MA20/50/200
 //  - two latest headlines about the coin
-//  - 30d range / change, MA position, RSI (CoinGecko daily, 1 year)
+//  - 30d range / change, MA position, RSI (daily closes, 1 year)
 //  - derivatives: funding rate + long/short accounts (what the app uses)
 //  - "Full analysis" asks the Agent.
 
 type Daily = { t: number; p: number }[];
-const YEAR_TTL = 1_800_000;
 
 const sma = (a: number[], n: number) => (a.length >= n ? a.slice(-n).reduce((s, v) => s + v, 0) / n : null);
 function rsi14(a: number[]) {
@@ -61,12 +61,15 @@ export function TradeInsights({ coin, onAsk }: {
   useEffect(() => {
     let alive = true;
     setRow(null); setDaily(null); setNews([]); setDeriv(null);
-    cgFetch<CoinRow[]>(COINS_MARKETS_URL, TTL.coins)
-      .then((rows) => { if (alive) setRow(rows.find((r) => r.symbol.toUpperCase() === coin) ?? null); })
+    getCoinRow(coin)
+      .then((r) => {
+        if (!alive) return;
+        setRow(r);
+        if (r) requestSparklines([r]); // 7-day hourly prices for the signal
+      })
       .catch(() => {});
-    getCoinGeckoId(coin)
-      .then((id) => (id ? cgFetch<{ prices?: [number, number][] }>(`https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=365&interval=daily`, YEAR_TTL) : null))
-      .then((j) => { if (alive && j?.prices) setDaily(j.prices.map(([t, p]) => ({ t, p }))); })
+    getMarketChart(coin, 365)
+      .then((j) => { if (alive && j.prices.length) setDaily(toDaily(j.prices).map(([t, p]) => ({ t, p }))); })
       .catch(() => {});
     fetchBrief()
       .then((items) => {
@@ -99,7 +102,9 @@ export function TradeInsights({ coin, onAsk }: {
   const above = (m: number | null) => (m != null && px != null ? px >= m : null);
 
   // Structure: our signal, confirmed (or not) by the MA position.
-  const sig = row ? signalOf(row) : null;
+  useSparklines();
+  const sigRow = row ? withSparklines([row])[0] : null;
+  const sig = sigRow ? signalOf(sigRow) : null;
   const maUp = [ma20, ma50, ma200].filter((m) => above(m) === true).length;
   const maKnown = [ma20, ma50, ma200].filter((m) => m != null).length;
   const tone: "bull" | "bear" | "mixed" =

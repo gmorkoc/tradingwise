@@ -5,39 +5,23 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useTranslation, Trans } from "react-i18next";
 import i18n from "../i18n";
-import { coinglass, fetchBn, getCoinGeckoId, COINS, type CandleDataPoint } from "../services/coinglass";
+import { coinglass, fetchBn, COINS, type CandleDataPoint } from "../services/coinglass";
 import { calcEMA, calcRSIArray, calcBB, calcATR } from "../services/indicators";
 import { fetchBrief, type BriefItem } from "./DailyBrief";
 import { BottomSheet } from "./BottomSheet";
-import { cgFetch } from "./GlobalMarkets";
+import { getExchangeMarkets, getCoinDetails, usePaprikaShown, type ExchangeMarket, type CoinDetails } from "../services/marketData";
 import "../styles/CoinPageTabs.css";
 
-// CoinGecko, made dependable: the shared keyed fetch (higher rate limit),
-// retried with back-off on 429 / network errors, and the last good copy
-// kept on the device — shown instantly next time, and used as a fallback
-// whenever CoinGecko is busy. Throws only if there's nothing at all.
-async function cgResilient<T>(url: string, lsKey: string, ttlMs: number, trim?: (d: T) => T): Promise<T> {
-  let stale: T | null = null;
-  try {
-    const raw = localStorage.getItem(lsKey);
-    if (raw) {
-      const { t, d } = JSON.parse(raw) as { t: number; d: T };
-      if (Date.now() - t < ttlMs) return d;
-      stale = d;
-    }
-  } catch { /* no cache */ }
-  const waits = [0, 1500, 4000, 9000];
-  for (const w of waits) {
-    if (w) await new Promise((r) => setTimeout(r, w));
-    try {
-      const d = await cgFetch<T>(url, ttlMs, 12000);
-      const keep = trim ? trim(d) : d;
-      try { localStorage.setItem(lsKey, JSON.stringify({ t: Date.now(), d: keep })); } catch { /* full */ }
-      return keep;
-    } catch { /* retry */ }
-  }
-  if (stale) return stale;
-  throw new Error("coingecko unavailable");
+// Exchange pairs and fundamentals come from services/marketData.ts —
+// CoinGecko first, CoinPaprika then CoinLore if it fails — cached on the
+// device (the last good copy is shown when every source is busy). The tabs
+// below keep their loader and retry every 30s if nothing loads at all.
+
+// CoinPaprika's free tier requires a credit — shown under a tab only while
+// its data is the one on screen.
+function PaprikaCredit({ keyPrefix }: { keyPrefix: string }) {
+  const { t } = useTranslation();
+  return usePaprikaShown([keyPrefix]) ? <span className="cpt-stat-sub">{t("globalMarkets.dataCoinPaprika")}</span> : null;
 }
 
 export type CoinPageTab = "overview" | "news" | "technicals" | "seasonals" | "markets" | "fundamentals";
@@ -1026,24 +1010,14 @@ function heatStyle(v: number | null): React.CSSProperties | undefined {
 }
 
 // ── Markets: where it trades (top pairs by volume) ─────────────────────
-interface Ticker { market: { name: string; logo?: string }; base: string; target: string; last: number; converted_volume?: { usd?: number }; trust_score?: string | null; trade_url?: string | null }
 function MarketsTab({ coin }: { coin: string }) {
-  const [rows, setRows] = useState<Ticker[] | null>(null);
+  const [rows, setRows] = useState<ExchangeMarket[] | null>(null);
   const [tries, setTries] = useState(0);
   useEffect(() => {
     let alive = true;
     let retry = 0;
     if (tries === 0) setRows(null);
-    (async () => {
-      const id = await getCoinGeckoId(coin);
-      if (!id) throw new Error("no id");
-      const j = await cgResilient<{ tickers?: Ticker[] }>(
-        `https://api.coingecko.com/api/v3/coins/${id}/tickers?include_exchange_logo=true&order=volume_desc`,
-        `cgTickers:${id}`, 10 * 60_000,
-        (d) => ({ tickers: (d.tickers ?? []).slice(0, 25) }),
-      );
-      if (alive) setRows((j.tickers ?? []).slice(0, 25));
-    })().catch(() => {
+    getExchangeMarkets(coin).then((r) => { if (alive) setRows(r); }).catch(() => {
       // Never "unavailable": keep the loader and try again shortly.
       if (alive) retry = window.setTimeout(() => setTries((n) => n + 1), 30_000);
     });
@@ -1060,61 +1034,40 @@ function MarketsTab({ coin }: { coin: string }) {
           <thead><tr><th>#</th><th>{tr("coinTabs.markets.exchange")}</th><th>{tr("coinTabs.markets.pair")}</th><th className="cpt-num">{tr("coinTabs.markets.price")}</th><th className="cpt-num">{tr("coinTabs.vol24")}</th><th>{tr("coinTabs.markets.trust")}</th></tr></thead>
           <tbody>
             {rows.map((t, i) => (
-              <tr key={`${t.market.name}:${t.base}/${t.target}:${i}`}>
+              <tr key={`${t.exchange}:${t.base}/${t.target}:${i}`}>
                 <td className="cpt-dim">{i + 1}</td>
                 <td>
                   <span className="cpt-ex">
-                    {t.market.logo && <img src={t.market.logo} alt="" loading="lazy" />}
-                    {t.market.name}
+                    {t.logo && <img src={t.logo} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.display = "none"; }} />}
+                    {t.exchange}
                   </span>
                 </td>
-                <td>{t.trade_url ? <a href={t.trade_url} target="_blank" rel="noreferrer">{t.base}/{t.target}</a> : `${t.base}/${t.target}`}</td>
-                <td className="cpt-num">{t.last < 1 ? t.last.toPrecision(4) : t.last.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
-                <td className="cpt-num">{fmtUsd(t.converted_volume?.usd ?? null)}</td>
-                <td><span className={`cpt-trust cpt-trust--${t.trust_score ?? "na"}`} aria-label={t.trust_score ? tr("coinTabs.markets.trustAria", { v: t.trust_score }) : tr("coinTabs.markets.trustUnknown")} /></td>
+                <td>{t.url ? <a href={t.url} target="_blank" rel="noreferrer">{t.base}/{t.target}</a> : `${t.base}/${t.target}`}</td>
+                <td className="cpt-num">{t.price < 1 ? t.price.toPrecision(4) : t.price.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+                <td className="cpt-num">{fmtUsd(t.volumeUsd)}</td>
+                <td><span className={`cpt-trust cpt-trust--${t.trust ?? "na"}`} aria-label={t.trust ? tr("coinTabs.markets.trustAria", { v: t.trust }) : tr("coinTabs.markets.trustUnknown")} /></td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      <PaprikaCredit keyPrefix={`pairs:${coin.toUpperCase()}`} />
     </div>
   );
 }
 
 // ── Fundamentals: supply, valuation, records, about ─────────────────────
-interface GeckoCoin {
-  name: string;
-  market_cap_rank?: number;
-  description?: { en?: string };
-  links?: { homepage?: string[] };
-  market_data?: {
-    current_price?: { usd?: number };
-    market_cap?: { usd?: number };
-    fully_diluted_valuation?: { usd?: number };
-    total_volume?: { usd?: number };
-    circulating_supply?: number;
-    total_supply?: number | null;
-    max_supply?: number | null;
-    ath?: { usd?: number }; ath_date?: { usd?: string }; ath_change_percentage?: { usd?: number };
-    atl?: { usd?: number }; atl_date?: { usd?: string }; atl_change_percentage?: { usd?: number };
-  };
-}
 function FundamentalsTab({ coin }: { coin: string }) {
-  const [data, setData] = useState<GeckoCoin | null>(null);
+  const [data, setData] = useState<CoinDetails | null>(null);
   const [tries, setTries] = useState(0);
   useEffect(() => {
     let alive = true;
     let retry = 0;
     if (tries === 0) setData(null);
-    (async () => {
-      const id = await getCoinGeckoId(coin);
-      if (!id) throw new Error("no id");
-      const j = await cgResilient<GeckoCoin>(
-        `https://api.coingecko.com/api/v3/coins/${id}?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=false`,
-        `cgCoin:${id}`, 15 * 60_000,
-      );
+    getCoinDetails(coin).then((j) => {
+      if (!j) throw new Error("no data");
       if (alive) setData(j);
-    })().catch(() => {
+    }).catch(() => {
       // Never "unavailable": keep the loader and try again shortly.
       if (alive) retry = window.setTimeout(() => setTries((n) => n + 1), 30_000);
     });
@@ -1123,19 +1076,19 @@ function FundamentalsTab({ coin }: { coin: string }) {
   useEffect(() => setTries(0), [coin]);
   const { t } = useTranslation();
   if (!data) return <Loading label={tries ? t("coinTabs.fund.stillLoading") : t("coinTabs.fund.loading")} />;
-  const m = data.market_data ?? {};
-  const circ = m.circulating_supply ?? null, max = m.max_supply ?? m.total_supply ?? null;
+  const m = data.market;
+  const circ = m?.circulating_supply ?? null, max = m?.max_supply ?? m?.total_supply ?? null;
   const pct = circ && max ? Math.min(100, (circ / max) * 100) : null;
-  const about = (data.description?.en ?? "").replace(/<[^>]+>/g, "").trim();
-  const date = (s?: string) => (s ? new Date(s).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "");
+  const about = data.description;
+  const date = (s?: string | null) => (s ? new Date(s).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "");
   return (
     <div className="cpt-section">
-      <h2 className="cpt-h"><CoinSheetTitle coin={coin} text={t("coinTabs.fund.title", { name: coinName(coin) })} />{data.market_cap_rank ? <span className="cpt-rank">#{data.market_cap_rank}</span> : null}</h2>
+      <h2 className="cpt-h"><CoinSheetTitle coin={coin} text={t("coinTabs.fund.title", { name: coinName(coin) })} />{data.rank ? <span className="cpt-rank">#{data.rank}</span> : null}</h2>
       <div className="cpt-stats">
-        <Stat label={t("coinTabs.fund.marketCap")} value={fmtUsd(m.market_cap?.usd)} />
-        <Stat label={t("coinTabs.fund.fdv")} value={fmtUsd(m.fully_diluted_valuation?.usd)} />
-        <Stat label={t("coinTabs.vol24")} value={fmtUsd(m.total_volume?.usd)} />
-        <Stat label={t("coinTabs.fund.volMcap")} value={m.total_volume?.usd && m.market_cap?.usd ? `${((m.total_volume.usd / m.market_cap.usd) * 100).toFixed(2)}%` : "—"} />
+        <Stat label={t("coinTabs.fund.marketCap")} value={fmtUsd(m?.market_cap)} />
+        <Stat label={t("coinTabs.fund.fdv")} value={fmtUsd(m?.fdv)} />
+        <Stat label={t("coinTabs.vol24")} value={fmtUsd(m?.total_volume)} />
+        <Stat label={t("coinTabs.fund.volMcap")} value={m?.total_volume && m?.market_cap ? `${((m.total_volume / m.market_cap) * 100).toFixed(2)}%` : "—"} />
       </div>
       <div className="cpt-supply">
         <div className="cpt-supply-head">
@@ -1145,21 +1098,23 @@ function FundamentalsTab({ coin }: { coin: string }) {
         {pct !== null && (
           <>
             <span className="cpt-supply-bar"><span style={{ width: `${pct}%` }} /></span>
-            <span className="cpt-supply-sub">{t(m.max_supply ? "coinTabs.fund.ofMax" : "coinTabs.fund.ofTotal", { pct: pct.toFixed(1), n: fmtNum(max) })}</span>
+            <span className="cpt-supply-sub">{t(m?.max_supply ? "coinTabs.fund.ofMax" : "coinTabs.fund.ofTotal", { pct: pct.toFixed(1), n: fmtNum(max) })}</span>
           </>
         )}
       </div>
       <div className="cpt-stats">
-        <Stat label={t("coinTabs.fund.ath")} value={fmtUsd(m.ath?.usd)} sub={t("coinTabs.fund.fromAth", { date: date(m.ath_date?.usd), pct: m.ath_change_percentage?.usd?.toFixed(1) ?? "—" })} />
-        <Stat label={t("coinTabs.fund.atl")} value={fmtUsd(m.atl?.usd)} sub={t("coinTabs.fund.sinceAtl", { date: date(m.atl_date?.usd), pct: m.atl_change_percentage?.usd?.toFixed(0) ?? "—" })} />
+        {/* ATH / ATL — "—" with no sub-line when the answering source lacks them. */}
+        <Stat label={t("coinTabs.fund.ath")} value={fmtUsd(m?.ath)} sub={m?.ath ? t("coinTabs.fund.fromAth", { date: date(m.ath_date), pct: m.ath_change_percentage?.toFixed(1) ?? "—" }) : undefined} />
+        <Stat label={t("coinTabs.fund.atl")} value={fmtUsd(m?.atl)} sub={m?.atl ? t("coinTabs.fund.sinceAtl", { date: date(m.atl_date), pct: m.atl_change_percentage?.toFixed(0) ?? "—" }) : undefined} />
       </div>
       {about && (
         <div className="cpt-about">
           <span className="cpt-table-title">{t("coinTabs.fund.about", { name: data.name })}</span>
           <p>{about.length > 700 ? `${about.slice(0, 700)}…` : about}</p>
-          {data.links?.homepage?.[0] && <a href={data.links.homepage[0]} target="_blank" rel="noreferrer">{t("coinTabs.fund.website")}</a>}
+          {data.links.website[0] && <a href={data.links.website[0]} target="_blank" rel="noreferrer">{t("coinTabs.fund.website")}</a>}
         </div>
       )}
+      <PaprikaCredit keyPrefix={`details:${coin.toUpperCase()}`} />
     </div>
   );
 }

@@ -10,7 +10,7 @@ import { Browser } from "@capacitor/browser";
 import { useTranslation } from "react-i18next";
 import { fetchBrief, extractChips, renderChip, type BriefItem } from "./DailyBrief";
 import type { Ticker24h } from "../services/coinglass";
-import { cgFetch, COINS_MARKETS_URL, TTL } from "./GlobalMarkets";
+import { getMarkets, requestSparklines, useSparklines, withSparklines } from "../services/marketData";
 import "../styles/MarketStories.css";
 
 type Outcome = { label: string; prob: number; color: string; history: number[] };
@@ -20,6 +20,12 @@ type CgCoin = {
   current_price: number; price_change_percentage_24h: number | null; total_volume: number;
   sparkline_in_7d?: { price: number[] };
 };
+
+// Top-100 coins (no stablecoins), biggest 24h gainer first.
+const sortedMovers = (coins: CgCoin[]) =>
+  coins
+    .filter((c) => c.market_cap_rank && c.market_cap_rank <= 100 && c.price_change_percentage_24h != null && !/usd|dai/i.test(c.symbol))
+    .sort((x, y) => (y.price_change_percentage_24h ?? 0) - (x.price_change_percentage_24h ?? 0));
 
 const LINE_COLORS = ["#3dbf84", "#2a4fd6", "#e8742c"];
 
@@ -234,6 +240,7 @@ export function MarketStories({ onSelectCoin, coinTickers }: { onSelectCoin: (sy
   const [newsDone, setNewsDone] = useState(false);
   const [odds, setOdds] = useState<OddsEvent[]>([]);
   const [coins, setCoins] = useState<CgCoin[]>([]);
+  const sparkVersion = useSparklines();
   const trackRef = useRef<HTMLDivElement>(null);
   // Phones (≤960px): swipe, one card at a time, odds and story split.
   const [isPhone, setIsPhone] = useState(() => window.matchMedia("(max-width: 960px)").matches);
@@ -259,7 +266,13 @@ export function MarketStories({ onSelectCoin, coinTickers }: { onSelectCoin: (sy
       if (Capacitor.isNativePlatform()) return;
       loadOdds().then((o) => { if (alive && o.length) setOdds(o); }).catch(() => {});
     };
-    const loadCoins = () => cgFetch<CgCoin[]>(COINS_MARKETS_URL, TTL.coins).then((c) => { if (alive && Array.isArray(c)) setCoins(c); }).catch(() => {});
+    const loadCoins = () => getMarkets().then((c) => {
+      if (!alive || !Array.isArray(c)) return;
+      setCoins(c);
+      // 7-day sparklines for the movers these panels can show.
+      const s = sortedMovers(c);
+      requestSparklines([...s.slice(0, 21), ...s.slice(-21)]);
+    }).catch(() => {});
     loadNews(); loadOddsNow(); loadCoins();
     const a = window.setInterval(loadNews, 10 * 60_000);
     const b = window.setInterval(loadOddsNow, 5 * 60_000);
@@ -280,8 +293,7 @@ export function MarketStories({ onSelectCoin, coinTickers }: { onSelectCoin: (sy
       if (hit) used.add(hit.url);
       return hit;
     };
-    const movers = coins.filter((c) => c.market_cap_rank && c.market_cap_rank <= 100 && c.price_change_percentage_24h != null && !/usd|dai/i.test(c.symbol));
-    const sorted = [...movers].sort((x, y) => (y.price_change_percentage_24h ?? 0) - (x.price_change_percentage_24h ?? 0));
+    const sorted = withSparklines(sortedMovers(coins));
     const gainer = sorted[0], loser = sorted[sorted.length - 1];
     // More movers to sprinkle between the remaining stories:
     // 2nd gainer, 2nd loser, 3rd gainer, 3rd loser…
@@ -360,7 +372,7 @@ export function MarketStories({ onSelectCoin, coinTickers }: { onSelectCoin: (sy
       pushCoin(m.coin, m.label);
     }
     return list;
-  }, [news, odds, coins, onSelectCoin, isPhone, coinTickers]);
+  }, [news, odds, coins, onSelectCoin, isPhone, coinTickers, sparkVersion]);
 
   // Endless loop: the panels are rendered three times and the track sits on
   // the middle copy; once scrolling settles in an outer copy it jumps back

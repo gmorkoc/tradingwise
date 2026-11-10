@@ -1,6 +1,8 @@
 {
   "globalMarkets": {
     "loadingGlobal": "Caricamento dati di mercato globali…",
+    "busy": "I dati di mercato sono sovraccarichi in questo momento — riprova tra un minuto.",
+    "loadFailed": "Impossibile caricare i dati di mercato. Riprova.",
     "chartTabs": { "market_caps": "Cap. di mercato BTC", "total_volumes": "Volume BTC" },
     "periodAll": "Tutto",
     "others": "Altri",
@@ -62,6 +64,9 @@
     "estNote": "Linea stimata dalla cap. di mercato di BTC ÷ dominanza attuale di BTC — non è una serie storica esatta",
     "marketPulse": "Polso del mercato",
     "liveCoinGecko": "dati CoinGecko in tempo reale",
+    "liveCoinPaprika": "dati CoinPaprika in tempo reale",
+    "liveCoinLore": "dati CoinLore in tempo reale",
+    "dataCoinPaprika": "Dati: CoinPaprika",
     "tradingVolume24h": "Volume di scambi 24h",
     "biggestMovers": "Maggiori movimenti di oggi",
     "btcPriceSwings": "Prezzo BTC e oscillazioni giornaliere",

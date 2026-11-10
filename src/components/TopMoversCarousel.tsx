@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import "../styles/TopMoversCarousel.css";
 import { fetchTopMovers, fetchSparklines, TopMover } from "../services/binancePrices";
 import { Sparkline } from "./Watchlist";
+import { getTrending } from "../services/marketData";
 
 interface Props {
   onSelectCoin?: (symbol: string) => void;
@@ -23,29 +24,21 @@ const TABS: { key: Tab; labelKey: string; fallback: string }[] = [
   { key: "losers",   labelKey: "topMovers2.tabLosers",   fallback: "Losers" },
 ];
 
-// CoinGecko's own "most-searched" ranking — real data (same endpoint
-// GlobalMarkets.tsx's Trending Now uses), not derivable from Binance's
-// ticker (which has no concept of search volume). Its own tiny cache/TTL
-// since this component doesn't share GlobalMarkets' module-scope cache.
-let trendingCache: { data: TopMover[]; ts: number } | null = null;
-const TRENDING_TTL = 300_000;
+// Trending list — CoinGecko's "most-searched" ranking (same shared, cached
+// getTrending() GlobalMarkets.tsx's Trending Now uses), with the
+// CoinPaprika / CoinLore fallbacks behind it. Not derivable from Binance's
+// ticker (which has no concept of search volume).
 async function fetchTrendingCoins(): Promise<TopMover[]> {
-  if (trendingCache && Date.now() - trendingCache.ts < TRENDING_TTL) return trendingCache.data;
   try {
-    const res = await fetch("https://api.coingecko.com/api/v3/search/trending", { headers: { accept: "application/json" } });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const json: { coins: { item: { symbol: string; name: string; thumb: string; data?: { price?: number; price_change_percentage_24h?: { usd?: number } } } }[] } = await res.json();
-    const data: TopMover[] = json.coins.map(({ item }) => ({
-      symbol: item.symbol.toUpperCase(),
-      name: item.name,
-      price: item.data?.price ?? 0,
-      pct: item.data?.price_change_percentage_24h?.usd ?? 0,
-      thumb: item.thumb,
+    return (await getTrending()).map((c) => ({
+      symbol: c.symbol.toUpperCase(),
+      name: c.name,
+      price: c.price ?? 0,
+      pct: c.change24h ?? 0,
+      thumb: c.image,
     }));
-    trendingCache = { data, ts: Date.now() };
-    return data;
   } catch {
-    return trendingCache?.data ?? [];
+    return [];
   }
 }
 

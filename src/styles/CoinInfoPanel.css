@@ -483,5 +483,7 @@ html:not([data-theme="light"]) .cip { --cip-blue: #6188ff; }
 /* Tags */
 .cip-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .cip-tag { padding: 5px 10px; border-radius: 8px; background: var(--cip-tint); font-size: 12px; color: var(--cip-muted); }
+/* Fallback data credit ("Data: CoinPaprika"), only while it's shown. */
+.cip-source-note { font-size: 11px; color: var(--cip-muted); opacity: 0.8; text-align: right; }
 .cip-link,
 .cip-link:hover { all: unset; align-self: flex-start; font-size: 13px; font-weight: 600; color: var(--cip-blue); cursor: pointer; }

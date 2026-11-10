@@ -1,6 +1,8 @@
 {
   "globalMarkets": {
     "loadingGlobal": "Küresel piyasa verileri yükleniyor…",
+    "busy": "Piyasa verileri şu anda yoğun — lütfen bir dakika sonra tekrar dene.",
+    "loadFailed": "Piyasa verileri yüklenemedi. Lütfen tekrar dene.",
     "chartTabs": { "market_caps": "BTC Piyasa Değeri", "total_volumes": "BTC Hacmi" },
     "periodAll": "Tümü",
     "others": "Diğerleri",
@@ -62,6 +64,9 @@
     "estNote": "Çizgi, BTC piyasa değeri ÷ güncel BTC dominansı ile tahmin edilmiştir — kesin bir tarihsel seri değildir",
     "marketPulse": "Piyasa Nabzı",
     "liveCoinGecko": "canlı CoinGecko verisi",
+    "liveCoinPaprika": "canlı CoinPaprika verisi",
+    "liveCoinLore": "canlı CoinLore verisi",
+    "dataCoinPaprika": "Veri: CoinPaprika",
     "tradingVolume24h": "24s İşlem Hacmi",
     "biggestMovers": "Bugünün En Büyük Hareketleri",
     "btcPriceSwings": "BTC Fiyatı ve Günlük Dalgalanmalar",

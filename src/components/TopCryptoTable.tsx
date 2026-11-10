@@ -1,24 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CoinRow, TABLE_PAGE_SIZE, fmtBig, fmtPrice, Sparkline, cgFetch, TTL } from "./GlobalMarkets";
+import { CoinRow, TABLE_PAGE_SIZE, fmtBig, fmtPrice, Sparkline } from "./GlobalMarkets";
 import { DEFAULT_IDS } from "./Watchlist";
+import { getMarkets, getTrending, requestSparklines, useSparklines, withSparklines } from "../services/marketData";
 import "../styles/GlobalMarkets.css";
 import "../styles/TopCryptoTable.css";
 import { useSort, SortTh } from "./SortableTh";
 
 // "Top Cryptocurrencies" table — shared by the Markets page (GlobalMarkets,
 // which passes the coins it already fetched) and the Chart page (no
-// `coins` prop: fetches the exact same CoinGecko request itself, served
-// from GlobalMarkets' cgFetch cache when Markets loaded it recently).
+// `coins` prop: fetches the same shared market list itself, served from
+// services/marketData.ts's cache when Markets loaded it recently).
 
-const COINS_URL =
-  "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&price_change_percentage=1h,7d,30d,1y&sparkline=true";
-
-const TRENDING_URL = "https://api.coingecko.com/api/v3/search/trending";
 const WATCH_KEY = "watchlistCoins_v1";
 
 // Filter dropdown (opt-in via `filterable`, Chart page). Watchlist reads
-// the same localStorage list Watchlist.tsx keeps (CoinGecko ids).
+// the same localStorage list Watchlist.tsx keeps (catalog ids).
 export type Filter = "all" | "watchlist" | "gainers" | "losers" | "trending";
 export const FILTERS: { key: Filter; label: string; icon: JSX.Element }[] = [
   { key: "all", label: "All coins", icon: (
@@ -142,8 +139,8 @@ export function TopCryptoTable({ coins: coinsProp, onSelectCoin, filterable = fa
   // Trending ids, fetched only once that filter is picked.
   useEffect(() => {
     if (filter !== "trending" || trendingIds) return;
-    cgFetch<{ coins: { item: { id: string } }[] }>(TRENDING_URL, TTL.trending)
-      .then((r) => setTrendingIds(r.coins.map((c) => c.item.id)))
+    getTrending()
+      .then((r) => setTrendingIds(r.map((c) => c.id)))
       .catch(() => setTrendingIds([]));
   }, [filter, trendingIds]);
 
@@ -157,7 +154,7 @@ export function TopCryptoTable({ coins: coinsProp, onSelectCoin, filterable = fa
   useEffect(() => {
     if (coinsProp) return;
     let alive = true;
-    cgFetch<CoinRow[]>(COINS_URL, TTL.coins)
+    getMarkets()
       .then((c) => { if (alive) setOwnCoins(c); })
       .catch((e) => { if (alive) setError(e?.message ?? "Failed to load"); });
     return () => { alive = false; };
@@ -192,7 +189,12 @@ export function TopCryptoTable({ coins: coinsProp, onSelectCoin, filterable = fa
   });
   useEffect(() => { setTablePage(1); }, [sort.key, sort.dir]);
   const tableTotalPages = Math.max(1, Math.ceil(sortedCoins.length / TABLE_PAGE_SIZE));
-  const pagedCoins = sortedCoins.slice((tablePage - 1) * TABLE_PAGE_SIZE, tablePage * TABLE_PAGE_SIZE);
+  const pageRows = sortedCoins.slice((tablePage - 1) * TABLE_PAGE_SIZE, tablePage * TABLE_PAGE_SIZE);
+  // 7-day sparklines, loaded only for the rows on this page.
+  useSparklines();
+  const pageKey = pageRows.map((c) => c.symbol).join(",");
+  useEffect(() => { requestSparklines(pageRows); }, [pageKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const pagedCoins = withSparklines(pageRows);
 
   return (
     <div className={`gm-section gm-table-section${filterable ? " tct--filterable" : ""}`}>

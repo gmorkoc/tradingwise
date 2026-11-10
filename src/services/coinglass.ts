@@ -1,5 +1,6 @@
 import axios, { type AxiosInstance } from 'axios';
 import { Capacitor } from '@capacitor/core';
+import { getMarkets, getGlobal } from './marketData';
 
 // The native iOS/Android app loads its bundled web content from a local
 // capacitor://localhost origin, not https://www.coinhintz.io — a relative
@@ -163,7 +164,7 @@ interface CandleDataPoint {
 }
 
 // Market-cap-ordered (not hand-grouped by category like the old ~70-coin
-// list this replaced) — generated from CoinGecko's top-market-cap pages
+// list this replaced) — generated from the top-market-cap rankings
 // cross-referenced against Binance's live USDT trading pairs (exchangeInfo,
 // status: TRADING), so every entry here is both a real top-market-cap coin
 // AND something the app's own price/candle fetches (which all go through
@@ -171,7 +172,7 @@ interface CandleDataPoint {
 // wrapped/staked derivatives (WBTC, stETH, etc.), gold-pegged tokens, and
 // tokenized-stock wrapper products (bStocks) were deliberately excluded —
 // none of those are "altcoins" in the sense a trader means. 257 coins as
-// of generation; re-run the same CoinGecko-top-N ∩ Binance-USDT-pairs
+// of generation; re-run the same market-cap-top-N ∩ Binance-USDT-pairs
 // process by hand to refresh rather than adding one-off entries ad hoc, or
 // this list and KNOWN_TICKERS in trading-agent-reply/index.ts will drift.
 export const COINS = [
@@ -1732,7 +1733,7 @@ export async function getMacroContext(coin: CoinSymbol | string = 'BTC'): Promis
   const oiTo   = Math.floor(Date.now() / 1000);
 
   const [dominanceRes, fundingRes, oiRes, dailyRes, coinalyzeOIRes] = await Promise.allSettled([
-    fetch('https://api.coingecko.com/api/v3/global').then(r => r.json()),
+    getGlobal(),
     api.get('futures/funding-rate/history',  { params: { symbol: sym, interval: '8h', limit: 2,  exchange: 'Binance' } }),
     api.get('futures/open-interest/history', { params: { symbol: sym, interval: '4h', limit: 3,  exchange: 'Binance' } }),
     fetchBinanceKlines(coin, '1d', 60),
@@ -1746,7 +1747,7 @@ export async function getMacroContext(coin: CoinSymbol | string = 'BTC'): Promis
   // BTC Dominance
   let btcDominance: number | null = null;
   if (dominanceRes.status === 'fulfilled') {
-    const raw = dominanceRes.value?.data?.btc_dominance;
+    const raw = dominanceRes.value?.market_cap_percentage?.btc;
     if (raw != null) btcDominance = Math.round(raw * 10) / 10;
   }
 
@@ -1823,7 +1824,7 @@ export function clearCandleCache(): void {
   candleInFlight.clear();
 }
 
-// ── Market caps from CoinGecko public API ─────────────────────────────────────
+// ── Market caps (CoinPaprika top-250 list, shared cache in marketData.ts) ─────
 
 let marketCapCache: Map<string, number> | null = null;
 let change24hCache: Map<string, number> | null = null;
@@ -1831,7 +1832,7 @@ let price24hCache: Map<string, number> | null = null;
 let marketCapFetchedAt = 0;
 const MARKET_CAP_TTL = 5 * 60 * 1000; // 5 min
 
-interface CoinGeckoMarket {
+interface MarketListCoin {
   id?: string;
   symbol: string;
   name?: string;
@@ -1841,20 +1842,11 @@ interface CoinGeckoMarket {
   current_price: number;
   price_change_percentage_24h: number;
 }
-let marketsRawCache: CoinGeckoMarket[] | null = null;
-
-/** CoinGecko id for a symbol (from the cached top-250 market list), e.g. BTC → "bitcoin". */
-export async function getCoinGeckoId(symbol: string): Promise<string | null> {
-  if (!marketsRawCache || Date.now() - marketCapFetchedAt >= MARKET_CAP_TTL) {
-    try { populateCoinGeckoCaches(await fetchCoinGeckoMarkets()); } catch { /* use what we have */ }
-  }
-  const s = symbol.toLowerCase();
-  return marketsRawCache?.find((c) => c.symbol.toLowerCase() === s)?.id ?? null;
-}
+let marketsRawCache: MarketListCoin[] | null = null;
 
 export interface TopMarketCoin { symbol: string; name: string; image: string | null; marketCap: number; volume24h: number; price: number; change24h: number }
 
-const toTopCoin = (c: CoinGeckoMarket): TopMarketCoin => ({
+const toTopCoin = (c: MarketListCoin): TopMarketCoin => ({
   symbol: c.symbol.toUpperCase(),
   name: c.name ?? c.symbol.toUpperCase(),
   image: c.image ?? null,
@@ -1864,10 +1856,10 @@ const toTopCoin = (c: CoinGeckoMarket): TopMarketCoin => ({
   change24h: c.price_change_percentage_24h ?? 0,
 });
 
-/** Top coins by market cap (CoinGecko order), skipping `skip` symbols. Uses the same 5-min cache. */
+/** Top coins by market cap, skipping `skip` symbols. Uses the same 5-min cache. */
 export async function fetchTopMarketCoins(count: number, skip: Set<string> = new Set()): Promise<TopMarketCoin[]> {
   if (!marketsRawCache || Date.now() - marketCapFetchedAt >= MARKET_CAP_TTL) {
-    try { populateCoinGeckoCaches(await fetchCoinGeckoMarkets()); } catch { /* use what we have */ }
+    try { populateMarketCaches(await fetchMarketList()); } catch { /* use what we have */ }
   }
   return (marketsRawCache ?? [])
     .filter((c) => !skip.has(c.symbol.toUpperCase()))
@@ -1878,7 +1870,7 @@ export async function fetchTopMarketCoins(count: number, skip: Set<string> = new
 /** Biggest 24h gainers among the top 100 by market cap (same cache). */
 export async function fetchTopGainers(count: number, skip: Set<string> = new Set()): Promise<TopMarketCoin[]> {
   if (!marketsRawCache || Date.now() - marketCapFetchedAt >= MARKET_CAP_TTL) {
-    try { populateCoinGeckoCaches(await fetchCoinGeckoMarkets()); } catch { /* use what we have */ }
+    try { populateMarketCaches(await fetchMarketList()); } catch { /* use what we have */ }
   }
   return (marketsRawCache ?? [])
     .slice(0, 100)
@@ -1888,21 +1880,18 @@ export async function fetchTopGainers(count: number, skip: Set<string> = new Set
     .map(toTopCoin);
 }
 
-async function fetchCoinGeckoMarkets(): Promise<CoinGeckoMarket[]> {
-  const res = await fetch(
-    'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=1&sparkline=false',
-    { headers: { accept: 'application/json' } }
-  );
-  return res.json();
+async function fetchMarketList(): Promise<MarketListCoin[]> {
+  return getMarkets();
 }
 
-function populateCoinGeckoCaches(data: CoinGeckoMarket[]) {
+function populateMarketCaches(data: MarketListCoin[]) {
   if (Array.isArray(data)) marketsRawCache = data;
   const capMap = new Map<string, number>();
   const chgMap = new Map<string, number>();
   const priceMap = new Map<string, number>();
   for (const coin of data) {
     const sym = coin.symbol.toUpperCase();
+    if (capMap.has(sym)) continue; // same ticker, lower-ranked coin
     capMap.set(sym, coin.market_cap);
     chgMap.set(sym, coin.price_change_percentage_24h ?? 0);
     priceMap.set(sym, coin.current_price ?? 0);
@@ -1918,7 +1907,7 @@ export async function fetchCoinMarketCaps(): Promise<Map<string, number>> {
     return marketCapCache;
   }
   try {
-    populateCoinGeckoCaches(await fetchCoinGeckoMarkets());
+    populateMarketCaches(await fetchMarketList());
     return marketCapCache!;
   } catch {
     return marketCapCache ?? new Map();
@@ -1934,7 +1923,7 @@ export async function fetchCoinChanges24h(): Promise<Map<string, CoinSnapshot>> 
     return map;
   }
   try {
-    populateCoinGeckoCaches(await fetchCoinGeckoMarkets());
+    populateMarketCaches(await fetchMarketList());
     const map = new Map<string, CoinSnapshot>();
     change24hCache!.forEach((chg, sym) => map.set(sym, { change: chg, price: price24hCache?.get(sym) ?? 0 }));
     return map;

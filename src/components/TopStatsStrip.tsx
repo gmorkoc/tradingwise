@@ -1,8 +1,9 @@
 // Desktop top bar (design B, "Market pulse"): three small live chips beside
 // the logo — Market cap (+24h change), BTC dominance, Fear & Greed (mini
-// gauge). CoinGecko /global (shared cached fetch) + alternative.me.
+// gauge). Global stats via services/marketData.ts (CoinGecko /global, with
+// fallbacks; shared cache) + alternative.me.
 import { useEffect, useState } from "react";
-import { cgFetch, TTL } from "./GlobalMarkets";
+import { getGlobal } from "../services/marketData";
 
 type GlobalData = {
   data?: {
@@ -25,8 +26,8 @@ export function TopStatsStrip() {
   useEffect(() => {
     let alive = true;
     const load = () => {
-      cgFetch<GlobalData>("https://api.coingecko.com/api/v3/global", TTL.global)
-        .then((r) => { if (alive && r?.data) setG(r.data); })
+      getGlobal()
+        .then((r) => { if (alive && r) setG(r); })
         .catch(() => {});
       fetch("https://api.alternative.me/fng/?limit=1&format=json")
         .then((r) => r.json())

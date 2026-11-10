@@ -86,7 +86,8 @@ import { MobileSymbolSheet } from "./components/MobileSymbolSheet";
 // Static, not lazy, like PriceChart above — "markets" is the default
 // landing section now, needed immediately on load, same reasoning as the
 // comment on the lazy block below.
-import { GlobalMarkets, COINS_MARKETS_URL, TTL, cgFetch } from "./components/GlobalMarkets";
+import { GlobalMarkets } from "./components/GlobalMarkets";
+import { getCoinRow } from "./services/marketData";
 
 // Desktop Focus mode (moon) button — hidden for now; flip to bring it back.
 const SHOW_FOCUS_BUTTON = false;
@@ -859,7 +860,7 @@ function AppDashboard({
     }
   });
   // Global (all-exchange) stats for the selected coin: open interest,
-  // funding, long/short (Coinalyze) and 24h volume (CoinGecko). Refreshed
+  // funding, long/short (Coinalyze) and 24h volume (CoinPaprika). Refreshed
   // every minute; the stats row falls back to single-venue values until loaded.
   const [globalDerivs, setGlobalDerivs] = useState<GlobalDerivs | null>(null);
   const [globalVol, setGlobalVol] = useState<number | null>(null);
@@ -869,11 +870,8 @@ function AppDashboard({
     setGlobalVol(null);
     const load = () => {
       getGlobalDerivs(coin).then((v) => { if (alive) setGlobalDerivs(v); }).catch(() => {});
-      cgFetch<{ symbol: string; total_volume: number }[]>(COINS_MARKETS_URL, TTL.coins)
-        .then((rows) => {
-          const r = rows.find((x) => x.symbol?.toUpperCase() === coin);
-          if (alive) setGlobalVol(r?.total_volume ?? null);
-        })
+      getCoinRow(coin)
+        .then((r) => { if (alive) setGlobalVol(r?.total_volume ?? null); })
         .catch(() => {});
     };
     load();
@@ -4254,7 +4252,7 @@ function AppDashboard({
                         // CoinMarketCap layout ("2col"): the Order Book is a tab
                         // in the right column now, not beside the chart.
                         sideColumn={undefined}
-                        // 24h Vol: all exchanges (CoinGecko), Binance until loaded.
+                        // 24h Vol: all exchanges (CoinPaprika), Binance until loaded.
                         quoteVolume24h={globalVol ?? coinTickers.get(coin)?.quoteVolume}
                         onZoneChange={(zone, price) => {
                           setChartZone(zone);

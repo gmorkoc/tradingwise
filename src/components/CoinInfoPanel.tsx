@@ -1,45 +1,26 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import i18n from "../i18n";
-import { CoinRow, COINS_MARKETS_URL, TTL, cgFetch, fmtBig, fmtPrice } from "./GlobalMarkets";
+import { CoinRow, TTL, fmtBig, fmtPrice } from "./GlobalMarkets";
 import { signalOf } from "./MarketSignalTable";
-import { COINS, getCoinGeckoId, fetchFundingRate, getPositionData, type Ticker24h } from "../services/coinglass";
+import { COINS, fetchFundingRate, getPositionData, type Ticker24h } from "../services/coinglass";
+import {
+  getCoinRow, getGlobal, getCoinDetails, requestSparklines, useSparklines, withSparklines, usePaprikaShown,
+  type CoinDetails,
+} from "../services/marketData";
 import "../styles/CoinInfoPanel.css";
 
 // Chart page (desktop) left column — a copy of CoinMarketCap's coin
 // sidebar. CMC-only items are swapped for ours: Treasury Holdings →
 // Market dominance, Profile Score → Signal score, Boost → Paper trade.
-// Data: the live ticker, the cached top-250 coin list (Markets), the
-// cached global stats, the coin's CoinGecko details (links, tags), and on
-// the Derivatives tab the funding rate + long/short ratios we already use.
+// Data: the live ticker, the coin's row from the cached top-250 list, the
+// cached global stats, the coin's details (links, tags) — all via
+// services/marketData.ts — and on the Derivatives tab the funding rate +
+// long/short ratios we already use.
 
-type MarketRow = CoinRow & {
-  fully_diluted_valuation?: number | null;
-  total_supply?: number | null;
-  market_cap_change_percentage_24h?: number | null;
-  high_24h?: number | null;
-  low_24h?: number | null;
-  ath?: number | null;
-  ath_date?: string | null;
-  ath_change_percentage?: number | null;
-  atl?: number | null;
-  atl_date?: string | null;
-  atl_change_percentage?: number | null;
-};
-interface CoinDetails {
-  categories?: string[];
-  links?: {
-    homepage?: string[];
-    whitepaper?: string;
-    blockchain_site?: string[];
-    subreddit_url?: string;
-    twitter_screen_name?: string;
-    repos_url?: { github?: string[] };
-  };
-}
+type MarketRow = CoinRow;
 
 const WATCH_KEY = "watchlistCoins_v1";
-const DETAILS_TTL = 600_000;
 const ext = { target: "_blank", rel: "noopener noreferrer" } as const;
 const host = (u: string) => { try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return u; } };
 const fmtNum = (n: number | null | undefined) => {
@@ -103,14 +84,20 @@ export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone 
   useEffect(() => {
     let alive = true;
     const load = () => {
-      cgFetch<MarketRow[]>(COINS_MARKETS_URL, TTL.coins).then((r) => { if (alive) setRows(r); }).catch(() => {});
-      cgFetch<{ data: { total_market_cap?: { usd?: number } } }>("https://api.coingecko.com/api/v3/global", TTL.global)
-        .then((g) => { if (alive) setGlobalCap(g.data.total_market_cap?.usd ?? null); }).catch(() => {});
+      getCoinRow(coin).then((r) => {
+        if (!alive) return;
+        setRows(r ? [r] : []);
+        if (r) requestSparklines([r]); // 7-day hourly prices (7d range + signal)
+      }).catch(() => {});
+      getGlobal()
+        .then((g) => { if (alive) setGlobalCap(g.total_market_cap?.usd ?? null); }).catch(() => {});
     };
     load();
     const id = window.setInterval(load, TTL.coins);
     return () => { alive = false; window.clearInterval(id); };
-  }, []);
+  }, [coin]);
+  useSparklines();
+  const paprikaShown = usePaprikaShown(["markets", "global", `details:${coin}`, `row:${coin}`, `pairs:${coin}`, `chart:${coin}:`]);
 
   // Links + tags.
   const [details, setDetails] = useState<CoinDetails | null>(null);
@@ -119,15 +106,9 @@ export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone 
   useEffect(() => {
     let alive = true;
     setDetails(null); setAllTags(false); setExplorersOpen(false);
-    (async () => {
-      const id = await getCoinGeckoId(coin);
-      if (!id) return;
-      const d = await cgFetch<CoinDetails>(
-        `https://api.coingecko.com/api/v3/coins/${id}?localization=false&tickers=false&market_data=false&community_data=false&developer_data=false&sparkline=false`,
-        DETAILS_TTL,
-      );
-      if (alive) setDetails(d);
-    })().catch(() => {});
+    getCoinDetails(coin)
+      .then((d) => { if (alive) setDetails(d); })
+      .catch(() => {});
     return () => { alive = false; };
   }, [coin]);
 
@@ -173,7 +154,8 @@ export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone 
   const [amt, setAmt] = useState("1");
   const [usd, setUsd] = useState("");
 
-  const r = rows?.find((x) => x.symbol.toUpperCase() === coin) ?? null;
+  const rowHit = rows?.find((x) => x.symbol.toUpperCase() === coin) ?? null;
+  const r = rowHit ? withSparklines([rowHit])[0] : null;
   const price = ticker?.price ?? r?.current_price ?? null;
   const chg = ticker?.change ?? r?.price_change_percentage_24h ?? null;
   const spark = r?.sparkline_in_7d?.price ?? [];
@@ -210,10 +192,12 @@ export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone 
   };
 
   const L = details?.links;
-  const site = L?.homepage?.find(Boolean);
-  const explorers = (L?.blockchain_site ?? []).filter(Boolean);
-  const github = L?.repos_url?.github?.find(Boolean);
-  const tags = (details?.categories ?? []).filter(Boolean);
+  const site = L?.website[0];
+  const explorers = L?.explorer ?? [];
+  const github = L?.source_code.find((u) => /github\.com/.test(u)) ?? L?.source_code[0];
+  const tags = details?.tags ?? [];
+  const twitter = L?.twitter ? L.twitter.replace(/^https?:\/\/(www\.)?twitter\.com\//, "https://x.com/") : null;
+  const reddit = L?.reddit.find((u) => /reddit\.com\/r\//.test(u)) ?? null;
 
   return (
     <aside id={phone ? "coin-sec-stats" : undefined} className={`cip${phone ? " cip--phone" : ""}`} aria-label={t("coinInfo.overviewAria", { name })}>
@@ -352,7 +336,7 @@ export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone 
       )}
 
       {/* Links */}
-      {(site || L?.whitepaper || L?.twitter_screen_name || L?.subreddit_url || github || explorers.length > 0) && (
+      {(site || L?.whitepaper || twitter || reddit || github || explorers.length > 0) && (
         <div className="cip-rows">
           {(site || L?.whitepaper) && (
             <div className="cip-row">
@@ -373,17 +357,17 @@ export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone 
               </span>
             </div>
           )}
-          {(L?.twitter_screen_name || L?.subreddit_url || github) && (
+          {(twitter || reddit || github) && (
             <div className="cip-row">
               <span className="cip-row-k">{t("coinInfo.socials")}</span>
               <span className="cip-row-v">
-                {L?.twitter_screen_name && (
-                  <a className="cip-soc" href={`https://x.com/${L.twitter_screen_name}`} {...ext} aria-label="X">
+                {twitter && (
+                  <a className="cip-soc" href={twitter} {...ext} aria-label="X">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.9 2H22l-7.6 8.7L23 22h-6.8l-5.3-6.9L4.8 22H1.7l8.1-9.3L1 2h7l4.8 6.3zm-1.2 18h1.9L6.4 3.9h-2z" /></svg>
                   </a>
                 )}
-                {L?.subreddit_url && /reddit\.com\/r\//.test(L.subreddit_url) && (
-                  <a className="cip-soc cip-soc--reddit" href={L.subreddit_url} {...ext} aria-label="Reddit">
+                {reddit && (
+                  <a className="cip-soc cip-soc--reddit" href={reddit} {...ext} aria-label="Reddit">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M22 12.1a2.2 2.2 0 0 0-3.7-1.6 10.8 10.8 0 0 0-5.8-1.8l1-4.6 3.2.7a1.6 1.6 0 1 0 .2-1l-3.6-.8a.5.5 0 0 0-.6.4l-1.1 5.3a10.8 10.8 0 0 0-5.9 1.8 2.2 2.2 0 1 0-2.4 3.6 4.3 4.3 0 0 0 0 .7c0 3.6 4.2 6.6 9.3 6.6s9.3-3 9.3-6.6a4.3 4.3 0 0 0 0-.7 2.2 2.2 0 0 0 1.1-2zM7.5 13.6a1.6 1.6 0 1 1 1.6 1.6 1.6 1.6 0 0 1-1.6-1.6zm9 4.3a5.9 5.9 0 0 1-4.5 1.4 5.9 5.9 0 0 1-4.5-1.4.4.4 0 0 1 .6-.6 5 5 0 0 0 3.9 1.1 5 5 0 0 0 3.9-1.1.4.4 0 1 1 .6.6zm-.3-2.7a1.6 1.6 0 1 1 1.6-1.6 1.6 1.6 0 0 1-1.6 1.6z" /></svg>
                   </a>
                 )}
@@ -509,6 +493,8 @@ export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone 
           )}
         </section>
       )}
+      {/* CoinPaprika's free tier requires a credit — only while its data is shown. */}
+      {paprikaShown && <div className="cip-source-note">{t("globalMarkets.dataCoinPaprika")}</div>}
     </aside>
   );
 }

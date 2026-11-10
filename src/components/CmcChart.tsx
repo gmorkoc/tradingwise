@@ -2,7 +2,8 @@
 // Green above the range's opening value, red below (a baseline chart),
 // dotted opening line with its value on the left, volume bars underneath,
 // a faint coinhintz watermark, and an all-time overview strip below.
-// Data: CoinGecko market_chart (prices / market caps / volumes).
+// Data: market_chart history (prices / market caps / volumes) from
+// services/marketData.ts — CoinGecko first, then CoinPaprika / CoinLore.
 import { Component, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import i18n from "i18next";
 import { useTranslation } from "react-i18next";
@@ -26,7 +27,8 @@ const tickFmt = (time: Time, type: TickMarkType) => {
     default: return d.toLocaleString(dateLocale(), { hour: "numeric", minute: "2-digit" });
   }
 };
-import { getCoinGeckoId, fetchBn, COINS } from "../services/coinglass";
+import { fetchBn, COINS } from "../services/coinglass";
+import { getMarketChart, getMarketChartRange, type MarketChart } from "../services/marketData";
 import { fetchBrief } from "./DailyBrief";
 import { getMacroEvents } from "../services/macroEvents";
 import "../styles/CmcChart.css";
@@ -75,14 +77,14 @@ const dedupe = (pts: Pt[]) => {
   return [...m.values()].sort((a, b) => a.time - b.time);
 };
 
-// CoinGecko market_chart — free tier covers the last 365 days only.
-async function geckoChart(coin: string, q: string) {
-  const id = await getCoinGeckoId(coin);
-  if (!id) throw new Error("no id");
-  const res = await fetch(`https://api.coingecko.com/api/v3/coins/${id}/${q}`);
-  if (!res.ok) throw new Error(String(res.status));
-  const j = (await res.json()) as { prices?: [number, number][]; market_caps?: [number, number][]; total_volumes?: [number, number][] };
-  return { price: conv(j.prices), mcap: conv(j.market_caps), vol: conv(j.total_volumes) };
+// Price / market cap / volume history (services/marketData.ts: CoinGecko
+// market_chart, else CoinPaprika / CoinLore + Binance) — the last 365 days.
+const toSeries3 = (j: MarketChart): Series3 => ({ price: conv(j.prices), mcap: conv(j.market_caps), vol: conv(j.total_volumes) });
+async function chartDays(coin: string, days: number) {
+  return toSeries3(await getMarketChart(coin, days));
+}
+async function chartRange(coin: string, from: number, to: number) {
+  return toSeries3(await getMarketChartRange(coin, from, to));
 }
 
 // Older price history (free, no key): Bitstamp (BTC daily back to 2011),
@@ -140,9 +142,9 @@ async function history(coin: string, step: number, from: number, to: number) {
 const STEP: Record<CmcRange, number> = { "1": 900, "7": 3600, "30": 14400, "365": DAY, "max": DAY };
 
 // `endTs` (unix s): a moment picked on the timeline — the range ending
-// there. Without it: the latest range. Price comes from CoinGecko for the
-// last year and Bitstamp/Binance before that; market cap only exists for
-// the last year (CoinGecko free tier).
+// there. Without it: the latest range. Price comes from the market-data
+// layer for the last year and Bitstamp/Binance before that; market cap
+// only exists for the last year (free-tier history limits).
 async function loadSeries(coin: string, days: CmcRange, endTs: number | null = null): Promise<Series3> {
   const key = `${coin}:${days}:${endTs ?? "now"}`;
   const ttl = endTs ? 3_600_000 : days === "1" ? 60_000 : 600_000;
@@ -154,16 +156,16 @@ async function loadSeries(coin: string, days: CmcRange, endTs: number | null = n
     // All-time price history; market cap: the last year.
     const [h, g] = await Promise.all([
       history(coin, DAY, 1293840000, now),
-      geckoChart(coin, "market_chart?vs_currency=usd&days=365").catch(() => null),
+      chartDays(coin, 365).catch(() => null),
     ]);
     data = { price: h.price, vol: h.vol, mcap: g?.mcap ?? [] };
   } else if (endTs == null) {
-    data = await geckoChart(coin, `market_chart?vs_currency=usd&days=${days}`);
+    data = await chartDays(coin, Number(days));
   } else {
     const from = endTs - RANGE_SECS[days];
     const inYear = from > now - YEAR + DAY;
     if (inYear) {
-      data = await geckoChart(coin, `market_chart/range?vs_currency=usd&from=${from}&to=${endTs}`)
+      data = await chartRange(coin, from, endTs)
         .catch(async () => ({ ...(await history(coin, STEP[days], from, endTs)), mcap: [] }));
     } else {
       data = { ...(await history(coin, STEP[days], from, endTs)), mcap: [] };
@@ -182,7 +184,7 @@ async function loadCustom(coin: string, from: number, to: number): Promise<Serie
   const step = span <= 2 * DAY ? 900 : span <= 14 * DAY ? 3600 : span <= 90 * DAY ? 14400 : DAY;
   let data: Series3;
   if (from > now - YEAR + DAY) {
-    data = await geckoChart(coin, `market_chart/range?vs_currency=usd&from=${from}&to=${to}`)
+    data = await chartRange(coin, from, to)
       .catch(async () => ({ ...(await history(coin, step, from, to)), mcap: [] }));
   } else {
     data = { ...(await history(coin, step, from, to)), mcap: [] };

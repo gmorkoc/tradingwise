@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { CoinRow, fmtBig, fmtPrice, Sparkline, cgFetch, TTL } from "./GlobalMarkets";
+import { CoinRow, fmtBig, fmtPrice, Sparkline } from "./GlobalMarkets";
+import { getTrending, requestSparklines, useSparklines, withSparklines } from "../services/marketData";
 import { DEFAULT_IDS } from "./Watchlist";
 import { technicalsLean } from "./CoinPageTabs";
 import { useAuth } from "../contexts/AuthContext";
@@ -12,14 +13,13 @@ import "../styles/MarketSignalTable.css";
 
 // Markets (home) coin table with a per-coin signal column. The signal is
 // the same technicals read the coin page uses (oscillators + moving
-// averages), run on each coin's 7-day hourly prices that CoinGecko already
-// returns with the list — no extra requests.
+// averages), run on each coin's 7-day hourly prices (Binance klines, loaded
+// for the rows on screen — services/marketData.ts requestSparklines).
 //
 // Desktop: toolbar (tabs left; Market Cap / Volume quick filters, Filters
 // and Columns right), sortable headers, column picker. Phones: tabs plus a
 // compact Coin · Price/24h · Signal list.
 
-const TRENDING_URL = "https://api.coingecko.com/api/v3/search/trending";
 const WATCH_KEY = "watchlistCoins_v1";
 const COLS_KEY = "mstCols_v1";
 const PAGE = 25;
@@ -77,7 +77,7 @@ const COLS: { key: ColKey; label: string; w: string; info?: string }[] = [
   { key: "cap", label: "Market Cap", w: "112px", info: "Price × circulating supply." },
   { key: "vol", label: "Volume(24h)", w: "112px", info: "Total traded value across exchanges in the last 24 hours." },
   { key: "supply", label: "Circulating Supply", w: "150px", info: "Coins in public hands right now." },
-  { key: "sig", label: "Signal", w: "196px", info: "Technicals read (moving averages + oscillators) on 7 days of hourly prices. 0 = strong sell, 100 = strong buy." },
+  { key: "sig", label: "Signal", w: "148px", info: "Technicals read (moving averages + oscillators) on 7 days of hourly prices. 0 = strong sell, 100 = strong buy." },
   { key: "chart", label: "Last 7 Days", w: "116px" },
 ];
 const ALL_COLS = COLS.map((c) => c.key);
@@ -196,8 +196,12 @@ const FREE_ROWS = 3;
 const PV_ROWS = 10;
 const PV_COINS = new Set(COINS.map((c) => c.symbol.toUpperCase()));
 
-export function MarketSignalTable({ coins, onSelectCoin, onOpenAuth, onTradeCoin }: Props) {
+export function MarketSignalTable({ coins: coinsProp, onSelectCoin, onOpenAuth, onTradeCoin }: Props) {
   const { t } = useTranslation();
+  // 7-day hourly prices (sparkline + signal) arrive separately, per coin
+  // shown — see the requestSparklines effect below.
+  const sparkVersion = useSparklines();
+  const coins = useMemo(() => withSparklines(coinsProp), [coinsProp, sparkVersion]); // eslint-disable-line react-hooks/exhaustive-deps
   // Translated labels — keys/values in the constants above stay English.
   const colLabel = (k: ColKey, fallback: string) => t(`marketSignals.cols.${k}`, fallback);
   const colInfo = (k: ColKey, fallback?: string) => (fallback ? t(`marketSignals.info.${k}`, fallback) : undefined);
@@ -280,8 +284,8 @@ export function MarketSignalTable({ coins, onSelectCoin, onOpenAuth, onTradeCoin
   }, []);
   useEffect(() => {
     if (tab !== "trending" || trendingIds) return;
-    cgFetch<{ coins: { item: { id: string } }[] }>(TRENDING_URL, TTL.trending)
-      .then((r) => setTrendingIds(r.coins.map((c) => c.item.id)))
+    getTrending()
+      .then((r) => setTrendingIds(r.map((c) => c.id)))
       .catch(() => setTrendingIds([]));
   }, [tab, trendingIds]);
 
@@ -368,6 +372,13 @@ export function MarketSignalTable({ coins, onSelectCoin, onOpenAuth, onTradeCoin
   const resetFilters = () => { setCapIdx(0); setVolIdx(0); setSigF("any"); setChgF("any"); setHideStables(false); };
 
   const rows = list.slice(0, shown);
+  // Sparklines/signals for the rows on screen; filtering or sorting by
+  // signal needs them for every coin.
+  const needAllSparks = sigOpen && (sigF !== "any" || sort.key === "sig");
+  const sparkKey = needAllSparks ? `all:${coinsProp.length}` : rows.map((c) => c.symbol).join(",");
+  useEffect(() => {
+    requestSparklines(needAllSparks ? coinsProp : rows);
+  }, [sparkKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Signal / 24h change / stablecoins — shared by the desktop Filters
   // popover and the phone sheet (which also gets the ranges + sort).
