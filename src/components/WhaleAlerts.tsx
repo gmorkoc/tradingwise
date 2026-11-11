@@ -134,11 +134,6 @@ export function WhaleAlerts({ btcPrice, coinChatOpen }: Props) {
     dismissTimerRef.current = setTimeout(advance, DISMISS_MS);
   }, []);
 
-  const dismissCurrent = useCallback(() => {
-    if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
-    advance();
-  }, [advance]);
-
   useEffect(() => {
     return subscribeWhaleAlerts(tx => {
       if (!notificationsEnabledRef.current) return;
@@ -244,10 +239,12 @@ export function WhaleAlerts({ btcPrice, coinChatOpen }: Props) {
                 <line x1="10" y1="14" x2="21" y2="3"/>
               </svg>
             </a>
+            {/* ✕ snoozes whale alerts for 1h (clears the queue too), not
+                just this one — closing it means "stop showing me these". */}
             <button
               className="whale-alert-close"
-              onClick={dismissCurrent}
-              aria-label={pendingCount > 0 ? t("whaleAlerts2.dismissNext") : t("whaleAlerts2.dismiss")}
+              onClick={snooze}
+              aria-label={t("whaleAlerts2.snoozeAria")}
             >
               <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                 <line x1="18" y1="6" x2="6" y2="18"/>

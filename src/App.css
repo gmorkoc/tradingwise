@@ -4551,8 +4551,38 @@ html[data-theme="light"] .top-nav-bar .top-nav-icons .buysig-bell { background: 
   min-width: 32px;
   border-radius: 8px;
 }
-.top-nav-bar .top-nav-icons .acct-avatar,
-.top-nav-bar .top-nav-icons .acct-avatar .nav-icon-wrap { width: 32px; height: 32px; }
+/* Desktop top bar: the user button matches the 38px search / bell /
+   settings circles (it was 32px), same fill, same 18px icon. */
+html .top-nav-bar .top-nav-icons .acct-avatar,
+html .top-nav-bar .top-nav-icons .acct-avatar .nav-icon-wrap {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  flex: 0 0 38px;
+  padding: 0;
+  border-radius: 50%;
+}
+html .top-nav-bar .top-nav-icons .acct-avatar .nav-icon-wrap svg { width: 18px; height: 18px; }
+/* Search / bell / settings take the profile icon's colours: input-bg fill,
+   secondary-text icon (both themes). */
+html .top-nav-bar .top-nav-icons :is(.mch-search-btn, .top-nav-icon-btn, .buysig-bell),
+html[data-theme="light"] .top-nav-bar .top-nav-icons :is(.mch-search-btn, .top-nav-icon-btn, .buysig-bell),
+html:not([data-theme="light"]) .top-nav-bar .top-nav-icons :is(.mch-search-btn, .top-nav-icon-btn, .buysig-bell),
+html .top-nav-bar .top-nav-search,
+html[data-theme="light"] .top-nav-bar .top-nav-search,
+html:not([data-theme="light"]) .top-nav-bar .top-nav-search {
+  background: var(--color-input-bg) !important;
+  color: var(--color-text-secondary) !important;
+}
+/* The search icon has its own colour rules (muted / green accent on hover) —
+   make it follow the button like the others. */
+html .top-nav-bar .top-nav-search .top-nav-search-ic,
+html .top-nav-bar .top-nav-search:hover .top-nav-search-ic { color: inherit !important; }
+html .top-nav-bar .top-nav-icons :is(.mch-search-btn, .top-nav-icon-btn, .buysig-bell):hover,
+html .top-nav-bar .top-nav-search:hover {
+  background: var(--color-hover) !important;
+  color: var(--color-text) !important;
+}
 
 /* Logo left of the search bar — only while the side menu is collapsed. */
 .top-nav-logo,
