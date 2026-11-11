@@ -1772,7 +1772,6 @@ function AppDashboard({
           )}
         </span>
         <svg className="mode-switch-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
-        {!paperTabSeen && <span className="chart-mobile-tab-dot" aria-hidden="true" />}
       </button>
       {modeMenuOpen && (
         <>

@@ -52,6 +52,11 @@
    float just above it. Scoped to only these four (FloatingNavBar.tsx's
    `raised`) rather than a blanket z-index bump, so it stays below every
    other overlay that was never asked to show it underneath. */
+/* Taps on the bar must never turn into a page scroll/zoom: with the bar
+   floating over the scrolling page, a 1–2px finger wobble made iOS treat a
+   tap as a pan, cancel the press and drop the click. */
+.fnb-bar,
+.fnb-bar * { touch-action: none; }
 .fnb-bar--raised {
   z-index: 200010;
 }
@@ -162,7 +167,7 @@ html[data-theme="light"] .fnb-item { color: #3c3c43; }
    to beat. */
 html[data-theme="light"] .fnb-item--active { color: #1e1b2e; }
 .fnb-item-label {
-  font-size: 0.6rem;
+  font-size: 10px; /* Apple tab-bar label size (was 9.6px) */
   font-weight: 600;
   white-space: nowrap;
   line-height: 1;
@@ -179,7 +184,9 @@ html[data-theme="light"] .fnb-item--active { color: #1e1b2e; }
    sized to match their 22x22 viewBox exactly. */
 /* Extra breathing room from its two immediate neighbors (Signals, Search)
    specifically — margin on this one item only. */
-.fnb-agent-item { padding: 0; margin: 0 22px; }
+/* 44pt minimum tap width (Apple HIG); margins trimmed 2px each so the
+   bar's spacing is unchanged (was 40px orb + 22px margins). */
+.fnb-agent-item { padding: 0; margin: 0 20px; min-width: 44px; }
 .fnb-agent-orb-inline {
   /* A <button>'s <span> child is inline by default — width/height on an
      inline, non-replaced element are ignored entirely. .fnb-item-icon-wrap

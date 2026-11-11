@@ -8193,7 +8193,6 @@ html[data-theme="light"] .mode-switch-item--on { background: rgba(15, 23, 42, 0.
   box-shadow: 0 0 0 2px var(--color-surface, #fff);
   pointer-events: none;
 }
-
 /* Chart tab's C before its first tap: same box as the spin wrapper, no spin. */
 .chart-tab-logo-static { display: inline-flex; }
 
@@ -8457,6 +8456,20 @@ html.is-native-app [contenteditable="true"] * {
   }
   /* Page starts right below the bar. */
   html .main-panel > .main-content-row > .main-content { padding-top: var(--mch-h, 0px); }
+  /* Side menu (phones): every row was 36–39pt tall — below Apple's 44pt
+     minimum, so taps slightly off-centre missed. */
+  html .icon-strip.mobile-open :is(button, a) {
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+  /* Base label is line-height:1 + overflow:hidden (for "…" truncation),
+     which clipped descenders — the "g" in "Long". Taller line box fixes it
+     and keeps the ellipsis. */
+  html .icon-strip.mobile-open .icon-strip-label { line-height: 1.4; }
+  /* Header floats over the scrolling page: a small finger wobble on a
+     button was read as a pan and the tap dropped. Never pan/zoom here. */
+  html .main-panel > .main-coin-header,
+  html .main-panel > .main-coin-header :is(button, a) { touch-action: none; }
 }
 
 /* Phones: glass on the header's menu / back button and "Live market" pill
