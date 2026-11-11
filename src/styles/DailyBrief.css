@@ -116,8 +116,19 @@ html[data-theme="light"] .db-sheet {
    overridden here; background/box-shadow inherit straight through,
    matching .db-card in both themes with no separate "active state"
    elevation anymore. */
+/* Opens at full height: from just above the floating nav (base `bottom`)
+   up to just under the status bar. */
 .db-sheet--expanded {
-  max-height: 46vh;
+  height: calc(100dvh - (20px + 62px + 1px) - env(safe-area-inset-top, 0px) - 12px);
+  max-height: none;
+  /* Full width: edge to edge, rounded only at the top. */
+  left: 0;
+  right: 0;
+  max-width: none;
+  margin: 0;
+  border-left: none;
+  border-right: none;
+  border-radius: 18px 18px 0 0;
 }
 
 /* The big reading view — what "expanded" used to mean before the teaser

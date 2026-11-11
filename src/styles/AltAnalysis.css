@@ -415,6 +415,38 @@
   color: var(--color-text-muted);
   line-height: 1.4;
 }
+.alt-signal-text { flex: 1; }
+/* Live reading + verdict, right-aligned on the row. */
+.alt-signal-live {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+  max-width: 48%;
+  text-align: right;
+}
+.alt-signal-val {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+.alt-signal-verdict {
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+.alt-signal-verdict--bull    { background: rgba(74, 222, 128, 0.14); color: #4ade80; }
+.alt-signal-verdict--bear    { background: rgba(248, 113, 113, 0.14); color: #f87171; }
+.alt-signal-verdict--neutral { background: rgba(148, 163, 184, 0.14); color: #94a3b8; }
+html[data-theme="light"] .alt-signal-verdict--bull { color: #16a34a; }
+html[data-theme="light"] .alt-signal-verdict--bear { color: #dc2626; }
+html[data-theme="light"] .alt-signal-verdict--neutral { color: #64748b; }
+.alt-signal-row--na { opacity: 0.5; }
 
 @media (max-width: 640px) {
   .alt-chart-signals-row { flex-direction: column; }
@@ -613,6 +645,70 @@
 .alt-pred-conf--high   { background: rgba(74,222,128,0.15); color: #4ade80; }
 .alt-pred-conf--medium { background: rgba(251,191,36,0.15);  color: #fbbf24; }
 .alt-pred-conf--low    { background: rgba(148,163,184,0.12); color: #94a3b8; }
+.alt-pred-agree {
+  font-size: 0.66rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+/* ── Likely range (bear / base / bull) ── */
+.alt-range {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.alt-range-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.alt-range-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+}
+.alt-range-asof { font-size: 0.68rem; color: var(--color-text-muted); }
+.alt-range-cells {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.alt-range-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  min-width: 0;
+}
+.alt-range-cell--bear { background: rgba(248, 113, 113, 0.06); }
+.alt-range-cell--base { background: var(--color-hover); }
+.alt-range-cell--bull { background: rgba(74, 222, 128, 0.06); }
+.alt-range-label {
+  font-size: 0.64rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.alt-range-price {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+.alt-range-chg { font-size: 0.72rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.alt-range-note {
+  margin: 0;
+  font-size: 0.68rem;
+  color: var(--color-text-muted);
+  line-height: 1.45;
+}
 
 /* ── Summary ── */
 .alt-pred-summary {
@@ -882,9 +978,21 @@
 /* Edge-to-edge on phones / small tablets (up to the app's 900px mobile
    layout): no page padding, no card borders / radius, banners flush left. */
 @media (max-width: 899px) {
-  /* .main-content adds a 16px gutter on mobile — cancel it so the section
-     backgrounds reach the screen edges; inner content keeps 16px. */
-  .alt-root { padding: 0; gap: 10px; margin: 0 -16px; width: calc(100% + 32px); max-width: none; }
+  /* .main-content adds a 16px gutter on mobile — drop it on this page so the
+     section backgrounds reach the screen edges; inner content keeps 16px.
+     (Negative margins don't work: index.css clips .main-content's children
+     with overflow-x: clip.) */
+  html .main-content:has(.alt-root) { padding-left: 0; padding-right: 0; }
+  /* No gap between sections (it showed as a dark strip); a hairline instead. */
+  .alt-root { padding: 0; gap: 0; margin: 0; width: 100%; max-width: none; }
+  .alt-root > * + * { border-top: 1px solid var(--color-border) !important; }
+  /* Original colours, but the tint runs left → right (not diagonal), same as
+     the Long-Term Analysis bar below it. */
+  .alt-hero {
+    background: linear-gradient(90deg,
+      color-mix(in srgb, var(--sector-color, #0a84ff) 8%, var(--color-card-bg)),
+      var(--color-card-bg)) !important;
+  }
   .alt-hero { padding: 16px; flex-direction: column; align-items: flex-start; border: none !important; border-radius: 0; }
   .alt-ai-section,
   .alt-wl-section { border: none; border-radius: 0; }

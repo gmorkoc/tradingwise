@@ -19,6 +19,14 @@
     "instantAccess": "Acceso inmediato",
     "cancelInAppStore": "Cancela o cambia tu plan en cualquier momento en los ajustes de suscripciones de la App Store.",
     "alreadySubscribed": "¿Ya estás suscrito con este ID de Apple?",
-    "restorePurchases": "Restaurar compras"
+    "restorePurchases": "Restaurar compras",
+    "appleRefundNote": "Se factura a través de tu ID de Apple. Los reembolsos los gestiona Apple según la política del App Store.",
+    "appleCancelBody": "Cancelarás desde los ajustes de suscripción de tu ID de Apple. Conservas todas tus funciones actuales hasta el final del periodo de facturación.",
+    "appleDowngradeSub": "Mantienes el acceso a tu plan actual hasta tu próxima fecha de facturación; después cambia automáticamente.",
+    "appleBilling1": "<strong>Las suscripciones se renuevan automáticamente</strong> al precio indicado y se cobran en tu ID de Apple. Se renuevan salvo que las canceles al menos 24 horas antes del final del periodo actual.",
+    "appleBilling2": "<strong>Reembolsos.</strong> Las compras realizadas en la app de iOS las factura Apple. Los reembolsos los gestiona únicamente Apple según las políticas del App Store; puedes solicitarlo en reportaproblem.apple.com.",
+    "appleBilling3": "<strong>Cancelación.</strong> Puedes cancelar en cualquier momento desde los ajustes de suscripción de tu ID de Apple. La cancelación se aplica al final del periodo de facturación actual: conservas el acceso completo hasta entonces y después tu cuenta vuelve al plan Gratis.",
+    "appleBilling4": "<strong>Las mejoras de plan</strong> se aplican de inmediato; Apple aplica cualquier prorrateo según sus normas de suscripción.",
+    "appleBilling5": "<strong>Las bajadas de plan</strong> se aplican en tu próxima renovación. Conservas el acceso al plan superior hasta entonces."
   }
 }

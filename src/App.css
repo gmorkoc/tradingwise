@@ -4800,6 +4800,9 @@ html:not([data-theme="light"]) .top-nav-icon-btn--settings:hover {
   background: var(--color-surface);
   overflow: visible;
   position: relative;
+  /* Its dropdowns (mode switch menu) must sit above page cards that set
+     their own z-index (e.g. Alt Analysis' .alt-hero at 10). */
+  z-index: 30;
 }
 /* Header toggle's logo tab: spinning while loading/refreshing — no blue
    glow behind it (the ring + "C" draw-in only). */
@@ -8013,7 +8016,14 @@ html[data-theme="light"] .wallet-chip-sub { color: #6d28d9; }
    border — built the same way: an oversized conic gradient spinning
    behind an inner fill, so light streaks travel along the edge — shows
    for ~5s, then fades out. */
-.mode-switch-pill--glint { overflow: hidden; isolation: isolate; }
+/* overflow:hidden alone doesn't clip the spinning layer on iOS WebKit (it
+   leaked above/below the pill as a coloured strip) — clip-path + mask do. */
+.mode-switch-pill--glint {
+  overflow: hidden;
+  isolation: isolate;
+  clip-path: inset(0 round 999px);
+  -webkit-mask-image: -webkit-radial-gradient(white, black);
+}
 .mode-switch-pill--glint::before {
   content: "";
   position: absolute;
@@ -8356,4 +8366,41 @@ html.is-native-app [contenteditable="true"] * {
   -webkit-user-select: text;
   user-select: text;
   -webkit-touch-callout: default;
+}
+
+/* Apple-standard close button (phones / iOS): 44×44pt tap area with a
+   30pt grey circle and a bold ✕, like system sheets. Desktop keeps the
+   plain ✕ glyph. */
+.ios-close-btn-ic { display: none; }
+@media (max-width: 900px) {
+  html .ios-close-btn,
+  html .ios-close-btn:hover {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    margin: -8px -10px -8px 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    position: relative;
+    flex-shrink: 0;
+  }
+  html .ios-close-btn::before {
+    content: "";
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(120, 120, 128, 0.24);
+    transition: transform 0.12s ease, background 0.12s ease;
+  }
+  html[data-theme="light"] .ios-close-btn::before { background: rgba(120, 120, 128, 0.16); }
+  html .ios-close-btn:active::before { transform: scale(0.9); background: rgba(120, 120, 128, 0.36); }
+  .ios-close-btn-txt { display: none; }
+  .ios-close-btn-ic { display: block; position: relative; }
 }

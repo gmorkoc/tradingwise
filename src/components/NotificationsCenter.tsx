@@ -141,7 +141,10 @@ export function NotificationsCenter({ open, onClose, onUnreadCountChange, anchor
             {unreadCount > 0 && (
               <button type="button" className="notif-mark-all" onClick={handleMarkAllRead}>{t("notificationsCenter.markAllRead")}</button>
             )}
-            <button type="button" className="notif-panel-close" onClick={onClose} aria-label={t("notificationsCenter.close")}>✕</button>
+            <button type="button" className="notif-panel-close ios-close-btn" onClick={onClose} aria-label={t("notificationsCenter.close")}>
+              <span className="ios-close-btn-txt">✕</span>
+              <svg className="ios-close-btn-ic" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+            </button>
           </div>
         </div>
 

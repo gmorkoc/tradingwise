@@ -390,7 +390,10 @@ export function BuySignals({ onOpenUpgrade, hideTrigger, columnTarget }: Props) 
                     <span className="buysig-panel-title">{t("buySignals.title", "Buy & Sell Signals")}</span>
                     <span className="buysig-panel-sub">{t("buySignals.subtitle", "4h technical confluence scan")}</span>
                   </div>
-                  <button className="buysig-panel-close" onClick={() => setOpen(false)}>✕</button>
+                  <button type="button" className="buysig-panel-close ios-close-btn" onClick={() => setOpen(false)} aria-label={t("common.close")}>
+                    <span className="ios-close-btn-txt">✕</span>
+                    <svg className="ios-close-btn-ic" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+                  </button>
                 </div>
 
                 <div className="buysig-list">

@@ -1,5 +1,6 @@
 import { forwardRef } from "react";
 import { useTranslation } from "react-i18next";
+import { Capacitor } from "@capacitor/core";
 import "../styles/AuthModal.css";
 
 interface Props {
@@ -51,11 +52,14 @@ export const RiskDisclaimer = forwardRef<HTMLLabelElement, Props>(
           <p dangerouslySetInnerHTML={{ __html: t("auth.disclaimer.risk6") }} />
 
           <p className="auth-disclaimer-section">{t("auth.disclaimer.billingSectionTitle")}</p>
-          <p dangerouslySetInnerHTML={{ __html: t("auth.disclaimer.billing1") }} />
-          <p dangerouslySetInnerHTML={{ __html: t("auth.disclaimer.billing2") }} />
-          <p dangerouslySetInnerHTML={{ __html: t("auth.disclaimer.billing3") }} />
-          <p dangerouslySetInnerHTML={{ __html: t("auth.disclaimer.billing4") }} />
-          <p dangerouslySetInnerHTML={{ __html: t("auth.disclaimer.billing5") }} />
+          {/* iOS app: purchases are billed by Apple, which also handles
+              refunds, cancellation and plan changes — so the Apple wording
+              replaces the web (Stripe) policy here. */}
+          {[1, 2, 3, 4, 5].map((n) => (
+            <p key={n} dangerouslySetInnerHTML={{ __html: Capacitor.getPlatform() === "ios"
+              ? t(`upgradeModal2.appleBilling${n}`)
+              : t(`auth.disclaimer.billing${n}`) }} />
+          ))}
           <p dangerouslySetInnerHTML={{ __html: t("auth.disclaimer.billing6") }} />
         </div>
         <label ref={ref} className={`auth-terms-check${shake ? " auth-terms-check--shake" : ""}`}>

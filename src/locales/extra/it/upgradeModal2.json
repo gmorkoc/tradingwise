@@ -19,6 +19,14 @@
     "instantAccess": "Accesso immediato",
     "cancelInAppStore": "Annulla o cambia il piano quando vuoi nelle impostazioni degli abbonamenti dell'App Store.",
     "alreadySubscribed": "Già abbonato con questo ID Apple?",
-    "restorePurchases": "Ripristina acquisti"
+    "restorePurchases": "Ripristina acquisti",
+    "appleRefundNote": "Addebitato tramite il tuo ID Apple. I rimborsi sono gestiti da Apple secondo le norme dell'App Store.",
+    "appleCancelBody": "Disdirai dalle impostazioni abbonamenti del tuo ID Apple. Mantieni tutte le funzioni attuali fino alla fine del periodo di fatturazione.",
+    "appleDowngradeSub": "L'accesso al piano attuale continua fino alla prossima data di fatturazione, poi cambia automaticamente.",
+    "appleBilling1": "<strong>Gli abbonamenti si rinnovano automaticamente</strong> al prezzo indicato e sono addebitati sul tuo ID Apple. Si rinnovano salvo disdetta almeno 24 ore prima della fine del periodo in corso.",
+    "appleBilling2": "<strong>Rimborsi.</strong> Gli acquisti effettuati nell'app iOS sono fatturati da Apple. I rimborsi sono gestiti esclusivamente da Apple secondo le norme dell'App Store; puoi richiederne uno su reportaproblem.apple.com.",
+    "appleBilling3": "<strong>Disdetta.</strong> Puoi disdire in qualsiasi momento dalle impostazioni abbonamenti del tuo ID Apple. La disdetta ha effetto alla fine del periodo di fatturazione in corso: mantieni l'accesso completo fino ad allora, poi il tuo account torna al piano Gratuito.",
+    "appleBilling4": "<strong>Gli upgrade del piano</strong> hanno effetto immediato; Apple applica l'eventuale ripartizione secondo le proprie regole sugli abbonamenti.",
+    "appleBilling5": "<strong>I downgrade del piano</strong> hanno effetto al prossimo rinnovo. Mantieni l'accesso al piano superiore fino ad allora."
   }
 }

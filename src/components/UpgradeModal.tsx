@@ -16,6 +16,7 @@ import {
   purchaseIAPPlan,
   restorePurchases,
   syncIAPEntitlement,
+  openManageSubscriptions,
   type IAPPlan,
 } from "../services/revenuecat";
 import { TIER_RANK, fetchProfile, subscriptionProvider, type Tier } from "../services/supabase";
@@ -303,7 +304,7 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
       if (isPaid) {
         setDone(kind === "upgrade"
           ? { message: t("upgradeModal.success.upgradeMessage", { plan: planLabel }), sub: t("upgradeModal.success.iapUpgradeSub") }
-          : { message: t("upgradeModal.success.downgradeMessage"), sub: t("upgradeModal.success.iapDowngradeSub") }
+          : { message: t("upgradeModal.success.downgradeMessage"), sub: t("upgradeModal2.appleDowngradeSub") }
         );
       } else {
         onClose();
@@ -345,6 +346,14 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
 
     try {
       if (confirm.kind === "cancel") {
+        // App Store subscriptions can only be cancelled by the user in
+        // Apple's own settings — Stripe has no record of them.
+        if (iap) {
+          openManageSubscriptions();
+          setConfirming(false);
+          setConfirm(null);
+          return;
+        }
         const { accessUntil } = await cancelSubscription();
         setDone({
           message: t("upgradeModal.success.cancelMessage"),
@@ -492,7 +501,7 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
 
             {/* What happens */}
             {confirm.kind === "cancel" && (
-              <p className="upgrade-sub">{t("upgradeModal.confirm.cancelBody")}</p>
+              <p className="upgrade-sub">{iap ? t("upgradeModal2.appleCancelBody") : t("upgradeModal.confirm.cancelBody")}</p>
             )}
             {confirm.kind === "upgrade" && confirm.amountDue !== undefined && (
               <p className="upgrade-sub"
@@ -525,7 +534,7 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
             )}
 
             {confirm.kind === "upgrade" && (
-              <p className="upgrade-footer upgrade-footer--policy" style={{ marginBottom: 8 }}>{t("upgradeModal.footer.noRefundNote")}</p>
+              <p className="upgrade-footer upgrade-footer--policy" style={{ marginBottom: 8 }}>{iap ? t("upgradeModal2.appleRefundNote") : t("upgradeModal.footer.noRefundNote")}</p>
             )}
 
             <div className="upgrade-confirm-actions">
@@ -713,7 +722,8 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
               {!isPaid && ` · ${t("upgradeModal2.instantAccess")}`}
               {/* Refund note and the subscription terms on the same line,
                   not their own paragraphs. */}
-              {" · "}{t("upgradeModal.footer.noRefundNote")}
+              {/* App Store purchases: Apple decides refunds, not us. */}
+              {" · "}{iap ? t("upgradeModal2.appleRefundNote") : t("upgradeModal.footer.noRefundNote")}
               {!isPaid && (
                 <>
                   {" "}{iap ? t("upgradeModal.footer.subscriptionTermsApple") : t("upgradeModal.footer.subscriptionTermsWeb")}{" "}

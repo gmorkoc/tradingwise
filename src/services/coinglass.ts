@@ -2092,7 +2092,43 @@ export async function fetchLivePrice(coin: string): Promise<number | null> {
   return fallback && fallback.price > 0 ? fallback.price : null;
 }
 
+// OKX positioning stats (daily): 7-day open-interest change (%) and the
+// latest long/short account ratio. Direct on iOS, proxied on web.
+export async function fetchOkxPositioning(coin: string): Promise<{ oiChange7d: number | null; longShort: number | null; longShortAvg30: number | null }> {
+  const base = Capacitor.isNativePlatform() ? 'https://www.okx.com' : '/okx-api';
+  const ccy = coin.toUpperCase();
+  const get = async (path: string) => {
+    try { const r = await fetch(`${base}${path}`); const j = await r.json(); return Array.isArray(j?.data) ? j.data as string[][] : []; }
+    catch { return []; }
+  };
+  const [oi, ls] = await Promise.all([
+    get(`/api/v5/rubik/stat/contracts/open-interest-volume?ccy=${ccy}&period=1D`),
+    get(`/api/v5/rubik/stat/contracts/long-short-account-ratio?ccy=${ccy}&period=1D`),
+  ]);
+  // Rows are newest first: [ts, oiUsd, volUsd] / [ts, ratio].
+  let oiChange7d: number | null = null;
+  if (oi.length > 7) {
+    const now = parseFloat(oi[0][1]), then = parseFloat(oi[7][1]);
+    if (now > 0 && then > 0) oiChange7d = (now / then - 1) * 100;
+  }
+  const r = ls.length ? parseFloat(ls[0][1]) : NaN;
+  // OKX retail runs structurally long (often 3+), so judge it against its
+  // own 30-day average rather than fixed thresholds.
+  const hist = ls.slice(0, 30).map((x) => parseFloat(x[1])).filter((x) => Number.isFinite(x) && x > 0);
+  const longShortAvg30 = hist.length >= 10 ? hist.reduce((a, b) => a + b, 0) / hist.length : null;
+  return { oiChange7d, longShort: Number.isFinite(r) && r > 0 ? r : null, longShortAvg30 };
+}
+
 export async function fetchFundingRate(coin: string): Promise<number | null> {
+  // OKX perp funding (8h, decimal e.g. 0.0001) — direct on iOS, where the
+  // relative /cg-api proxy below doesn't exist.
+  try {
+    const base = Capacitor.isNativePlatform() ? 'https://www.okx.com' : '/okx-api';
+    const r = await fetch(`${base}/api/v5/public/funding-rate?instId=${coin.toUpperCase()}-USDT-SWAP`);
+    const j = await r.json();
+    const v = parseFloat(j?.data?.[0]?.fundingRate);
+    if (Number.isFinite(v)) return v;
+  } catch { /* fall back to CoinGlass */ }
   try {
     const symbol = coin === 'BTC' ? 'BTCUSDT' : `${coin}USDT`;
     const res = await api.get('futures/funding-rate/history', {

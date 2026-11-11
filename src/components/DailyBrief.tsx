@@ -1018,11 +1018,6 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
                   </span>
                   {t("nav.live")}
                 </span>
-                {updatedAt !== null && (
-                  <span className="db-head-updated">
-                    {t("dailyBrief.lastUpdated", "Updated")} {timeAgo(updatedAt, t)}
-                  </span>
-                )}
               </span>
             )}
             {/* Collapsed (the dock) shows just the plain title now — no

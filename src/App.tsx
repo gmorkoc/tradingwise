@@ -411,7 +411,7 @@ const NAV_ITEMS: {
     id: "altanalysis",
     labelKey: "nav.altanalysis",
     requiredTier: "elite",
-    category: "market",
+    category: "technical",
     d: [
       "M8 3v3",
       "M6 6h4v6H6z",

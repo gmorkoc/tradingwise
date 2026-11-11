@@ -314,7 +314,7 @@ html:not([data-theme="light"]) .mkst-panel:hover { background: rgba(255, 255, 25
   pointer-events: none;
 }
 @media (max-width: 960px) {
-  .mkst-panel:has(> .mkst-coin)::before { inset: 0 8px; border-radius: 16px; }
+  .mkst-panel:has(> .mkst-coin)::before { inset: 0; border-radius: 0; box-shadow: none !important; }
 }
 /* Desktop: a much lighter wash, no edge line. */
 @media (min-width: 961px) {
@@ -468,25 +468,26 @@ html:not([data-theme="light"]) .mkst-panel:hover { background: rgba(255, 255, 25
     flex-basis: 100%;
     max-width: none;
     scroll-snap-align: center;
-    padding: 20px 20px 18px;
-    border-right: none;
+    /* Every card runs edge to edge: no border, square corners, 16px gutter. */
+    padding: 20px 16px 18px;
+    border: none;
     border-radius: 0;
-    border: 1px solid var(--mkst-line);
   }
   /* Only the photo cards are rounded. */
   /* The photo sits 8px in from each side (same card width as the rest, so
      swiping stays even); the photo and its fade carry the rounded corners. */
-  .mkst-panel:has(> .mkst-news) { min-height: 360px; padding: 22px 30px 20px; border: none; border-radius: 0; }
+  .mkst-panel:has(> .mkst-news) { min-height: 360px; padding: 22px 16px 20px; border: none; border-radius: 0; }
+  /* Photo cards run edge to edge, square corners. */
   .mkst-panel > .mkst-news > .mkst-news-img,
-  .mkst-panel > .mkst-news > .mkst-news-img:hover { inset: 0 8px; border-radius: 16px; }
-  .mkst-panel:has(> .mkst-news)::after { inset: 0 8px; border-radius: 16px; }
+  .mkst-panel > .mkst-news > .mkst-news-img:hover { inset: 0; border-radius: 0; }
+  .mkst-panel:has(> .mkst-news)::after { inset: 0; border-radius: 0; }
   .mkst-panel:hover { background: none; }
-  /* Phones: no card border; content 16px inside the wash (wash is 8px in). */
+  /* Phones: no card border; the coloured wash fills the whole card. */
   .mkst-panel:has(> .mkst-coin) {
     border: none;
     background: none;
-    padding-left: 24px;
-    padding-right: 24px;
+    padding-left: 16px;
+    padding-right: 16px;
   }
   .mkst-arrow { display: none; }
   .mkst-title,

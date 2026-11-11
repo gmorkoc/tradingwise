@@ -19,6 +19,14 @@
     "instantAccess": "Instant access",
     "cancelInAppStore": "Cancel or change your plan any time in the App Store's subscription settings.",
     "alreadySubscribed": "Already subscribed on this Apple ID?",
-    "restorePurchases": "Restore purchases"
+    "restorePurchases": "Restore purchases",
+    "appleRefundNote": "Billed through your Apple ID. Refunds are handled by Apple under App Store policy.",
+    "appleCancelBody": "You'll cancel in your Apple ID subscription settings. You keep all your current features until the end of your billing period.",
+    "appleDowngradeSub": "Your current plan access continues until your next billing date, then switches automatically.",
+    "appleBilling1": "<strong>Subscriptions auto-renew</strong> at the listed price and are billed to your Apple ID. They renew automatically unless cancelled at least 24 hours before the end of the current period.",
+    "appleBilling2": "<strong>Refunds.</strong> Purchases made in the iOS app are billed by Apple. Refunds are handled solely by Apple under the App Store's policies — you can request one at reportaproblem.apple.com.",
+    "appleBilling3": "<strong>Cancellation.</strong> You can cancel at any time in your Apple ID subscription settings. Cancellation takes effect at the end of your current billing period — you keep full access until then, after which your account reverts to the Free tier.",
+    "appleBilling4": "<strong>Plan upgrades</strong> take effect immediately; Apple applies any proration under its subscription rules.",
+    "appleBilling5": "<strong>Plan downgrades</strong> take effect at your next renewal. You keep your higher-tier access until then."
   }
 }

@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { createChart, IChartApi, ISeriesApi, CandlestickData, ColorType, CandlestickSeries } from "lightweight-charts";
-import { COINS, coinglass, fetchCoinMarketCaps, fetchCoin24hTickers, fetchCoinChanges24h, fetchFundingRate, CandleDataPoint, CoinSnapshot } from "../services/coinglass";
-import { getAltPricePrediction, AltPricePrediction } from "../services/openai";
+import { COINS, coinglass, fetchCoinMarketCaps, fetchCoin24hTickers, fetchCoinChanges24h, fetchFundingRate, fetchOkxPositioning, getAllExchangeFunding, CandleDataPoint, CoinSnapshot } from "../services/coinglass";
+import { getAltNarrative, AltNarrative } from "../services/openai";
+import { computeAltForecast, fmtUsd, type AltForecast, type SignalKey, type Timeframe } from "../utils/altForecast";
 import { AIQuotaWall } from "./AIQuotaWall";
 import { RoundedCandleOverlay } from "./DrawingOverlay";
 import { useAuth } from "../contexts/AuthContext";
@@ -15,7 +16,10 @@ interface Props {
   onOpenAuth: () => void;
 }
 
-type Timeframe = "1W" | "1M" | "3M" | "6M" | "1Y" | "ALL";
+const HORIZON_EN: Record<Timeframe, string> = {
+  "1W": "1 week", "1M": "1 month", "3M": "3 months", "6M": "6 months", "1Y": "12 months", "ALL": "2+ years",
+};
+const LANG_NAME: Record<string, string> = { en: "English", es: "Spanish", it: "Italian", tr: "Turkish" };
 
 const SECTOR_MAP: Record<string, string> = {
   BTC: "Store of Value", ETH: "Layer 1", BNB: "Layer 1", SOL: "Layer 1",
@@ -79,7 +83,7 @@ function fmtPrice(p: number) {
 }
 
 export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const sectorLabel = (s: string) => SECTOR_KEY[s] ? t(`altAnalysis2.sectors.${SECTOR_KEY[s]}`) : s;
   const { tier } = useAuth();
   const { used, limit } = useAIQuota();
@@ -103,8 +107,12 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
   const [marketCap, setMarketCap] = useState(0);
   const [loadingChart, setLoadingChart] = useState(false);
   const [btcCloses, setBtcCloses]       = useState<number[]>([]);
-  const [fundingRate, setFundingRate]   = useState<number | null>(null);
-  const [analysis, setAnalysis]   = useState<AltPricePrediction | null>(null);
+  const [daily, setDaily]               = useState<CandleDataPoint[]>([]);
+  const [fundingAll, setFundingAll]     = useState<Record<string, Partial<Record<string, number>>>>({});
+  const [fundingSingle, setFundingSingle] = useState<number | null>(null);
+  const [positioning, setPositioning]   = useState<{ oiChange7d: number | null; longShort: number | null; longShortAvg30: number | null }>({ oiChange7d: null, longShort: null, longShortAvg30: null });
+  // Frozen at generate time so the shown call doesn't drift as data ticks.
+  const [analysis, setAnalysis]   = useState<{ forecast: AltForecast; narrative: AltNarrative; at: Date } | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError]     = useState("");
   const [allChanges, setAllChanges] = useState<Map<string, CoinSnapshot>>(new Map());
@@ -168,18 +176,40 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
     loadMetrics(coin);
   }, [coin, loadMetrics]);
 
-  // BTC trend context (fetch once on mount, refresh on coin change)
+  // BTC: 1 year of daily closes (macro trend + relative strength).
   useEffect(() => {
-    coinglass.getHistoricalCandles('1day', 'BTC').then(data => {
-      setBtcCloses(data.slice(-60).map(c => c.close));
+    coinglass.getHistoricalCandles('1day', 'BTC', 365 * 86400).then(data => {
+      setBtcCloses(data.map(c => c.close));
     }).catch(() => {});
   }, []);
 
-  // Funding rate (per coin)
+  // Funding across Binance / Bybit / OKX / Bitget / Coinbase (one bulk call).
   useEffect(() => {
-    setFundingRate(null);
-    fetchFundingRate(coin.symbol).then(setFundingRate).catch(() => {});
+    getAllExchangeFunding().then(setFundingAll).catch(() => {});
+  }, []);
+
+  // Per coin: 1 year of daily candles, OKX positioning, single-venue funding fallback.
+  useEffect(() => {
+    setDaily([]);
+    setFundingSingle(null);
+    setPositioning({ oiChange7d: null, longShort: null, longShortAvg30: null });
+    coinglass.getHistoricalCandles('1day', coin.symbol, 365 * 86400).then(setDaily).catch(() => {});
+    fetchOkxPositioning(coin.symbol).then(setPositioning).catch(() => {});
+    fetchFundingRate(coin.symbol).then(setFundingSingle).catch(() => {});
   }, [coin.symbol]);
+
+  const funding = useMemo(() => {
+    const rates = Object.values(fundingAll[coin.symbol] ?? {}).filter((x): x is number => typeof x === "number" && Number.isFinite(x));
+    if (rates.length) return { rate: rates.reduce((a, b) => a + b, 0) / rates.length, venues: rates.length };
+    return fundingSingle !== null ? { rate: fundingSingle, venues: 1 } : { rate: null, venues: 0 };
+  }, [fundingAll, coin.symbol, fundingSingle]);
+
+  const forecast = useMemo(() => computeAltForecast({
+    price, tf, tfCandles: candles, daily, btcDailyCloses: btcCloses,
+    funding: funding.rate, fundingVenues: funding.venues,
+    oiChange7d: positioning.oiChange7d, longShort: positioning.longShort, longShortAvg30: positioning.longShortAvg30,
+    marketCapB: marketCap / 1e9,
+  }), [price, tf, candles, daily, btcCloses, funding, positioning, marketCap]);
 
   // All-coin 24h changes for winners/losers (CoinGecko, same call as market caps)
   useEffect(() => {
@@ -228,7 +258,8 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
   useEffect(() => {
     if (!seriesRef.current || !candles.length) return;
     const data: CandlestickData[] = candles.map(c => ({
-      time: (c.time / 1000) as any,
+      // Candle times are already in seconds (fetchBinanceKlines).
+      time: c.time as any,
       open: c.open, high: c.high, low: c.low, close: c.close,
     }));
     seriesRef.current.setData(data);
@@ -245,187 +276,30 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
     setShowDropdown(false);
   };
 
-  const detectCandlePattern = (cs: CandleDataPoint[]): string => {
-    if (cs.length < 3) return "insufficient data";
-    const [c3, c2, c1] = cs.slice(-3);
-    const body1 = Math.abs(c1.close - c1.open);
-    const range1 = c1.high - c1.low || 0.0001;
-    const upper1 = c1.high - Math.max(c1.close, c1.open);
-    const lower1 = Math.min(c1.close, c1.open) - c1.low;
-    const body2 = Math.abs(c2.close - c2.open);
-    const range2 = c2.high - c2.low || 0.0001;
-    const body3 = Math.abs(c3.close - c3.open);
-
-    if (body1 / range1 < 0.1) return "Doji — market at equilibrium, indecision";
-    if (lower1 > body1 * 2 && upper1 < body1 * 0.5 && c1.close >= c1.open)
-      return "Hammer — buyers rejected lower prices, bullish reversal signal";
-    if (upper1 > body1 * 2 && lower1 < body1 * 0.5 && c1.close <= c1.open)
-      return "Shooting Star — sellers rejected higher prices, bearish reversal signal";
-    if (c2.close < c2.open && c1.close > c1.open && c1.open <= c2.close && c1.close >= c2.open)
-      return "Bullish Engulfing — buyers overwhelmed sellers, strong reversal";
-    if (c2.close > c2.open && c1.close < c1.open && c1.open >= c2.close && c1.close <= c2.open)
-      return "Bearish Engulfing — sellers overwhelmed buyers, strong reversal";
-    if (c3.close < c3.open && body3 > range2 * 0.4 && body2 / range2 < 0.3
-        && c1.close > c1.open && c1.close > (c3.open + c3.close) / 2)
-      return "Morning Star — 3-candle bullish reversal, buyers took control";
-    if (c3.close > c3.open && body3 > range2 * 0.4 && body2 / range2 < 0.3
-        && c1.close < c1.open && c1.close < (c3.open + c3.close) / 2)
-      return "Evening Star — 3-candle bearish reversal, sellers took control";
-    if (c1.close > c1.open && body1 / range1 > 0.7)
-      return "Strong bullish candle — full-body close, buyers fully in control";
-    if (c1.close < c1.open && body1 / range1 > 0.7)
-      return "Strong bearish candle — full-body close, sellers fully in control";
-    return c1.close > c1.open ? "Mild bullish candle" : "Mild bearish candle";
-  };
-
-  const buildTechnicalSummary = () => {
-    if (candles.length < 10) return null;
-
-    const closes  = candles.map(c => c.close);
-    const highs   = candles.map(c => c.high);
-    const lows    = candles.map(c => c.low);
-    const volumes = candles.map(c => c.volume ?? 0);
-
-    // Period range
-    const periodHigh  = Math.max(...highs);
-    const periodLow   = Math.min(...lows);
-    const priceRange  = periodHigh - periodLow;
-    const pctFromHigh = ((price - periodHigh) / periodHigh) * 100;
-    const pctFromLow  = ((price - periodLow)  / periodLow)  * 100;
-    const posInRange  = priceRange > 0 ? ((price - periodLow) / priceRange) * 100 : 50;
-
-    // Recent momentum: last 5 vs previous 5 closes
-    const recentAvg   = closes.slice(-5).reduce((a, b) => a + b, 0) / 5;
-    const previousAvg = closes.slice(-10, -5).reduce((a, b) => a + b, 0) / 5;
-    const momentum    = ((recentAvg - previousAvg) / previousAvg) * 100;
-
-    // MAs
-    const ma20 = closes.slice(-20).reduce((a, b) => a + b, 0) / Math.min(20, closes.length);
-    const ma50 = closes.length >= 50
-      ? closes.slice(-50).reduce((a, b) => a + b, 0) / 50
-      : closes.reduce((a, b) => a + b, 0) / closes.length;
-
-    // RSI and MACD using existing coinglass implementations
-    const rsi  = coinglass.calculateRSI(closes);
-    const macd = coinglass.calculateMACD(closes);
-
-    // Volatility
-    const avgRange     = candles.slice(-20).reduce((a, c) => a + (c.high - c.low), 0) / 20;
-    const volatilityPct = (avgRange / price) * 100;
-
-    // Consecutive up/down streak
-    let streak = 0;
-    for (let i = closes.length - 1; i > 0; i--) {
-      if (closes[i] > closes[i - 1]) { if (streak >= 0) streak++; else break; }
-      else                            { if (streak <= 0) streak--; else break; }
-    }
-
-    // Volume trend: recent 5 vs previous 5 average volume
-    const hasVolume    = volumes.some(v => v > 0);
-    const recentVol    = volumes.slice(-5).reduce((a, b) => a + b, 0) / 5;
-    const previousVol  = volumes.slice(-10, -5).reduce((a, b) => a + b, 0) / 5;
-    const volumeTrend  = hasVolume && previousVol > 0
-      ? ((recentVol - previousVol) / previousVol) * 100
-      : null;
-
-    // Higher highs / lower lows pattern (last 10 vs prior 10)
-    const recentHigh = Math.max(...highs.slice(-10));
-    const prevHigh   = Math.max(...highs.slice(-20, -10));
-    const recentLow  = Math.min(...lows.slice(-10));
-    const prevLow    = Math.min(...lows.slice(-20, -10));
-    const hhhl = recentHigh > prevHigh && recentLow > prevLow ? "higher highs + higher lows (bullish structure)"
-               : recentHigh < prevHigh && recentLow < prevLow ? "lower highs + lower lows (bearish structure)"
-               : "mixed structure (no clear trend)";
-
-    // BTC trend context
-    let btcTrend = "BTC data unavailable";
-    if (btcCloses.length >= 20) {
-      const btcMa20 = btcCloses.slice(-20).reduce((a, b) => a + b, 0) / 20;
-      const btcMa50 = btcCloses.length >= 50
-        ? btcCloses.slice(-50).reduce((a, b) => a + b, 0) / 50
-        : btcCloses.reduce((a, b) => a + b, 0) / btcCloses.length;
-      const btcPrice = btcCloses[btcCloses.length - 1];
-      const btcRsi   = coinglass.calculateRSI(btcCloses);
-      btcTrend = btcPrice > btcMa20 && btcPrice > btcMa50
-        ? `BTC above MA20 (${fmtPrice(btcMa20)}) and MA50 (${fmtPrice(btcMa50)}) — bullish macro (RSI ${btcRsi})`
-        : btcPrice < btcMa20 && btcPrice < btcMa50
-        ? `BTC below MA20 (${fmtPrice(btcMa20)}) and MA50 (${fmtPrice(btcMa50)}) — bearish macro (RSI ${btcRsi})`
-        : `BTC between MA20 (${fmtPrice(btcMa20)}) and MA50 (${fmtPrice(btcMa50)}) — neutral macro (RSI ${btcRsi})`;
-    }
-
-    // Funding rate interpretation
-    let fundingContext = "Funding rate unavailable";
-    if (fundingRate !== null) {
-      const pct = (fundingRate * 100).toFixed(4);
-      fundingContext = fundingRate > 0.0002
-        ? `+${pct}% (very high positive — overleveraged longs, bearish contrarian signal)`
-        : fundingRate > 0.0001
-        ? `+${pct}% (elevated positive — longs dominant, slight bearish lean)`
-        : fundingRate < -0.0001
-        ? `${pct}% (negative — shorts dominant, potential short squeeze)`
-        : `${pct}% (neutral)`;
-    }
-
-    const trend = price > ma50
-      ? (price > ma20 ? "above MA20 and MA50 (uptrend)" : "below MA20 but above MA50 (weakening)")
-      : (price > ma20 ? "above MA20 but below MA50 (recovery attempt)" : "below MA20 and MA50 (downtrend)");
-
-    // ── Current price action from chart ──────────────────────────────────────
-    const candlePattern = detectCandlePattern(candles);
-
-    const last = candles[candles.length - 1];
-    const lastRange = last.high - last.low || 0.0001;
-    const lastUpper = last.high - Math.max(last.close, last.open);
-    const lastLower = Math.min(last.close, last.open) - last.low;
-    const upperPct  = (lastUpper / lastRange * 100).toFixed(0);
-    const lowerPct  = (lastLower / lastRange * 100).toFixed(0);
-    let wickAnalysis = "";
-    if (parseInt(upperPct) > 35) wickAnalysis += `Upper wick ${upperPct}% of range (sellers rejecting highs). `;
-    if (parseInt(lowerPct) > 35) wickAnalysis += `Lower wick ${lowerPct}% of range (buyers rejecting lows). `;
-    if (!wickAnalysis) wickAnalysis = `Balanced candle — upper wick ${upperPct}%, lower wick ${lowerPct}% of range.`;
-
-    const recentCandles = candles.slice(-6).map((c, i, arr) => {
-      const dir = c.close >= c.open ? "▲" : "▼";
-      const chg = ((c.close - c.open) / c.open * 100).toFixed(2);
-      const label = i === arr.length - 1 ? " ← current" : "";
-      return `  O:${fmtPrice(c.open)} H:${fmtPrice(c.high)} L:${fmtPrice(c.low)} C:${fmtPrice(c.close)} ${dir}${chg}%${label}`;
-    }).join("\n");
-
-    return {
-      periodHigh:    fmtPrice(periodHigh),
-      periodLow:     fmtPrice(periodLow),
-      posInRange:    posInRange.toFixed(0),
-      pctFromHigh:   pctFromHigh.toFixed(1),
-      pctFromLow:    pctFromLow.toFixed(1),
-      momentum:      momentum.toFixed(2),
-      ma20:          fmtPrice(ma20),
-      ma50:          fmtPrice(ma50),
-      trend,
-      volatilityPct: volatilityPct.toFixed(2),
-      streak,
-      candleCount:   candles.length,
-      rsi:           rsi.toFixed(1),
-      macdHistogram: macd.histogram.toFixed(4),
-      macdSignal:    macd.histogram > 0 ? "bullish crossover" : "bearish crossover",
-      volumeTrend:   volumeTrend !== null ? volumeTrend.toFixed(1) : null,
-      hhhl,
-      btcTrend,
-      fundingContext,
-      candlePattern,
-      wickAnalysis,
-      recentCandles,
-    };
-  };
+  const sigName = (k: SignalKey) => t(`altAnalysis2.sig.${k}Name`);
+  const sigValue = (s: AltForecast["signals"][number]) =>
+    s.stateKey ? `${t(`altAnalysis2.st.${s.stateKey}`)}${s.value ? ` · ${s.value}` : ""}` : s.value;
 
   const handleGenerate = async () => {
+    const fc = forecast;
+    if (!fc) return;
     setAiLoading(true);
     setAiError("");
-    const techSummary = buildTechnicalSummary();
-    const res = await getAltPricePrediction(
-      coin.symbol, coin.name, sector, price, change24h,
-      marketCap / 1e9, tf, techSummary,
-    );
-    if (res.success && res.result) setAnalysis(res.result);
+    const range = (x: number, c: number) => `${fmtUsd(x)} (${c >= 0 ? "+" : ""}${c.toFixed(1)}%)`;
+    const lang = LANG_NAME[(i18n.language || "en").slice(0, 2)] ?? "English";
+    const res = await getAltNarrative({
+      symbol: coin.symbol, name: coin.name, sector, price, horizon: HORIZON_EN[tf],
+      direction: fc.direction, confidence: fc.confidence, score: fc.score,
+      agree: fc.agree, against: fc.against,
+      range: { bear: range(fc.bear, fc.bearChg), base: range(fc.base, fc.baseChg), bull: range(fc.bull, fc.bullChg) },
+      levels: {
+        entry: `${fmtUsd(fc.entryLo)} – ${fmtUsd(fc.entryHi)}`, stop: fmtUsd(fc.stop),
+        supports: fc.supports.map(fmtUsd).join(" / "), resistances: fc.resistances.map(fmtUsd).join(" / "),
+      },
+      signals: fc.signals.map(s => ({ name: s.key, verdict: s.verdict, detail: s.detail, weight: s.weight })),
+      language: lang,
+    });
+    if (res.success && res.result) setAnalysis({ forecast: fc, narrative: res.result, at: new Date() });
     else setAiError(res.error ?? t("altAnalysis2.predictionFailed"));
     setAiLoading(false);
   };
@@ -607,26 +481,46 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
           <div className="alt-signal-panel">
             <div className="alt-signal-panel-title">{t("altAnalysis2.signalsUsed")}</div>
             <div className="alt-signal-list">
-              {([
-                { n: 1, tag: "RSI (14)",       desc: t("altAnalysis2.sig.rsiDesc"),        color: "#f59e0b", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 12 Q5 4 8 12 Q11 20 14 12 Q17 4 20 12"/><line x1="2" y1="7" x2="22" y2="7" strokeDasharray="2 2" strokeWidth="1"/><line x1="2" y1="17" x2="22" y2="17" strokeDasharray="2 2" strokeWidth="1"/></svg> },
-                { n: 2, tag: "MACD",            desc: t("altAnalysis2.sig.macdDesc"),       color: "#818cf8", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 18 Q7 6 12 10 Q17 14 22 4"/><path d="M2 14 Q7 10 12 12 Q17 14 22 10" strokeDasharray="3 2"/></svg> },
-                { n: 3, tag: "MA20 / MA50",     desc: t("altAnalysis2.sig.maDesc"),            color: "#38bdf8", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 16 Q6 8 12 11 Q18 14 22 7"/><path d="M2 19 Q6 14 12 15 Q18 16 22 12" strokeDasharray="3 2"/></svg> },
-                { n: 4, tag: t("altAnalysis2.sig.structure"), desc: t("altAnalysis2.sig.structureDesc"),         color: "#34d399", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="3" x2="8" y2="6"/><rect x="6" y="6" width="4" height="6" rx="0.5"/><line x1="8" y1="12" x2="8" y2="15"/><line x1="16" y1="6" x2="16" y2="8"/><rect x="14" y="8" width="4" height="7" rx="0.5"/><line x1="16" y1="15" x2="16" y2="18"/></svg> },
-                { n: 5, tag: t("altAnalysis2.sig.momentum"), desc: t("altAnalysis2.sig.momentumDesc"),           color: "#fb923c", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> },
-                { n: 6, tag: t("altAnalysis2.sig.volume"), desc: t("altAnalysis2.sig.volumeDesc"),          color: "#a78bfa", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="14" width="4" height="7" rx="0.5"/><rect x="10" y="9" width="4" height="12" rx="0.5"/><rect x="17" y="5" width="4" height="16" rx="0.5"/></svg> },
-                { n: 7, tag: t("altAnalysis2.sig.btcMacro"), desc: t("altAnalysis2.sig.btcMacroDesc"),              color: "#f97316", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M9 8h4.5a2 2 0 0 1 0 4H9v4h5a2 2 0 0 0 0-4"/><line x1="9" y1="8" x2="9" y2="16"/><line x1="10.5" y1="6" x2="10.5" y2="8"/><line x1="13.5" y1="6" x2="13.5" y2="8"/><line x1="10.5" y1="16" x2="10.5" y2="18"/><line x1="13.5" y1="16" x2="13.5" y2="18"/></svg> },
-                { n: 8, tag: t("altAnalysis2.sig.funding"), desc: t("altAnalysis2.sig.fundingDesc"),              color: "#f43f5e", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="5" y1="19" x2="19" y2="5"/><circle cx="7" cy="7" r="2"/><circle cx="17" cy="17" r="2"/></svg> },
-                { n: 9, tag: t("altAnalysis2.sig.cycle"), desc: t("altAnalysis2.sig.cycleDesc"),             color: "#2dd4bf", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><line x1="12" y1="7" x2="12" y2="12"/><line x1="12" y1="12" x2="15" y2="14"/></svg> },
-              ] as { n: number; tag: string; desc: string; color: string; icon: React.ReactNode }[]).map(({ n, tag, desc, color, icon }) => (
-                <div key={tag} className="alt-signal-row">
-                  <span className="alt-signal-num">{n}</span>
-                  <span className="alt-signal-icon" style={{ color }}>{icon}</span>
-                  <div className="alt-signal-text">
-                    <span className="alt-signal-name">{tag}</span>
-                    <span className="alt-signal-desc">{desc}</span>
-                  </div>
-                </div>
-              ))}
+              {(() => {
+                const ICON: Record<SignalKey, { color: string; icon: React.ReactNode }> = {
+                  rsi: { color: "#f59e0b", icon:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 12 Q5 4 8 12 Q11 20 14 12 Q17 4 20 12"/><line x1="2" y1="7" x2="22" y2="7" strokeDasharray="2 2" strokeWidth="1"/><line x1="2" y1="17" x2="22" y2="17" strokeDasharray="2 2" strokeWidth="1"/></svg> },
+                  macd: { color: "#818cf8", icon:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 18 Q7 6 12 10 Q17 14 22 4"/><path d="M2 14 Q7 10 12 12 Q17 14 22 10" strokeDasharray="3 2"/></svg> },
+                  ma: { color: "#38bdf8", icon:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 16 Q6 8 12 11 Q18 14 22 7"/><path d="M2 19 Q6 14 12 15 Q18 16 22 12" strokeDasharray="3 2"/></svg> },
+                  structure: { color: "#34d399", icon:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="3" x2="8" y2="6"/><rect x="6" y="6" width="4" height="6" rx="0.5"/><line x1="8" y1="12" x2="8" y2="15"/><line x1="16" y1="6" x2="16" y2="8"/><rect x="14" y="8" width="4" height="7" rx="0.5"/><line x1="16" y1="15" x2="16" y2="18"/></svg> },
+                  momentum: { color: "#fb923c", icon:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> },
+                  volume: { color: "#a78bfa", icon:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="14" width="4" height="7" rx="0.5"/><rect x="10" y="9" width="4" height="12" rx="0.5"/><rect x="17" y="5" width="4" height="16" rx="0.5"/></svg> },
+                  btc: { color: "#f97316", icon:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M9 8h4.5a2 2 0 0 1 0 4H9v4h5a2 2 0 0 0 0-4"/><line x1="9" y1="8" x2="9" y2="16"/><line x1="10.5" y1="6" x2="10.5" y2="8"/><line x1="13.5" y1="6" x2="13.5" y2="8"/><line x1="10.5" y1="16" x2="10.5" y2="18"/><line x1="13.5" y1="16" x2="13.5" y2="18"/></svg> },
+                  funding: { color: "#f43f5e", icon:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="5" y1="19" x2="19" y2="5"/><circle cx="7" cy="7" r="2"/><circle cx="17" cy="17" r="2"/></svg> },
+                  cycle: { color: "#2dd4bf", icon:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><line x1="12" y1="7" x2="12" y2="12"/><line x1="12" y1="12" x2="15" y2="14"/></svg> },
+                  oi: { color: "#22d3ee", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg> },
+                  longShort: { color: "#e879f9", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17V7"/><path d="m4 10 3-3 3 3"/><path d="M17 7v10"/><path d="m14 14 3 3 3-3"/></svg> },
+                  vsBtc: { color: "#fbbf24", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg> },
+                  drawdown: { color: "#f87171", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 4h18"/><path d="M12 4v14"/><path d="m7 13 5 5 5-5"/></svg> },
+                };
+                const ORDER: SignalKey[] = ["rsi", "macd", "ma", "structure", "momentum", "volume", "btc", "funding", "oi", "longShort", "vsBtc", "drawdown", "cycle"];
+                return ORDER.map((k, i) => {
+                  const s = forecast?.signals.find(x => x.key === k);
+                  const { color, icon } = ICON[k];
+                  return (
+                    <div key={k} className={`alt-signal-row${s ? "" : " alt-signal-row--na"}`}>
+                      <span className="alt-signal-num">{i + 1}</span>
+                      <span className="alt-signal-icon" style={{ color }}>{icon}</span>
+                      <div className="alt-signal-text">
+                        <span className="alt-signal-name">{sigName(k)}</span>
+                        <span className="alt-signal-desc">{t(`altAnalysis2.sig.${k}Info`)}</span>
+                      </div>
+                      <div className="alt-signal-live">
+                        <span className="alt-signal-val">{s ? sigValue(s) : "—"}</span>
+                        {s && (
+                          <span className={`alt-signal-verdict alt-signal-verdict--${s.verdict}`}>
+                            {t(`altAnalysis2.dir_${s.verdict === "bull" ? "bullish" : s.verdict === "bear" ? "bearish" : "neutral"}`)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
             </div>
           </div>
 
@@ -661,67 +555,102 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
         ) : (
           <div className="alt-ai-result">
 
-            {/* ── Hero prediction row ── */}
+            {(() => {
+              const fc = analysis.forecast;
+              const nv = analysis.narrative;
+              const dirCls = fc.direction === "bullish" ? "alt-pos" : fc.direction === "bearish" ? "alt-neg" : "alt-neutral";
+              const chg = (c: number) => `${c >= 0 ? "+" : ""}${c.toFixed(1)}%`;
+              return (<>
+            {/* ── Hero: call + base case + confidence ── */}
             <div className="alt-pred-hero" style={{ borderColor: `${sectorColor}30`, background: `color-mix(in srgb, ${sectorColor} 6%, var(--color-hover))` }}>
               <div className="alt-pred-direction">
-                <span className={`alt-pred-arrow ${analysis.direction === "bullish" ? "alt-pos" : analysis.direction === "bearish" ? "alt-neg" : "alt-neutral"}`}>
-                  {analysis.direction === "bullish" ? "▲" : analysis.direction === "bearish" ? "▼" : "◆"}
+                <span className={`alt-pred-arrow ${dirCls}`}>
+                  {fc.direction === "bullish" ? "▲" : fc.direction === "bearish" ? "▼" : "◆"}
                 </span>
                 <div>
-                  <div className={`alt-pred-label ${analysis.direction === "bullish" ? "alt-pos" : analysis.direction === "bearish" ? "alt-neg" : "alt-neutral"}`}>
-                    {t(`altAnalysis2.dir_${analysis.direction}`, { defaultValue: analysis.direction }).toUpperCase()}
+                  <div className={`alt-pred-label ${dirCls}`}>
+                    {t(`altAnalysis2.dir_${fc.direction}`).toUpperCase()}
                   </div>
                   <div className="alt-pred-horizon">{t(`altAnalysis2.target_${tf}`)}</div>
                 </div>
               </div>
 
               <div className="alt-pred-target">
-                <span className="alt-pred-target-price">{fmtPrice(analysis.targetPrice)}</span>
-                <span className={`alt-pred-target-pct ${analysis.targetChange >= 0 ? "alt-pos" : "alt-neg"}`}>
-                  {analysis.targetChange >= 0 ? "+" : ""}{analysis.targetChange.toFixed(1)}%
-                </span>
+                <span className="alt-pred-target-price">{fmtUsd(fc.base)}</span>
+                <span className={`alt-pred-target-pct ${fc.baseChg >= 0 ? "alt-pos" : "alt-neg"}`}>{chg(fc.baseChg)}</span>
               </div>
 
               <div className="alt-pred-confidence">
                 <span className="alt-pred-conf-label">{t("altAnalysis2.confidence")}</span>
-                <span className={`alt-pred-conf-badge alt-pred-conf--${analysis.confidence}`}>
-                  {t(`altAnalysis2.conf_${analysis.confidence}`, { defaultValue: analysis.confidence }).toUpperCase()}
+                <span className={`alt-pred-conf-badge alt-pred-conf--${fc.confidence}`}>
+                  {t(`altAnalysis2.conf_${fc.confidence}`).toUpperCase()}
+                </span>
+                <span className="alt-pred-agree">
+                  {fc.direction === "neutral"
+                    ? t("altAnalysis2.neutralCount", { n: fc.agree, total: fc.signals.length })
+                    : t("altAnalysis2.agreeCount", { n: fc.agree, total: fc.signals.length })}
                 </span>
               </div>
             </div>
 
+            {/* ── Likely range ── */}
+            <div className="alt-range">
+              <div className="alt-range-head">
+                <span className="alt-range-title">{t("altAnalysis2.likelyRange")}</span>
+                <span className="alt-range-asof">{t("altAnalysis2.asOf", { time: analysis.at.toLocaleTimeString(i18n.language, { hour: "2-digit", minute: "2-digit" }) })}</span>
+              </div>
+              <div className="alt-range-cells">
+                <div className="alt-range-cell alt-range-cell--bear">
+                  <span className="alt-range-label">{t("altAnalysis2.bearCase")}</span>
+                  <span className="alt-range-price">{fmtUsd(fc.bear)}</span>
+                  <span className="alt-range-chg alt-neg">{chg(fc.bearChg)}</span>
+                </div>
+                <div className="alt-range-cell alt-range-cell--base">
+                  <span className="alt-range-label">{t("altAnalysis2.baseCase")}</span>
+                  <span className="alt-range-price">{fmtUsd(fc.base)}</span>
+                  <span className={`alt-range-chg ${fc.baseChg >= 0 ? "alt-pos" : "alt-neg"}`}>{chg(fc.baseChg)}</span>
+                </div>
+                <div className="alt-range-cell alt-range-cell--bull">
+                  <span className="alt-range-label">{t("altAnalysis2.bullCase")}</span>
+                  <span className="alt-range-price">{fmtUsd(fc.bull)}</span>
+                  <span className="alt-range-chg alt-pos">{chg(fc.bullChg)}</span>
+                </div>
+              </div>
+              <p className="alt-range-note">{t("altAnalysis2.rangeNote")}</p>
+            </div>
+
             {/* ── Summary ── */}
-            <p className="alt-pred-summary" style={{ borderLeftColor: sectorColor }}>{analysis.summary}</p>
+            <p className="alt-pred-summary" style={{ borderLeftColor: sectorColor }}>{nv.summary}</p>
 
             {/* ── Trade levels + reasons ── */}
             <div className="alt-pred-grid">
               <div className="alt-pred-levels">
                 <div className="alt-pred-level-row">
                   <span className="alt-pred-level-label">{t("altAnalysis2.entryZone")}</span>
-                  <span className="alt-pred-level-val">{analysis.entryZone}</span>
+                  <span className="alt-pred-level-val">{fmtUsd(fc.entryLo)} – {fmtUsd(fc.entryHi)}</span>
                 </div>
                 <div className="alt-pred-level-row">
                   <span className="alt-pred-level-label">{t("altAnalysis2.stopLoss")}</span>
-                  <span className="alt-pred-level-val alt-neg">{analysis.stopLoss}</span>
+                  <span className="alt-pred-level-val alt-neg">{fmtUsd(fc.stop)}</span>
                 </div>
                 <div className="alt-pred-level-divider" />
                 <div className="alt-pred-level-row">
                   <span className="alt-pred-level-label">{t("altAnalysis2.support")}</span>
-                  <span className="alt-pred-level-val alt-pos">{analysis.supports.join(" / ")}</span>
+                  <span className="alt-pred-level-val alt-pos">{fc.supports.map(fmtUsd).join(" / ")}</span>
                 </div>
                 <div className="alt-pred-level-row">
                   <span className="alt-pred-level-label">{t("altAnalysis2.resistance")}</span>
-                  <span className="alt-pred-level-val alt-neg">{analysis.resistances.join(" / ")}</span>
+                  <span className="alt-pred-level-val alt-neg">{fc.resistances.map(fmtUsd).join(" / ")}</span>
                 </div>
               </div>
 
               <div className="alt-pred-reasons">
                 <div className="alt-pred-reasons-title">{t("altAnalysis2.why")}</div>
                 <ul className="alt-ai-list">
-                  {analysis.reasons.map((r, i) => (
+                  {nv.reasons.map((r, i) => (
                     <li key={i}>
-                      <span className={analysis.direction === "bearish" ? "alt-x" : "alt-check"}>
-                        {analysis.direction === "bearish" ? "▼" : "▲"}
+                      <span className={fc.direction === "bearish" ? "alt-x" : "alt-check"}>
+                        {fc.direction === "bearish" ? "▼" : "▲"}
                       </span>
                       {r}
                     </li>
@@ -731,13 +660,17 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
             </div>
 
             {/* ── Reasoning ── */}
-            <div className="alt-reasoning">
-              <div className="alt-reasoning-label">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-                {t("altAnalysis2.whyThisPrediction")}
+            {nv.reasoning && (
+              <div className="alt-reasoning">
+                <div className="alt-reasoning-label">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                  {t("altAnalysis2.whyThisPrediction")}
+                </div>
+                <p className="alt-reasoning-text">{nv.reasoning}</p>
               </div>
-              <p className="alt-reasoning-text">{analysis.reasoning}</p>
-            </div>
+            )}
+              </>);
+            })()}
 
             <button className="alt-regenerate-btn" onClick={handleGenerate} disabled={aiLoading}>
               {aiLoading ? t("altAnalysis2.analyzing") : t("altAnalysis2.regenerate")}

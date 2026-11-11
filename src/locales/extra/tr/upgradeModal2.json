@@ -19,6 +19,14 @@
     "instantAccess": "Anında erişim",
     "cancelInAppStore": "Planını istediğin zaman App Store abonelik ayarlarından iptal edebilir veya değiştirebilirsin.",
     "alreadySubscribed": "Bu Apple ID ile zaten abone misin?",
-    "restorePurchases": "Satın alımları geri yükle"
+    "restorePurchases": "Satın alımları geri yükle",
+    "appleRefundNote": "Apple ID'n üzerinden faturalandırılır. İadeler App Store politikasına göre Apple tarafından yapılır.",
+    "appleCancelBody": "İptal işlemini Apple ID abonelik ayarlarından yapacaksın. Fatura döneminin sonuna kadar mevcut tüm özelliklerini kullanmaya devam edersin.",
+    "appleDowngradeSub": "Mevcut planına bir sonraki fatura tarihine kadar erişmeye devam edersin, ardından otomatik olarak değişir.",
+    "appleBilling1": "<strong>Abonelikler</strong> belirtilen fiyattan Apple ID'ne faturalandırılır ve mevcut dönemin bitiminden en az 24 saat önce iptal edilmedikçe otomatik olarak yenilenir.",
+    "appleBilling2": "<strong>İadeler.</strong> iOS uygulamasında yapılan satın alımlar Apple tarafından faturalandırılır. İadeler yalnızca Apple tarafından, App Store politikalarına göre yapılır; reportaproblem.apple.com adresinden talep edebilirsin.",
+    "appleBilling3": "<strong>İptal.</strong> Aboneliğini istediğin zaman Apple ID abonelik ayarlarından iptal edebilirsin. İptal, mevcut fatura döneminin sonunda geçerli olur; o tarihe kadar tüm özelliklere erişimin devam eder, sonra hesabın Ücretsiz plana döner.",
+    "appleBilling4": "<strong>Plan yükseltmeleri</strong> hemen geçerli olur; Apple olası kısmi ücretlendirmeyi kendi abonelik kurallarına göre uygular.",
+    "appleBilling5": "<strong>Plan düşürmeleri</strong> bir sonraki yenilemede geçerli olur. O zamana kadar üst plan erişimin devam eder."
   }
 }
