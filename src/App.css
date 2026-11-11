@@ -4202,6 +4202,8 @@ html:not([data-theme="light"]) .top-nav-search-kbd { background: color-mix(in sr
 .top-nav-promo-x:hover { background: rgba(10, 11, 13, 0.06); color: #0a0b0d; }
 .top-nav-promo-x:focus-visible { outline: 2px solid #0052ff; }
 html:not([data-theme="light"]) .top-nav-promo { background: #1c1d23; }
+/* Phones: no fill — just the message on the page background. */
+html .top-nav-promo.top-nav-promo--phone { background: transparent; }
 /* Mobile web: compact, one line, ✕ tucked in on the right. */
 /* Text centred; equal side padding so the ✕ on the right doesn't shift it. */
 .top-nav-promo--phone { height: 38px; padding: 0 40px; justify-content: center; text-align: center; }
@@ -8396,6 +8398,206 @@ html.is-native-app [contenteditable="true"] * {
   -webkit-user-select: text;
   user-select: text;
   -webkit-touch-callout: default;
+}
+
+/* Phones: semi-transparent frosted header. It floats over the page so
+   content scrolls under it; the page gets top padding equal to the header
+   (--mch-bottom from App.tsx), so at rest everything sits exactly where it
+   did. */
+@media (max-width: 900px) {
+  /* The top bar is a copy of the floating nav bar (.fnb-bar in
+     FloatingNavBar.css): a floating glass pill, 16px in from each side,
+     same fill / blur / border / shadows in both themes. */
+  html .main-panel > .main-coin-header {
+    position: absolute;
+    /* auto = stay where it naturally sits (below the web promo strip when
+       there is one) instead of jumping to the very top. */
+    top: auto;
+    margin-top: 0;
+    /* Full width, flush to the top of the app area (which already sits
+       below the iOS safe area / status bar). */
+    left: 0;
+    right: 0;
+    height: auto !important;
+    min-height: 64px !important; /* same as the floating nav */
+    padding: 6px 16px !important;
+    border-radius: 0 !important;
+    /* Above in-page toolbars (chart drawing tools 1001–1003), below every
+       popup/sheet (1010+). */
+    z-index: 1005;
+    background: rgba(0, 0, 0, 0.55) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+    backdrop-filter: blur(24px) saturate(180%) !important;
+    /* Full-width bar: no border, edge lines or shadow — just the glass. */
+    border: none !important;
+    box-shadow: none !important;
+  }
+  html[data-theme="light"] .main-panel > .main-coin-header {
+    background: rgb(255 255 255 / 0%) !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+  /* The status-bar (safe area) strip becomes part of the same glass bar:
+     the app area starts at the very top and the bar reaches up behind the
+     status bar, padding its buttons down below it. --mch-h includes that
+     padding, so the page still starts right below the bar. */
+  html .app-shell-body { padding-top: 0 !important; }
+  html .main-panel > .main-coin-header {
+    padding-top: calc(var(--native-safe-area-top, env(safe-area-inset-top, 0px)) + 6px) !important;
+    min-height: calc(64px + var(--native-safe-area-top, env(safe-area-inset-top, 0px))) !important;
+  }
+  /* The pill is centred on its own (absolute, top 50%) — shift it by half
+     the status-bar padding so it lines up with the menu and bell again. */
+  html .main-panel > .main-coin-header .mode-switch {
+    top: calc(50% + var(--native-safe-area-top, env(safe-area-inset-top, 0px)) / 2);
+  }
+  /* Page starts right below the bar. */
+  html .main-panel > .main-content-row > .main-content { padding-top: var(--mch-h, 0px); }
+}
+
+/* Phones: glass on the header's menu / back button and "Live market" pill
+   (same recipe as the bell below). */
+@media (max-width: 900px) {
+  html body .main-coin-header .mch-left .mch-menu-btn.mch-nav-btn,
+  html body .main-coin-header .mch-left .mch-menu-btn.mch-nav-btn:hover,
+  html .main-coin-header .mode-switch-pill,
+  html .main-coin-header .mode-switch-pill:hover {
+    background: rgba(255, 255, 255, 0.2) !important;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2) !important;
+  }
+  /* Light: white glass over white content needs more body and an edge. */
+  html[data-theme="light"] body .main-coin-header .mch-left .mch-menu-btn.mch-nav-btn,
+  html[data-theme="light"] .main-coin-header .mode-switch-pill,
+  html[data-theme="light"] .mch-right .mch-notif-feed-btn {
+    background: rgba(255, 255, 255, 0.6) !important;
+    border: 1px solid rgba(15, 23, 42, 0.08) !important;
+    box-shadow: 0 8px 32px rgba(15, 23, 42, 0.12), 0 1px 3px rgba(15, 23, 42, 0.08) !important;
+  }
+  html body .main-coin-header .mch-left .mch-menu-btn.mch-nav-btn {
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 50% !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+  }
+  /* The pill's inner fill must stay (nearly) solid, or its periodic moving
+     rim floods the whole pill with colour — tinted to match the glass. */
+  html .main-coin-header .mode-switch-pill--glint::after { background: rgba(38, 38, 40, 0.97) !important; }
+  html[data-theme="light"] .main-coin-header .mode-switch-pill--glint::after { background: rgba(250, 250, 252, 0.97) !important; }
+}
+
+/* Phones: header bell as frosted glass (the user's .glass recipe), kept
+   round and 44pt. */
+@media (max-width: 900px) {
+  html .mch-right .mch-notif-feed-btn,
+  html .mch-right .mch-notif-feed-btn:hover,
+  html[data-theme="light"] .mch-right .mch-notif-feed-btn,
+  html[data-theme="light"] .mch-right .mch-notif-feed-btn:hover {
+    background: rgba(255, 255, 255, 0.2) !important;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2) !important;
+    color: #ffffff !important;
+  }
+  /* Light theme: same glass, dark icon so it shows on the white header. */
+  html[data-theme="light"] .mch-right .mch-notif-feed-btn,
+  html[data-theme="light"] .mch-right .mch-notif-feed-btn:hover { color: #1c1c1e !important; }
+  html .mch-right .mch-notif-feed-btn:active { transform: scale(0.94); }
+  /* Apple's minimum tap target: 44×44pt (was 36). */
+  html .mch-right .mch-notif-feed-btn {
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    flex: 0 0 44px !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+  }
+  html .mch-right .mch-notif-feed-btn svg { width: 20px !important; height: 20px !important; }
+}
+/* Without backdrop-filter, a more solid fill so the icon stays readable. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  @media (max-width: 900px) {
+    html .mch-right .mch-notif-feed-btn { background: rgba(255, 255, 255, 0.85) !important; color: #1c1c1e !important; }
+  }
+}
+
+/* Phones: inside the floating top bar the three buttons are plain items,
+   like the nav's (no glass of their own — the bar is the glass). */
+@media (max-width: 900px) {
+  html body .main-coin-header .mch-left .mch-menu-btn.mch-nav-btn,
+  html body .main-coin-header .mch-left .mch-menu-btn.mch-nav-btn:hover,
+  html body .main-coin-header .mode-switch-pill,
+  html body .main-coin-header .mode-switch-pill:hover,
+  html body .main-coin-header .mch-right .mch-notif-feed-btn,
+  html body .main-coin-header .mch-right .mch-notif-feed-btn:hover,
+  html[data-theme="light"] body .main-coin-header .mch-left .mch-menu-btn.mch-nav-btn,
+  html[data-theme="light"] body .main-coin-header .mode-switch-pill,
+  html[data-theme="light"] body .main-coin-header .mch-right .mch-notif-feed-btn {
+    background: transparent !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: #d8dbe4 !important;
+  }
+  html[data-theme="light"] body .main-coin-header .mch-left .mch-menu-btn.mch-nav-btn,
+  html[data-theme="light"] body .main-coin-header .mode-switch-pill,
+  html[data-theme="light"] body .main-coin-header .mch-right .mch-notif-feed-btn { color: #3c3c43 !important; }
+  /* The pill's old moving-rim shine, now on the "Live market" letters: a
+     purple → blue → green sweep across the text every few minutes (same
+     180s cadence as before), plain text the rest of the time. */
+  html body .main-coin-header .mode-switch-pill--glint .mode-switch-title {
+    --mst-c: #d8dbe4;
+    background-image: linear-gradient(100deg,
+      var(--mst-c) 0%, var(--mst-c) 38%,
+      #a78bfa 44%, #7c3aed 47%, #3b82f6 50%, #22c55e 53%,
+      var(--mst-c) 59%, var(--mst-c) 100%);
+    background-size: 300% 100%;
+    background-position: 100% 0;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    animation: mst-text-glint 180s ease-in-out 6s infinite;
+  }
+  html[data-theme="light"] body .main-coin-header .mode-switch-pill--glint .mode-switch-title { --mst-c: #1c1c1e; }
+  @keyframes mst-text-glint {
+    0%    { background-position: 100% 0; }
+    1.6%  { background-position: 0% 0; }
+    100%  { background-position: 0% 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html body .main-coin-header .mode-switch-pill--glint .mode-switch-title { animation: none; }
+  }
+
+  /* Round 44pt circles on menu / bell (the pill stays plain). */
+  html body .main-coin-header .mch-left .mch-menu-btn.mch-nav-btn,
+  html body .main-coin-header .mch-right .mch-notif-feed-btn {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  }
+  html[data-theme="light"] body .main-coin-header .mch-left .mch-menu-btn.mch-nav-btn,
+  html[data-theme="light"] body .main-coin-header .mch-right .mch-notif-feed-btn {
+    background: rgba(255, 255, 255, 0.7) !important;
+    border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  }
+  html body .main-coin-header :is(.mch-menu-btn.mch-nav-btn, .mch-notif-feed-btn):active { background: rgba(127, 127, 127, 0.2) !important; }
+  /* The pill's moving-rim shine needs a solid inner fill (::after) and a
+     mask/clip, and both stop WebKit's backdrop blur — so on phones the
+     shine is off and the pill is plain glass like the nav. */
+  html body .main-coin-header .mode-switch-pill--glint::before,
+  html body .main-coin-header .mode-switch-pill--glint::after { display: none !important; }
+  html body .main-coin-header .mode-switch-pill--glint {
+    -webkit-mask-image: none !important;
+    mask-image: none !important;
+    clip-path: none !important;
+    isolation: auto !important;
+  }
 }
 
 /* Apple-standard close button (phones / iOS): 44×44pt tap area with a

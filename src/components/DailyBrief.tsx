@@ -134,6 +134,20 @@ export function renderChip(label: string, _category: Category, coinTickers?: Map
   );
 }
 
+// Feeds often hand out small thumbnails (BBC: 240px) that look blurry when
+// shown full width. Ask the image CDN for a bigger version where the URL
+// pattern allows it.
+function upscaleThumb(url: string): string {
+  if (!url) return url;
+  // BBC ichef: /ace/standard/240/… → 976px (a size BBC serves).
+  let u = url.replace(/(ichef\.bbci\.co\.uk\/(?:ace|news)\/(?:standard|ws))\/\d+\//, "$1/976/");
+  // WordPress resized copies: name-150x150.jpg → name.jpg (the original).
+  u = u.replace(/-\d{2,4}x\d{2,4}(\.(?:jpe?g|png|webp))(\?|$)/i, "$1$2");
+  // ?w=300 style width params below 600px → 1200.
+  u = u.replace(/([?&](?:w|width)=)(\d+)/i, (m, p, n) => (Number(n) < 600 ? `${p}1200` : m));
+  return u;
+}
+
 // rss2json usually resolves `thumbnail`/`enclosure`, but some feeds only embed the
 // image inline in the HTML body — fall back to scraping the first <img src>.
 function extractImgFromHtml(html?: string): string {
@@ -187,12 +201,12 @@ async function fetchFeed(feed: FeedDef): Promise<BriefItem[]> {
         pubDate: item.pubDate
           ? new Date(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(item.pubDate) ? `${item.pubDate.replace(" ", "T")}Z` : item.pubDate).getTime()
           : Date.now(),
-        thumbnail:
+        thumbnail: upscaleThumb(
           item.thumbnail ||
           item.enclosure?.link ||
           extractImgFromHtml(item.content) ||
           extractImgFromHtml(item.description) ||
-          "",
+          ""),
       })
     );
     return feed.category === "crypto" ? items : items.filter((i) => isRelevant(i.title));

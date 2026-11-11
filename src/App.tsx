@@ -1867,6 +1867,34 @@ function AppDashboard({
       return Number.isFinite(at) && at > 0 && Date.now() - at < PROMO_SNOOZE_MS;
     } catch { return false; }
   });
+  // Desktop: the strip above the top bar. Phones: the same banner sits on
+  // the Markets page, between the carousel and Market Status.
+  const showPromo = !Capacitor.isNativePlatform() && !user && !promoHidden
+    && (isDesktopWidth || activeSection === "markets");
+  // Not closed within a minute → it hides itself for this visit (comes back
+  // next visit; ✕ is still the 24-hour snooze).
+  useEffect(() => {
+    if (!showPromo) return;
+    const id = window.setTimeout(() => setPromoHidden(true), 60_000);
+    return () => window.clearTimeout(id);
+  }, [showPromo]);
+  const promoStripEl = showPromo ? (
+    <div className={`top-nav-promo${isDesktopWidth ? "" : " top-nav-promo--phone"}`}>
+      <button type="button" className="top-nav-promo-link" onClick={() => onOpenAuth("signup")}>
+        {isDesktopWidth
+          ? <Trans i18nKey="promoStrip.desktop" defaults="Sign up free and get <b>$100k</b> in paper trading cash + <b>$1k</b> to predict prices" components={{ b: <b /> }} />
+          : <Trans i18nKey="promoStrip.phone" defaults="Sign up free: <b>$100k</b> paper cash + <b>$1k</b> to predict" components={{ b: <b /> }} />}
+      </button>
+      <button
+        type="button"
+        className="top-nav-promo-x"
+        aria-label={t("promoStrip.dismiss", "Dismiss")}
+        onClick={() => { setPromoHidden(true); try { localStorage.setItem("ch:signupPromoClosedAt", String(Date.now())); } catch { /* ignore */ } }}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+      </button>
+    </div>
+  ) : null;
   const [guestBurgerCat, setGuestBurgerCat] = useState<NavCategoryId | null>(null);
   // Phones: the page and its scrolling area must never sit shifted
   // sideways (iOS could pan .main-content horizontally despite
@@ -2662,9 +2690,13 @@ function AppDashboard({
     mchCleanupRef.current?.();
     mchCleanupRef.current = null;
     const root = document.documentElement;
-    if (!el) { root.style.setProperty("--mch-bottom", "0px"); return; }
+    if (!el) { root.style.setProperty("--mch-bottom", "0px"); root.style.setProperty("--mch-h", "0px"); return; }
     const update = () => {
-      root.style.setProperty("--mch-bottom", `${Math.max(0, Math.round(el.getBoundingClientRect().bottom))}px`);    };
+      root.style.setProperty("--mch-bottom", `${Math.max(0, Math.round(el.getBoundingClientRect().bottom))}px`);
+      // The header's own height (no safe-area / promo offset above it) — the
+      // page's top padding under the floating header on phones.
+      root.style.setProperty("--mch-h", `${Math.round(el.offsetHeight)}px`);
+    };
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
@@ -3605,23 +3637,9 @@ function AppDashboard({
           {/* Signed-out promo strip above the header (Coinbase style). */}
           {/* Website only (never the iOS app): desktop on every page,
               mobile web on the Markets page only. */}
-          {!Capacitor.isNativePlatform() && !user && !promoHidden && (isDesktopWidth || activeSection === "markets") && (
-            <div className={`top-nav-promo${isDesktopWidth ? "" : " top-nav-promo--phone"}`}>
-              <button type="button" className="top-nav-promo-link" onClick={() => onOpenAuth("signup")}>
-                {isDesktopWidth
-                  ? <Trans i18nKey="promoStrip.desktop" defaults="Sign up free and get <b>$100k</b> in paper trading cash + <b>$1k</b> to predict prices" components={{ b: <b /> }} />
-                  : <Trans i18nKey="promoStrip.phone" defaults="Sign up free: <b>$100k</b> paper cash + <b>$1k</b> to predict" components={{ b: <b /> }} />}
-              </button>
-              <button
-                type="button"
-                className="top-nav-promo-x"
-                aria-label={t("promoStrip.dismiss", "Dismiss")}
-                onClick={() => { setPromoHidden(true); try { localStorage.setItem("ch:signupPromoClosedAt", String(Date.now())); } catch { /* ignore */ } }}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
-              </button>
-            </div>
-          )}
+          {/* Desktop: above the top bar. Phones: first thing inside the
+              scrolling page (below), so it scrolls under the glass header. */}
+          {isDesktopWidth && promoStripEl}
           {!Capacitor.isNativePlatform() && isDesktopWidth && (
             <div className={`top-nav-bar top-nav-bar--guest${user ? " top-nav-bar--signed" : ""}`}>
               {/* Logo beside the search bar while the side menu is collapsed
@@ -4226,6 +4244,8 @@ function AppDashboard({
                   <div style={!isWideDesktop ? { display: mobileChartTab === "orderbook" ? "none" : "contents" } : undefined}>
                     {/* Every platform: desktop arrows, phones swipe. */}
                     <MarketStories onSelectCoin={openStoryCoin} coinTickers={coinTickers} />
+                    {/* Phones: sign-up banner right above Market Status. */}
+                    {!isDesktopWidth && promoStripEl}
 
                     <GlobalMarkets
                       onOpenAuth={onOpenAuth}

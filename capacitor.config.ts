@@ -7,6 +7,13 @@ const config: CapacitorConfig = {
   ios: {
     contentInset: 'automatic',
   },
+  // Simulator live reload: `LIVE_RELOAD=1 npx cap copy ios` points the app
+  // at the local Vite dev server so changes show instantly. Any normal
+  // `npx cap copy/sync` (incl. the TestFlight pipeline) leaves this out, so
+  // release builds always load the bundled app.
+  ...(process.env.LIVE_RELOAD
+    ? { server: { url: process.env.LIVE_RELOAD_URL || 'http://localhost:5173', cleartext: true } }
+    : {}),
   plugins: {
     // Without this, iOS resizes/shifts the WebView whenever an input is
     // focused (to keep it clear of the keyboard) — that's the "screen gets
