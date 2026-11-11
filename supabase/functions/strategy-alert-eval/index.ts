@@ -133,6 +133,9 @@ const INDICATOR_NAMES: Record<IndicatorId, string> = {
 };
 
 Deno.serve(async (req) => {
+  // Candles are cached per run only — the function stays warm between cron
+  // calls, and without this every run re-used the first candles it fetched.
+  candleCache.clear();
   if (req.headers.get("x-cron-secret") !== CRON_SECRET) {
     return new Response("Unauthorized", { status: 401 });
   }

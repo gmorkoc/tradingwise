@@ -49,6 +49,10 @@ async function getPrice(coin: string): Promise<number | null> {
 }
 
 Deno.serve(async (req) => {
+  // The cache only dedupes within ONE run. Supabase keeps the function warm
+  // between the per-minute cron calls, so without this the first price ever
+  // fetched was reused forever — the price never moved and no alert fired.
+  priceCache.clear();
   // verify_jwt is off for this function (see supabase/config.toml) since its
   // only caller is the pg_cron job, not a signed-in client — this header is
   // the substitute check.
