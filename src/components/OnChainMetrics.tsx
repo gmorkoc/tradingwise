@@ -44,13 +44,14 @@ function buildTiles(d: OnChainData, t: (k: string) => string): Tile[] {
       value: fmtNum(d.transactions),
       tooltip: t("onchain.metrics.dailyTxs.tooltip"),
     },
-    {
+    // The source sometimes reports 0 for the day — hide the tile then.
+    ...(d.minerRevenueUSD > 0 ? [{
       icon: "⛏",
       label: t("onchain.metrics.minerRevenue.label"),
       value: fmt$(d.minerRevenueUSD),
       colorClass: "onchain-tile-value--amber",
       tooltip: t("onchain.metrics.minerRevenue.tooltip"),
-    },
+    }] : []),
     {
       icon: "🎯",
       label: t("onchain.metrics.difficulty.label"),

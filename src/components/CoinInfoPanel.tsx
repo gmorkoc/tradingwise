@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import i18n from "../i18n";
 import { CoinRow, TTL, fmtBig, fmtPrice } from "./GlobalMarkets";
 import { signalOf } from "./MarketSignalTable";
-import { COINS, fetchFundingRate, getPositionData, type Ticker24h } from "../services/coinglass";
+import { COINS, coinglass, fetchFundingRate, getPositionData, type Ticker24h } from "../services/coinglass";
 import {
   getCoinRow, getGlobal, getCoinDetails, requestSparklines, useSparklines, withSparklines, usePaprikaShown,
   type CoinDetails,
@@ -166,8 +166,34 @@ export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone,
   const price = ticker?.price ?? r?.current_price ?? null;
   const chg = ticker?.change ?? r?.price_change_percentage_24h ?? null;
   const spark = r?.sparkline_in_7d?.price ?? [];
-  const lo = perf === "24h" ? ticker?.low ?? r?.low_24h ?? null : spark.length ? Math.min(...spark) : null;
-  const hi = perf === "24h" ? ticker?.high ?? r?.high_24h ?? null : spark.length ? Math.max(...spark) : null;
+  // Binance daily candles fill the 7d range and ATH/ATL when the CoinGecko
+  // row is missing (its quota runs out). Binance history starts at the
+  // coin's listing there, so these are only used as a fallback.
+  // Wait for the list to load first, so this doesn't fire for every coin.
+  const needDaily = !!rows && (!r?.ath || !r?.atl || !spark.length);
+  const [daily, setDaily] = useState<{ coin: string; c: { time: number; high: number; low: number }[] } | null>(null);
+  useEffect(() => {
+    if (!needDaily || daily?.coin === coin) return;
+    let alive = true;
+    coinglass.getHistoricalCandles("all", coin)
+      .then((c) => { if (alive && c.length) setDaily({ coin, c }); })
+      .catch(() => { /* keep "—" */ });
+    return () => { alive = false; };
+  }, [needDaily, coin, daily?.coin]);
+  const dc = daily?.coin === coin ? daily.c : [];
+  const last7 = dc.slice(-7);
+  const dHi = dc.length ? dc.reduce((a, b) => (b.high > a.high ? b : a)) : null;
+  const dLo = dc.length ? dc.reduce((a, b) => (b.low < a.low ? b : a)) : null;
+  const ath = r?.ath || dHi?.high || null;
+  const athDate = r?.ath ? r.ath_date : dHi ? new Date(dHi.time * 1000).toISOString() : null;
+  const atl = r?.atl || dLo?.low || null;
+  const atlDate = r?.atl ? r.atl_date : dLo ? new Date(dLo.time * 1000).toISOString() : null;
+  const athPct = r?.ath ? r.ath_change_percentage ?? null : ath && (ticker?.price ?? r?.current_price) ? (((ticker?.price ?? r!.current_price) as number) / ath - 1) * 100 : null;
+  const atlPct = r?.atl ? r.atl_change_percentage ?? null : atl && (ticker?.price ?? r?.current_price) ? (((ticker?.price ?? r!.current_price) as number) / atl - 1) * 100 : null;
+  const lo7 = spark.length ? Math.min(...spark) : last7.length ? Math.min(...last7.map((c) => c.low)) : null;
+  const hi7 = spark.length ? Math.max(...spark) : last7.length ? Math.max(...last7.map((c) => c.high)) : null;
+  const lo = perf === "24h" ? ticker?.low ?? r?.low_24h ?? null : lo7;
+  const hi = perf === "24h" ? ticker?.high ?? r?.high_24h ?? null : hi7;
   const rangePos = price != null && lo != null && hi != null && hi > lo ? Math.min(100, Math.max(0, ((price - lo) / (hi - lo)) * 100)) : null;
   const volMcap = r?.total_volume && r?.market_cap ? (r.total_volume / r.market_cap) * 100 : null;
   const circPct = r?.circulating_supply && r?.max_supply ? Math.min(100, (r.circulating_supply / r.max_supply) * 100) : null;
@@ -492,21 +518,21 @@ export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone,
         <div className="cip-rec">
           <div>
             <span className="cip-rec-t">{t("coinInfo.ath")}</span>
-            <span className="cip-rec-d">{dateStr(r?.ath_date)}</span>
+            <span className="cip-rec-d">{dateStr(athDate)}</span>
           </div>
           <div className="cip-rec-r">
-            <strong>{r?.ath ? fmtPrice(r.ath) : "—"}</strong>
-            {r?.ath_change_percentage != null && <span className="cip-dn">{r.ath_change_percentage.toFixed(2)}%</span>}
+            <strong>{ath ? fmtPrice(ath) : "—"}</strong>
+            {athPct != null && <span className="cip-dn">{athPct.toFixed(2)}%</span>}
           </div>
         </div>
         <div className="cip-rec">
           <div>
             <span className="cip-rec-t">{t("coinInfo.atl")}</span>
-            <span className="cip-rec-d">{dateStr(r?.atl_date)}</span>
+            <span className="cip-rec-d">{dateStr(atlDate)}</span>
           </div>
           <div className="cip-rec-r">
-            <strong>{r?.atl ? fmtPrice(r.atl) : "—"}</strong>
-            {r?.atl_change_percentage != null && <span className="cip-up">+{r.atl_change_percentage.toLocaleString(undefined, { maximumFractionDigits: 1 })}%</span>}
+            <strong>{atl ? fmtPrice(atl) : "—"}</strong>
+            {atlPct != null && <span className="cip-up">+{atlPct.toLocaleString(undefined, { maximumFractionDigits: 1 })}%</span>}
           </div>
         </div>
       </section>

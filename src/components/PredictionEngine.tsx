@@ -25,7 +25,7 @@ function donutSlice(cx: number, cy: number, or_: number, ir: number, a0: number,
 
 
 interface Props {
-  btcData: Partial<{ rsi: number; macd: number; macdSignal: number; fundingRate: number; longShortRatio: number; price: number }> | null;
+  btcData: Partial<{ rsi: number; macd: number; macdSignal: number; fundingRate: number; longShortRatio: number; price: number; fundingAvailable: boolean; longShortAvailable: boolean }> | null;
   coin: CoinSymbol;
   livePrice: number | null;
   onOpenAuth?: () => void;
@@ -189,7 +189,9 @@ export function PredictionEngine({ btcData, coin, livePrice, onOpenAuth, onOpenU
       setLoading(false);
     };
     load();
-    return () => { cancelled = true; };
+    // Reset the 60s guard too, or the next run (coin switch, or React's
+    // dev double-mount) skips loading and the loaders spin forever.
+    return () => { cancelled = true; lastFetch.current = 0; };
   }, [coin]);
 
   const rsi         = btcData?.rsi         ?? 50;
@@ -197,6 +199,9 @@ export function PredictionEngine({ btcData, coin, livePrice, onOpenAuth, onOpenU
   const macdSig     = btcData?.macdSignal  ?? 0;
   const fundingRate = btcData?.fundingRate ?? 0;
   const lsRatio     = btcData?.longShortRatio ?? 1;
+  // No live source answered: show "—" instead of a made-up 0% / 1.00.
+  const frKnown     = !!btcData && btcData.fundingAvailable !== false;
+  const lsKnown     = !!btcData && btcData.longShortAvailable !== false;
   const fgValue     = fearGreed?.value ?? 50;
   const poc         = poc4h || price;
 
@@ -254,10 +259,10 @@ export function PredictionEngine({ btcData, coin, livePrice, onOpenAuth, onOpenU
     },
     {
       name: t("predEngine.frName"),
-      value: `${(fundingRate * 100).toFixed(4)}%`,
+      value: frKnown ? `${(fundingRate * 100).toFixed(4)}%` : "—",
       score: s3,
       icon: "💸",
-      detail: fundingRate > 0.001
+      detail: !frKnown ? "—" : fundingRate > 0.001
         ? t("predEngine.frHigh",    { fr: (fundingRate * 100).toFixed(4), price: fmtK(price) })
         : fundingRate < -0.001
         ? t("predEngine.frLow",     { fr: (Math.abs(fundingRate) * 100).toFixed(4), price: fmtK(price) })
@@ -265,10 +270,10 @@ export function PredictionEngine({ btcData, coin, livePrice, onOpenAuth, onOpenU
     },
     {
       name: t("predEngine.lsName"),
-      value: lsRatio.toFixed(2),
+      value: lsKnown ? lsRatio.toFixed(2) : "—",
       score: s4,
       icon: "⚖️",
-      detail: lsRatio > 1.5
+      detail: !lsKnown ? "—" : lsRatio > 1.5
         ? t("predEngine.lsCrowded",  { ls: lsRatio.toFixed(2), price: fmtK(price) })
         : lsRatio > 1.1
         ? t("predEngine.lsBull",     { ls: lsRatio.toFixed(2), price: fmtK(price) })

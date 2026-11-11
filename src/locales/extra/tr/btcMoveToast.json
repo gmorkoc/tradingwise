@@ -6,6 +6,8 @@
     "bearish": "DÜŞÜŞ",
     "priceAlert": "{{coin}} FİYAT UYARISI",
     "inLastMove": "son harekette {{change}} ({{pct}}%)",
-    "dismiss": "Kapat"
+    "dismiss": "Kapat",
+    "snooze": "1s ertele",
+    "snoozeAria": "Balina uyarılarını 1 saat ertele"
   }
 }

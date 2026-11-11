@@ -6,6 +6,8 @@
     "bearish": "BAJISTA",
     "priceAlert": "ALERTA DE PRECIO {{coin}}",
     "inLastMove": "{{change}} ({{pct}}%) en el último movimiento",
-    "dismiss": "Descartar"
+    "dismiss": "Descartar",
+    "snooze": "Pausar 1h",
+    "snoozeAria": "Pausar alertas de ballenas durante 1 hora"
   }
 }

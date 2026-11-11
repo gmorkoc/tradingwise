@@ -235,11 +235,17 @@ html[data-theme="light"] .fnb-agent-dot {
 }
 .fnb-agent-ring--2 { animation-delay: 0.7s; }
 .fnb-agent-ring--3 { animation-delay: 1.4s; }
+/* Anchored to the bar itself (not the screen), so it always sits just above
+   the nav — a fixed bottom offset ignored the iPhone home-indicator inset and
+   landed on top of the bar. Pointer lines up with the Agent orb (centre). */
 .fnb-agent-callout {
-  position: fixed;
+  position: absolute;
   left: 50%;
-  bottom: 88px;
-  transform: translateX(-50%);
+  bottom: calc(100% + 12px);
+  /* `translate`, not `transform`: the pop-in animation (ta-callout-pop) sets
+     transform and was wiping the centring, pushing the bubble right. */
+  translate: -50% 0;
+  width: max-content;
   z-index: 261;
   max-width: 220px;
   padding: 10px 14px;

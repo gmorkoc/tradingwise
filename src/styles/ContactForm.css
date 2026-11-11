@@ -205,7 +205,7 @@
   padding-right: 36px;
   cursor: pointer;
   text-align: left;
-  color: var(--color-text-primary);
+  color: var(--color-text);
 }
 .cf-select-chev { transition: transform 0.2s ease; }
 .cf-select--open + .cf-select-chev { transform: translateY(-50%) rotate(180deg); }
@@ -218,9 +218,15 @@
   margin: 0;
   padding: 4px;
   list-style: none;
-  background: var(--color-bg-primary, #fff);
-  border: 1px solid var(--color-border, rgba(127, 127, 127, 0.25));
+  /* Follows the theme (dark default, light override below). */
+  background: #1c1c1f;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+}
+html[data-theme="light"] .cf-select-list {
+  background: #fff;
+  border-color: rgba(0, 0, 0, 0.1);
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
 }
 .cf-select-opt {
@@ -233,13 +239,13 @@
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: var(--color-text-primary);
+  color: var(--color-text);
   font: inherit;
   font-size: 15px;
   text-align: left;
   cursor: pointer;
 }
-.cf-select-opt:active { background: var(--color-bg-secondary, rgba(127, 127, 127, 0.12)); }
+.cf-select-opt:active { background: rgba(127, 127, 127, 0.16); }
 .cf-select-opt--on { font-weight: 600; }
 .cf-select-opt--on svg { color: #3b82f6; }
 .cf-select-chev {

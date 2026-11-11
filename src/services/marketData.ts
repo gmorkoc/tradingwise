@@ -18,13 +18,17 @@
 // CoinPaprika's free tier requires a credit — usePaprikaShown() lets a page
 // show a small "Data: CoinPaprika" note only while its data is on screen.
 import { useSyncExternalStore } from "react";
+import { Capacitor } from "@capacitor/core";
 import { fetchBn } from "./coinglass";
 import { CATALOG } from "./coinCatalog";
 
-const CG = "https://api.coingecko.com/api/v3";
+// CoinGecko goes through our server (middleware.ts /gecko-api), which adds
+// the API key and picks free vs paid host — so switching plans or keys is
+// a Vercel setting, never an app update. The app (capacitor://) calls the
+// live site's route directly.
+const CG = `${Capacitor.isNativePlatform() ? "https://www.coinhintz.io" : ""}/gecko-api/api/v3`;
 const PAPRIKA = "https://api.coinpaprika.com/v1";
 const LORE = "https://api.coinlore.net/api";
-const CG_API_KEY = import.meta.env.VITE_COINGECKO_API_KEY as string | undefined;
 
 // ── Types (CoinGecko-shaped) ──────────────────────────────────────────────
 export type DataSource = "cg" | "pp" | "cl";
@@ -309,10 +313,8 @@ function dedupeRows(rows: MarketCoin[]): MarketCoin[] {
 
 // ── CoinGecko ─────────────────────────────────────────────────────────────
 async function cgGet<T>(path: string, valid: (d: T) => boolean): Promise<T> {
-  // Key in the query string, not a header — a custom header triggers a CORS
-  // preflight CoinGecko's Access-Control-Allow-Headers doesn't allow.
-  const url = `${CG}${path}${CG_API_KEY ? `${path.includes("?") ? "&" : "?"}x_cg_demo_api_key=${CG_API_KEY}` : ""}`;
-  const d = (await httpJson(url)) as T;
+  // The key is added server-side (see CG above).
+  const d = (await httpJson(`${CG}${path}`)) as T;
   if (!d || !valid(d)) throw new BadPayload();
   return d;
 }
@@ -562,7 +564,9 @@ export function getMarkets(): Promise<MarketCoin[]> {
     )).map(cgToCoin)],
     ["pp", ppTop],
     ["cl", clTop],
-  ]);
+  // Highest market cap first whichever source answered — CoinGecko sends
+  // that order, the backup sources (used when it's out of quota) don't.
+  ]).then((rows) => [...rows].sort((a, b) => (b.market_cap ?? 0) - (a.market_cap ?? 0)));
 }
 
 /** CoinGecko id for a symbol: from the list when CoinGecko answered it,

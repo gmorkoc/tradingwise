@@ -76,8 +76,8 @@ Live market data:
 - Liquidation Above: $${btcData.liquidationAbove?.toFixed(2)}
 - Liquidation Below: $${btcData.liquidationBelow?.toFixed(2)}${liqMid ? `\n- Liquidation Midpoint: $${liqMid} (price is ${Number(btcData.price) >= Number(liqMid) ? "ABOVE — bullish lean" : "BELOW — bearish lean"})` : ""}
 - Open Interest: $${btcData.openInterest ? (btcData.openInterest / 1e9).toFixed(2) + "B" : "N/A"}
-- Funding Rate: ${btcData.fundingRate?.toFixed(4)} (${(btcData.fundingRate ?? 0) > 0 ? "positive — longs paying" : "negative — shorts paying"})
-- Long/Short Ratio: ${btcData.longShortRatio?.toFixed(2)} (${(btcData.longShortRatio ?? 1) > 1 ? "more longs" : "more shorts"})
+- Funding Rate: ${btcData.fundingAvailable === false ? "N/A" : `${btcData.fundingRate?.toFixed(4)} (${(btcData.fundingRate ?? 0) > 0 ? "positive — longs paying" : "negative — shorts paying"})`}
+- Long/Short Ratio: ${btcData.longShortAvailable === false ? "N/A" : `${btcData.longShortRatio?.toFixed(2)} (${(btcData.longShortRatio ?? 1) > 1 ? "more longs" : "more shorts"})`}
 - RSI: ${btcData.rsi?.toFixed(1)} (${(btcData.rsi ?? 50) >= 70 ? "overbought" : (btcData.rsi ?? 50) <= 30 ? "oversold" : "neutral"})
 - MACD: ${btcData.macd?.toFixed(4)} (${(btcData.macd ?? 0) > 0 ? "bullish" : "bearish"})
 - MACD Signal: ${btcData.macdSignal?.toFixed(4) ?? "N/A"}${fearGreed ? `

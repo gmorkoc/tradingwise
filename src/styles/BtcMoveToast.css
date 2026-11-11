@@ -181,6 +181,39 @@
   background: rgba(255,255,255,0.22);
 }
 
+/* ✕ on top, "Snooze 1h" under it (whale alerts). */
+.btc-toast-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 6px;
+  align-self: stretch;
+  flex-shrink: 0;
+}
+.btc-toast-actions--snooze { justify-content: center; }
+.btc-toast-close.btc-toast-close {
+  background: none;
+  border: none;
+  box-shadow: none;
+  opacity: 0.7;
+}
+.btc-toast-close.btc-toast-close:hover { background: none; opacity: 1; }
+.btc-toast-snooze {
+  border: none;
+  border-radius: 99px;
+  padding: 3px 9px;
+  background: rgba(255, 255, 255, 0.12);
+  color: inherit;
+  font: inherit;
+  font-size: 0.66rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+html[data-theme="light"] .btc-toast-close.btc-toast-close { background: none; border: none; }
+html[data-theme="light"] .btc-toast-snooze { background: rgba(0, 0, 0, 0.07); color: #111114; }
+
 /* Progress bar */
 .btc-toast-bar {
   position: relative;
@@ -199,4 +232,45 @@
     top: max(12px, var(--native-safe-area-top, env(safe-area-inset-top)));
     border-radius: 14px;
   }
+}
+
+/* Phones: the same card and position as every other in-app notification
+   (PushToast — iOS banner look, follows the app theme). */
+@media (max-width: 900px) {
+  html .btc-toast {
+    width: calc(100vw - 16px);
+    top: max(6px, calc(var(--native-safe-area-top, env(safe-area-inset-top, 0px)) - 3px));
+    min-height: 64px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border: none;
+    border-radius: 24px;
+    background: rgba(40, 40, 44, 0.84);
+    -webkit-backdrop-filter: blur(30px) saturate(180%);
+    backdrop-filter: blur(30px) saturate(180%);
+    box-shadow: 0 10px 34px rgba(0, 0, 0, 0.5);
+  }
+  html .btc-toast-glow { display: none; }
+  html .btc-toast-bar { display: none; }
+  /* Same layout as before, just scaled to an iOS banner's ~64pt height. */
+  html .btc-toast-inner { padding: 9px 12px 9px 12px; gap: 11px; }
+  html .btc-toast-btc-icon { width: 40px; height: 40px; }
+  html .btc-toast-whale { font-size: 1.3rem; }
+  html .btc-toast-body { gap: 2px; min-width: 0; }
+  html .btc-toast-price { font-size: 1.05rem; padding-top: 1px; }
+  html .btc-toast-usd { font-size: 0.75rem; }
+  html .btc-toast-change { font-size: 0.64rem; }
+  html .btc-toast-close { width: 24px; height: 24px; border-radius: 7px; font-size: 0.75rem; }
+  html[data-theme="light"] .btc-toast {
+    background: rgba(246, 246, 248, 0.84);
+    box-shadow: 0 10px 34px rgba(0, 0, 0, 0.16);
+  }
+  html[data-theme="light"] .btc-toast-price,
+  html[data-theme="light"] .btc-toast-close { color: #111114; }
+  html[data-theme="light"] .btc-toast-tag { color: rgba(60, 60, 67, 0.6); }
+  html[data-theme="light"] .btc-toast-usd { color: rgba(60, 60, 67, 0.75); }
+  html[data-theme="light"] .btc-toast-inner { color: #111114; }
+  html[data-theme="light"] .btc-toast-close { background: rgba(0, 0, 0, 0.06); border-color: rgba(0, 0, 0, 0.08); }
 }

@@ -71,8 +71,8 @@ export function CoinMarketMood({ coin }: Props) {
         if (cancelled) return;
         setData({
           price: typeof btc?.price === "number" ? btc.price : null,
-          fundingRate: typeof btc?.fundingRate === "number" ? btc.fundingRate : null,
-          longShortRatio: typeof btc?.longShortRatio === "number" ? btc.longShortRatio : null,
+          fundingRate: typeof btc?.fundingRate === "number" && btc.fundingAvailable !== false ? btc.fundingRate : null,
+          longShortRatio: typeof btc?.longShortRatio === "number" && btc.longShortAvailable !== false ? btc.longShortRatio : null,
           fearGreedValue: fg?.current.value ?? null,
           fearGreedLabel: fg?.current.classification ?? null,
           rsi: typeof btc?.rsi === "number" ? btc.rsi : null,

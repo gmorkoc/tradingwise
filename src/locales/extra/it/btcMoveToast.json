@@ -6,6 +6,8 @@
     "bearish": "RIBASSISTA",
     "priceAlert": "AVVISO PREZZO {{coin}}",
     "inLastMove": "{{change}} ({{pct}}%) nell'ultimo movimento",
-    "dismiss": "Chiudi"
+    "dismiss": "Chiudi",
+    "snooze": "Posticipa 1h",
+    "snoozeAria": "Posticipa gli avvisi balena di 1 ora"
   }
 }

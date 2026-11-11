@@ -19,11 +19,13 @@ interface Props {
   /** A price move or a whale transfer — both use this one toast. */
   alert: BtcMoveAlert | WhaleToastAlert | null;
   onDismiss: () => void;
-  /** ✕ button only (falls back to onDismiss) — whale alerts snooze here. */
+  /** ✕ button only (falls back to onDismiss). */
   onClose?: () => void;
+  /** Whale alerts: the "Snooze 1h" button. */
+  onSnooze?: () => void;
 }
 
-export function BtcMoveToast({ alert, onDismiss, onClose }: Props) {
+export function BtcMoveToast({ alert, onDismiss, onClose, onSnooze }: Props) {
   const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
   const [progress, setProgress] = useState(100);
@@ -169,15 +171,30 @@ export function BtcMoveToast({ alert, onDismiss, onClose }: Props) {
           </div>
         )}
 
-        {/* Close */}
-        <button
-          className="btc-toast-close"
-          onClick={(e) => {
-            e.stopPropagation();
-            if (onClose) { setVisible(false); onClose(); } else dismiss();
-          }}
-          aria-label={t("btcMoveToast.dismiss")}
-        >✕</button>
+        {/* Close (+ Snooze on whale alerts) */}
+        <div className={`btc-toast-actions${whale && onSnooze ? " btc-toast-actions--snooze" : ""}`}>
+          {/* Whale alerts: Snooze only, no ✕ (swipe still dismisses). */}
+          {!(whale && onSnooze) && (
+            <button
+              className="btc-toast-close"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onClose) { setVisible(false); onClose(); } else dismiss();
+              }}
+              aria-label={t("btcMoveToast.dismiss")}
+            >✕</button>
+          )}
+          {whale && onSnooze && (
+            <button
+              type="button"
+              className="btc-toast-snooze"
+              onClick={(e) => { e.stopPropagation(); setVisible(false); onSnooze(); }}
+              aria-label={t("btcMoveToast.snoozeAria", "Snooze whale alerts for 1 hour")}
+            >
+              {t("btcMoveToast.snooze", "Snooze 1h")}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Progress bar */}

@@ -1,6 +1,7 @@
 {
   "pushToast": {
     "buySignal": "Señal de compra",
+    "now": "ahora",
     "sellSignal": "Señal de venta",
     "watchlist": "Lista de seguimiento",
     "watchlisted": "En tu lista",

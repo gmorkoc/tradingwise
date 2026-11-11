@@ -8,6 +8,7 @@
 // Data: services/marketData.ts getCoinDetails — CoinGecko first, then
 // CoinPaprika, then CoinLore (fields a source lacks come back null).
 import { getCoinDetails } from "./marketData";
+import { COINALYZE_BASE } from "./coinglass";
 
 export interface CoinMeta {
   marketCapUSD: number | null;
@@ -60,7 +61,7 @@ export async function fetchCoinMeta(coin: string): Promise<CoinMeta | null> {
 // users' networks, so it's not used.
 export async function fetchOpenInterestCoins(coin: string): Promise<number | null> {
   try {
-    const res = await fetch(`/coinalyze-api/v1/open-interest?symbols=${coin}USDT_PERP.A`);
+    const res = await fetch(`${COINALYZE_BASE}/v1/open-interest?symbols=${coin}USDT_PERP.A`);
     if (!res.ok) return null;
     const d = await res.json();
     const oi = Array.isArray(d) && typeof d[0]?.value === "number" ? d[0].value : NaN;

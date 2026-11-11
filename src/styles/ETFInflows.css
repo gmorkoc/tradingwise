@@ -407,7 +407,10 @@ html[data-theme="light"] .etf-flow-bar-wrap { background: rgba(0,0,0,0.06); }
 @media (max-width: 640px) {
   .etf-wrap { padding: 14px 12px; gap: 14px; }
   .etf-summary-row { grid-template-columns: repeat(2, 1fr); }
-  .etf-aum { display: none; }
+  .etf-aum, .etf-aum-h { display: none; }
+  /* Never wider than the phone: the table scrolls inside its card. */
+  .etf-table-card { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .etf-table th, .etf-table td { padding: 10px 10px; }
   .etf-table th:last-child,
   .etf-table td:last-child { display: none; }
 }

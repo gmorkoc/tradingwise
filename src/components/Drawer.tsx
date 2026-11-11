@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import i18n from "../i18n";
 import { CoinHintzLogo } from "./CoinHintzLogo";
@@ -122,6 +122,21 @@ export const Drawer: React.FC<DrawerProps> = ({
     try { localStorage.setItem("lang", code); } catch { /* noop */ }
   };
 
+  // Language: our own dropdown (same as the contact form's), not the native
+  // <select>, which opens iOS's system picker wheel.
+  const langRef = useRef<HTMLDivElement>(null);
+  const [langOpen, setLangOpen] = useState(false);
+  useEffect(() => {
+    if (!langOpen) return;
+    const away = (e: PointerEvent) => {
+      if (langRef.current && !langRef.current.contains(e.target as Node)) setLangOpen(false);
+    };
+    document.addEventListener("pointerdown", away);
+    return () => document.removeEventListener("pointerdown", away);
+  }, [langOpen]);
+  useEffect(() => { if (!isOpen) setLangOpen(false); }, [isOpen]);
+  const curLang = LANGUAGES.find((l) => i18n.language?.startsWith(l.code)) ?? LANGUAGES[0];
+
   return (
     <>
       {isOpen && <div className="drawer-backdrop" onClick={onClose} />}
@@ -222,9 +237,38 @@ export const Drawer: React.FC<DrawerProps> = ({
 
             <div className="drawer-row">
               <span className="drawer-row-lead"><Ico name="language" /><span className="drawer-row-label">{t("drawer.language")}</span></span>
-              <select className="drawer-coin-select" value={i18n.language} onChange={(e) => handleLanguageChange(e.target.value)}>
-                {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
-              </select>
+              <div className="drawer-lang-wrap" ref={langRef}>
+                <button
+                  type="button"
+                  className={`drawer-coin-select drawer-lang-btn${langOpen ? " drawer-lang-btn--open" : ""}`}
+                  aria-haspopup="listbox"
+                  aria-expanded={langOpen}
+                  onClick={() => setLangOpen((v) => !v)}
+                >
+                  {curLang.label}
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
+                </button>
+                {langOpen && (
+                  <ul className="drawer-lang-list" role="listbox" aria-label={t("drawer.language")}>
+                    {LANGUAGES.map((l) => (
+                      <li key={l.code}>
+                        <button
+                          type="button"
+                          role="option"
+                          aria-selected={l.code === curLang.code}
+                          className={`drawer-lang-opt${l.code === curLang.code ? " drawer-lang-opt--on" : ""}`}
+                          onClick={() => { handleLanguageChange(l.code); setLangOpen(false); }}
+                        >
+                          <span>{l.label}</span>
+                          {l.code === curLang.code && (
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+                          )}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
           </section>
 

@@ -344,7 +344,9 @@ export function MarketCycles({ coin, theme }: { coin: string; theme: "dark" | "l
                 const step = rbRange === "all" ? 7 * 86400 : 86400;
                 const times: UTCTimestamp[] = [];
                 for (let t = pr[0].time; t <= pr[pr.length - 1].time; t = (t + step) as UTCTimestamp) times.push(t);
-                times.push(pr[pr.length - 1].time);
+                // Add the last day unless the loop already ended on it — a
+                // repeated time makes the chart reject the whole series.
+                if (times[times.length - 1] !== pr[pr.length - 1].time) times.push(pr[pr.length - 1].time);
                 // Top band first: each band fills down to the bottom and the
                 // next (lower) one paints over it → stacked rainbow.
                 for (let i = RAINBOW.length - 1; i >= 0; i--) {

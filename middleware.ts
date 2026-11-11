@@ -1,4 +1,4 @@
-export const config = { matcher: ['/cg-api/:path*', '/cg-sdk/:path*', '/coinalyze-api/:path*', '/bn-api/:path*', '/gecko-api/:path*', '/ff-cal', '/etf-api/:path*'] };
+export const config = { matcher: ['/cg-api/:path*', '/cg-sdk/:path*', '/coinalyze-api/:path*', '/bn-api/:path*', '/gecko-api/:path*', '/ff-cal', '/etf-api/:path*', '/okx-api/:path*'] };
 
 // Reflects whatever Origin actually sent the request, instead of checking
 // it against a fixed web-origin allowlist — that allowlist never included
@@ -21,6 +21,11 @@ function corsHeaders(req: Request): Record<string, string> {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   };
 }
+
+// Last good Coinalyze answers (see the /coinalyze-api route below).
+const coinalyzeCache = new Map<string, { at: number; body: string }>();
+// Last good CoinGecko answers (see the /gecko-api route below).
+const geckoCache = new Map<string, { at: number; body: string }>();
 
 export default async function middleware(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') {
@@ -73,6 +78,31 @@ export default async function middleware(req: Request): Promise<Response> {
     });
   }
 
+  // ── OKX proxy ─────────────────────────────────────────────────────────────
+  // OKX's rubik (stats) endpoints send no CORS header at all, so the iOS app
+  // (capacitor://localhost) can't call them directly. Was a vercel.json
+  // rewrite, which passes OKX's missing CORS headers through unchanged.
+  if (url.pathname.startsWith('/okx-api/')) {
+    const okxPath = url.pathname.replace(/^\/okx-api\//, '');
+    const upstream = new URL(`https://www.okx.com/${okxPath}`);
+    upstream.search = url.search;
+    try {
+      const response = await fetch(upstream.toString(), { headers: { accept: 'application/json' } });
+      const text = await response.text();
+      return new Response(text, {
+        status: response.status,
+        headers: {
+          'content-type': 'application/json',
+          'cache-control': 'public, s-maxage=30, stale-while-revalidate=60',
+          vary: 'Origin',
+          ...corsHeaders(req),
+        },
+      });
+    } catch {
+      return new Response('{"code":"502","data":[]}', { status: 502, headers: { 'content-type': 'application/json', ...corsHeaders(req) } });
+    }
+  }
+
   // ── CoinGlass SDK proxy (preserves /api/ prefix for SDK-generated paths) ─
   if (url.pathname.startsWith('/cg-sdk/')) {
     const cgPath = url.pathname.replace(/^\/cg-sdk\//, '');
@@ -93,10 +123,40 @@ export default async function middleware(req: Request): Promise<Response> {
     const caPath = url.pathname.replace(/^\/coinalyze-api\//, '');
     const upstream = new URL(`https://api.coinalyze.net/${caPath}`);
     upstream.search = url.search;
-    const response = await fetch(upstream.toString(), {
-      headers: { accept: 'application/json', 'api_key': process.env.VITE_COINALYZE_API_KEY ?? '' },
-    });
+    // One shared key for every visitor hit Coinalyze's rate limit (429), so
+    // successful answers are reused for 60s — per instance in memory, and by
+    // the CDN/browser via cache-control — instead of fetched per visitor.
+    // History routes carry from/to in seconds — round them to 5 min so
+    // repeat calls share one cache entry instead of each being unique.
+    for (const p of ['from', 'to']) {
+      const v = Number(upstream.searchParams.get(p));
+      if (v > 0) upstream.searchParams.set(p, String(Math.floor(v / 300) * 300));
+    }
+    const key = upstream.toString();
+    const hit = coinalyzeCache.get(key);
+    const cacheHeaders = { 'content-type': 'application/json', 'cache-control': 'public, max-age=30, s-maxage=60, stale-while-revalidate=120', vary: 'Origin', ...corsHeaders(req) };
+    if (hit && Date.now() - hit.at < 60_000) {
+      return new Response(hit.body, { status: 200, headers: cacheHeaders });
+    }
+    // On failure, an answer up to 10 min old beats none — older is stale.
+    const fallback = hit && Date.now() - hit.at < 600_000 ? hit : null;
+    let response: Response;
+    try {
+      response = await fetch(key, {
+        headers: { accept: 'application/json', 'api_key': process.env.VITE_COINALYZE_API_KEY ?? '' },
+      });
+    } catch {
+      if (fallback) return new Response(fallback.body, { status: 200, headers: { ...cacheHeaders, 'x-stale': '1' } });
+      return new Response('[]', { status: 502, headers: { 'content-type': 'application/json', ...corsHeaders(req) } });
+    }
     const text = await response.text();
+    if (response.ok) {
+      coinalyzeCache.set(key, { at: Date.now(), body: text });
+      if (coinalyzeCache.size > 300) coinalyzeCache.delete(coinalyzeCache.keys().next().value as string);
+      return new Response(text, { status: 200, headers: cacheHeaders });
+    }
+    // Rate-limited: serve the last good answer if it's recent enough.
+    if (fallback) return new Response(fallback.body, { status: 200, headers: { ...cacheHeaders, 'x-stale': '1' } });
     return new Response(text, {
       status: response.status,
       headers: { 'content-type': 'application/json', ...corsHeaders(req) },
@@ -114,14 +174,38 @@ export default async function middleware(req: Request): Promise<Response> {
   // instead. The other CoinGecko calls in this app (global/coins/markets/
   // trending/sentiment) go straight to api.coingecko.com directly instead
   // of through this proxy — those never hit this gap.
+  // The key lives here, not in the app: COINGECKO_API_KEY (falls back to
+  // VITE_COINGECKO_API_KEY), and COINGECKO_PLAN=pro switches to the paid
+  // host + header. Changing plan/key = Vercel env + redeploy, no app update.
+  // Answers are reused for 60s (in memory + CDN) so every visitor shares
+  // one upstream call; on a 429/error a recent (≤10 min) answer is served.
   if (url.pathname.startsWith('/gecko-api/')) {
     const gkPath = url.pathname.replace(/^\/gecko-api\//, '');
-    const upstream = new URL(`https://api.coingecko.com/${gkPath}`);
+    const pro = process.env.COINGECKO_PLAN === 'pro';
+    const key = process.env.COINGECKO_API_KEY || process.env.VITE_COINGECKO_API_KEY || '';
+    const upstream = new URL(`https://${pro ? 'pro-api' : 'api'}.coingecko.com/${gkPath}`);
     upstream.search = url.search;
-    const response = await fetch(upstream.toString(), {
-      headers: { accept: 'application/json' },
-    });
+    const cacheKey = upstream.toString();
+    const hit = geckoCache.get(cacheKey);
+    const okHeaders = { 'content-type': 'application/json', 'cache-control': 'public, max-age=30, s-maxage=60, stale-while-revalidate=300', vary: 'Origin', ...corsHeaders(req) };
+    if (hit && Date.now() - hit.at < 60_000) return new Response(hit.body, { status: 200, headers: okHeaders });
+    const fallback = hit && Date.now() - hit.at < 600_000 ? hit : null;
+    const headers: Record<string, string> = { accept: 'application/json' };
+    if (key) headers[pro ? 'x-cg-pro-api-key' : 'x-cg-demo-api-key'] = key;
+    let response: Response;
+    try {
+      response = await fetch(cacheKey, { headers });
+    } catch {
+      if (fallback) return new Response(fallback.body, { status: 200, headers: { ...okHeaders, 'x-stale': '1' } });
+      return new Response('{}', { status: 502, headers: { 'content-type': 'application/json', ...corsHeaders(req) } });
+    }
     const text = await response.text();
+    if (response.ok) {
+      geckoCache.set(cacheKey, { at: Date.now(), body: text });
+      if (geckoCache.size > 300) geckoCache.delete(geckoCache.keys().next().value as string);
+      return new Response(text, { status: 200, headers: okHeaders });
+    }
+    if (fallback) return new Response(fallback.body, { status: 200, headers: { ...okHeaders, 'x-stale': '1' } });
     return new Response(text, {
       status: response.status,
       headers: { 'content-type': 'application/json', ...corsHeaders(req) },

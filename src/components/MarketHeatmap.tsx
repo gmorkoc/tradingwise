@@ -205,7 +205,7 @@ export function MarketHeatmap() {
       <div className="mhm-canvas" ref={containerRef}>
         {loading && coins.length === 0 && <p className="mhm-loading">{t("marketHeatmap.loading", "Loading…")}</p>}
 
-        {tileRects.map(({ item: tile, x, y, width, height }) => {
+        {tileRects.map(({ item: tile, x, y, width, height }, tileIdx) => {
           // Font size tracks the tile's AREA (sqrt of it) — proportional to
           // market cap/dominance in a squarified treemap — not its shorter
           // side, which is just incidental packing shape. No upper cap on
@@ -222,7 +222,8 @@ export function MarketHeatmap() {
           const showExtra = width >= 78 && height >= 56;
           return (
             <div
-              key={tile.symbol}
+              // Symbols repeat across coins (two "WETH", two "CC").
+              key={`${tile.symbol}-${tileIdx}`}
               className="mhm-tile"
               style={{
                 left: x, top: y, width, height,

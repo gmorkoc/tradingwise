@@ -4,6 +4,7 @@ import { BottomSheet } from "./BottomSheet";
 import { useTranslation, Trans } from "react-i18next";
 import i18next from "i18next";
 import { Capacitor } from "@capacitor/core";
+import { PENDING_PREDICT_EVENT, clearPendingPredict, getPendingPredict } from "../services/pendingPredict";
 import { Haptics, ImpactStyle } from "@capacitor/haptics";
 import { Filesystem, Directory } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
@@ -2257,6 +2258,23 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     if (!authUser) { onOpenAuth?.(); return; }
     setShowCompactView(true);
   };
+  // Shared predictions link for this coin (services/pendingPredict.ts):
+  // open predictions now if signed in, else ask to sign in once and open
+  // them as soon as the account exists.
+  const predictAskedRef = useRef(false);
+  useEffect(() => {
+    // Only the main chart page acts (not Advance Chart or the symbol sheet).
+    if (pageMode || prefsScope === "sheet") return;
+    const check = () => {
+      if (getPendingPredict() !== coin) return;
+      if (authUser) { clearPendingPredict(); setShowCompactView(true); return; }
+      if (!predictAskedRef.current) { predictAskedRef.current = true; onOpenAuth?.(); }
+    };
+    check();
+    window.addEventListener(PENDING_PREDICT_EVENT, check);
+    return () => window.removeEventListener(PENDING_PREDICT_EVENT, check);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coin, authUser]);
   const consensusOn = prefsScope === "trade" && !pageMode;
   // Buy & Sell scanner's current call for this coin (Pro+; RLS-readable).
   const [scanSignal, setScanSignal] = useState<{ direction: "buy" | "sell"; active: boolean } | null>(null);

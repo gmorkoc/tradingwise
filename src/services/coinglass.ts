@@ -11,6 +11,13 @@ import { getMarkets, getGlobal } from './marketData';
 // reason /bn-api exists), but the ban circuit breaker below still protects
 // against retry storms regardless of which URL is used.
 const BN_BASE = Capacitor.isNativePlatform() ? 'https://data-api.binance.vision' : '/bn-api';
+// The iOS app loads from capacitor://localhost, so relative proxy paths
+// (/coinalyze-api, /cg-api) point nowhere there — it calls the live site's
+// proxy instead (middleware.ts allows the app's origin). OKX allows the app
+// directly.
+const SITE = Capacitor.isNativePlatform() ? 'https://www.coinhintz.io' : '';
+export const COINALYZE_BASE = `${SITE}/coinalyze-api`;
+const OKX_BASE = Capacitor.isNativePlatform() ? 'https://www.okx.com' : '/okx-api';
 
 function addRetry(instance: AxiosInstance, retries = 2) {
   instance.interceptors.response.use(undefined, async (err) => {
@@ -70,11 +77,20 @@ function addBanCircuitBreaker(instance: AxiosInstance) {
 }
 
 const api = axios.create({
-  baseURL: '/cg-api',
+  baseURL: `${SITE}/cg-api`,
   timeout: 15000,
   headers: { accept: 'application/json' },
 });
 addRetry(api);
+// Our CoinGlass plan answers every endpoint this app uses with
+// {"code":"401","msg":"Upgrade plan"}, so each call was a wasted request on
+// every page. Every caller already falls back to other sources when this
+// fails, so short-circuit it with no network request. Flip to true after
+// upgrading the plan.
+const COINGLASS_ENABLED = false;
+if (!COINGLASS_ENABLED) {
+  api.interceptors.request.use(() => Promise.reject(new Error('CoinGlass disabled (plan)')));
+}
 
 
 
@@ -144,6 +160,10 @@ interface BTCData {
   macdSignal: number;
   cmeGap: CMEGap | null;
   timestamp: number;
+  /** false when no source answered (fundingRate / longShortRatio are then
+   *  neutral placeholders — show "—"). Missing = treat as available. */
+  fundingAvailable?: boolean;
+  longShortAvailable?: boolean;
 }
 
 interface PriceDataPoint {
@@ -827,9 +847,25 @@ export const coinglass = {
         // this uses Coinalyze instead, already proven reachable above.
         // Coinalyze reports OI in base-asset units (BTC), not USD — this
         // gets multiplied by price below to match CoinGlass's convention.
-        fetch(`/coinalyze-api/v1/open-interest?symbols=${symbol}_PERP.A`).then(r => r.json()).catch(() => null),
-        fetch(`/coinalyze-api/v1/funding-rate?symbols=${symbol}_PERP.A`).then(r => r.json()).catch(() => null),
-        fetch(`/coinalyze-api/v1/long-short-ratio-history?symbols=${symbol}_PERP.A&interval=1hour&from=${lsFrom}&to=${lsTo}`).then(r => r.json()).catch(() => null),
+        // OKX first: works from the app and the web, no shared rate limit.
+        // Coinalyze (rate-limited shared key) is only asked when OKX has no
+        // answer — see below.
+        fetch(`${OKX_BASE}/api/v5/public/open-interest?instType=SWAP&instId=${coin}-USDT-SWAP`).then(r => r.json()).catch(() => null),
+        fetch(`${OKX_BASE}/api/v5/public/funding-rate?instId=${coin}-USDT-SWAP`).then(r => r.json()).catch(() => null),
+        // L/S: Coinalyze (Binance accounts) — OKX's account ratio runs on a
+        // different scale (~2.5–3 for BTC) than the 1–2 our signals are
+        // tuned for, and its rubik API sends no CORS header for the app.
+        fetch(`${COINALYZE_BASE}/v1/long-short-ratio-history?symbols=${symbol}_PERP.A&interval=1hour&from=${lsFrom}&to=${lsTo}`).then(r => r.json()).catch(() => null),
+      ]);
+      const okxOIRes = coinalyzeOIRes, okxFRRes = coinalyzeFRRes, czLSRes = coinalyzeLSRes;
+      const okxOIUsd = parseFloat(okxOIRes?.data?.[0]?.oiUsd ?? '');
+      const okxOICoins = parseFloat(okxOIRes?.data?.[0]?.oiCcy ?? '');
+      const okxFR = parseFloat(okxFRRes?.data?.[0]?.fundingRate ?? '');
+      // Coinalyze OI / funding only when OKX couldn't answer.
+      const needOi = !(isFinite(okxOIUsd) || isFinite(okxOICoins));
+      const [czOIRes, czFRRes] = await Promise.all([
+        needOi ? fetch(`${COINALYZE_BASE}/v1/open-interest?symbols=${symbol}_PERP.A`).then(r => r.json()).catch(() => null) : null,
+        !isFinite(okxFR) ? fetch(`${COINALYZE_BASE}/v1/funding-rate?symbols=${symbol}_PERP.A`).then(r => r.json()).catch(() => null) : null,
       ]);
 
       const candles = candlesRes;
@@ -848,12 +884,16 @@ export const coinglass = {
       const openInterestCg = oiRes?.data?.code === '0'
         ? parseFloat(oiRes.data.data?.[0]?.close ?? '')
         : NaN;
+      const openInterestOkx = isFinite(okxOIUsd) && okxOIUsd > 0 ? okxOIUsd
+        : isFinite(okxOICoins) && okxOICoins > 0 ? okxOICoins * price : NaN;
       const openInterestCoinalyze = (() => {
-        const row = Array.isArray(coinalyzeOIRes) ? coinalyzeOIRes[0] : null;
+        const row = Array.isArray(czOIRes) ? czOIRes[0] : null;
         const contracts = typeof row?.value === 'number' ? row.value : NaN;
         return isFinite(contracts) ? contracts * price : NaN;
       })();
+      // 0 = unknown (every display already shows "—" for 0).
       const openInterest = isFinite(openInterestCg) ? openInterestCg
+        : isFinite(openInterestOkx) ? openInterestOkx
         : isFinite(openInterestCoinalyze) ? openInterestCoinalyze
         : 0;
 
@@ -863,12 +903,14 @@ export const coinglass = {
         : NaN;
       const fundingRateDirect = parseFloat(bnFRDirectRes?.lastFundingRate ?? '');
       const fundingRateCoinalyze = (() => {
-        const row = Array.isArray(coinalyzeFRRes) ? coinalyzeFRRes[0] : null;
+        const row = Array.isArray(czFRRes) ? czFRRes[0] : null;
         return typeof row?.value === 'number' ? row.value / 100 : NaN;
       })();
+      const fundingKnown = [fundingRateCg, fundingRateDirect, fundingRateCoinalyze, okxFR].some((v) => isFinite(v));
       const fundingRate = isFinite(fundingRateCg) ? fundingRateCg
         : isFinite(fundingRateDirect) ? fundingRateDirect
         : isFinite(fundingRateCoinalyze) ? fundingRateCoinalyze
+        : isFinite(okxFR) ? okxFR
         : 0;
 
       const closes = candles.map(c => c.close);
@@ -891,13 +933,14 @@ export const coinglass = {
         return isFinite(ratio) ? Math.round(ratio * 100) / 100 : NaN;
       })();
       const lsRatioCoinalyze = (() => {
-        const entry = Array.isArray(coinalyzeLSRes)
-          ? coinalyzeLSRes.find((s: { symbol?: string }) => s.symbol === `${symbol}_PERP.A`)
+        const entry = Array.isArray(czLSRes)
+          ? czLSRes.find((s: { symbol?: string }) => s.symbol === `${symbol}_PERP.A`)
           : null;
         const hist = entry?.history;
         const last = Array.isArray(hist) && hist.length ? hist[hist.length - 1] : null;
         return typeof last?.r === 'number' ? Math.round(last.r * 100) / 100 : NaN;
       })();
+      const lsKnown = [lsRatioCg, lsRatioDirect, lsRatioCoinalyze].some((v) => isFinite(v));
       const longShortRatio = isFinite(lsRatioCg) ? lsRatioCg
         : isFinite(lsRatioDirect) ? lsRatioDirect
         : isFinite(lsRatioCoinalyze) ? lsRatioCoinalyze
@@ -912,6 +955,9 @@ export const coinglass = {
         openInterest,
         fundingRate,
         longShortRatio,
+        // false = no source answered: show "—", not the neutral placeholder.
+        fundingAvailable: fundingKnown,
+        longShortAvailable: lsKnown,
         rsi,
         macd: macdData.macd,
         macdSignal: macdData.signal,
@@ -1033,7 +1079,7 @@ export const coinglass = {
       if (isFinite(units) && units > 0) return save(units);
     } catch { /* fall through */ }
     try {
-      const r = await fetch(`/coinalyze-api/v1/open-interest?symbols=${coin}USDT_PERP.A`);
+      const r = await fetch(`${COINALYZE_BASE}/v1/open-interest?symbols=${coin}USDT_PERP.A`);
       const j = await r.json();
       const units = Array.isArray(j) && typeof j[0]?.value === 'number' ? j[0].value : NaN;
       if (isFinite(units) && units > 0) return save(units);
@@ -1177,7 +1223,7 @@ export const coinglass = {
     const [bnRes, bybitCgRes, okxRes, bitgetRes, cbCgRes, cbIntxRes, bnDirectRes, bybitDirectRes, coinalyzeRes] = await Promise.all([
       api.get('futures/funding-rate/history', { params: { symbol: sym, interval: '8h', limit: 1, exchange: 'Binance' } }).catch(() => null),
       api.get('futures/funding-rate/history', { params: { symbol: sym, interval: '8h', limit: 1, exchange: 'Bybit' }   }).catch(() => null),
-      fetch(`/okx-api/api/v5/public/funding-rate?instId=${coin}-USDT-SWAP`).then(r => r.json()).catch(() => null),
+      fetch(`${OKX_BASE}/api/v5/public/funding-rate?instId=${coin}-USDT-SWAP`).then(r => r.json()).catch(() => null),
       fetch(`https://api.bitget.com/api/v2/mix/market/current-fund-rate?symbol=${sym}&productType=USDT-FUTURES`).then(r => r.json()).catch(() => null),
       api.get('futures/funding-rate/history', { params: { symbol: sym, interval: '8h', limit: 1, exchange: 'Coinbase' } }).catch(() => null),
       fetch(`/coinbase-api/api/v1/instruments/${coin}-PERP/quote`).then(r => r.json()).catch(() => null),
@@ -1193,7 +1239,7 @@ export const coinglass = {
       // Bybit's own APIs are (they block US-based requests, which is what
       // this app's hosting currently is) — last-resort fallback so Binance/
       // Bybit still show real data instead of a fake neutral placeholder.
-      fetch(`/coinalyze-api/v1/funding-rate?symbols=${sym}_PERP.A,${sym}.6`).then(r => r.json()).catch(() => null),
+      fetch(`${COINALYZE_BASE}/v1/funding-rate?symbols=${sym}_PERP.A,${sym}.6`).then(r => r.json()).catch(() => null),
     ]);
 
     // Coinalyze's `value` is already a percentage (e.g. 0.0094 means
@@ -1766,7 +1812,7 @@ export async function getMacroContext(coin: CoinSymbol | string = 'BTC'): Promis
     // open-interest/history — same source as getAllBTCData's OI fallback.
     // Binance Futures direct (fapi.binance.com) is geo-blocked from this
     // app's hosting region entirely, so that's not an option here.
-    fetch(`/coinalyze-api/v1/open-interest-history?symbols=${sym}_PERP.A&interval=4hour&from=${oiFrom}&to=${oiTo}`).then(r => r.json()),
+    fetch(`${COINALYZE_BASE}/v1/open-interest-history?symbols=${sym}_PERP.A&interval=4hour&from=${oiFrom}&to=${oiTo}`).then(r => r.json()),
   ]);
 
   // BTC Dominance
@@ -2093,9 +2139,10 @@ export async function fetchLivePrice(coin: string): Promise<number | null> {
 }
 
 // OKX positioning stats (daily): 7-day open-interest change (%) and the
-// latest long/short account ratio. Direct on iOS, proxied on web.
+// latest long/short account ratio. Always through our proxy: OKX's rubik
+// endpoints send no CORS header, so the app can't call them directly.
 export async function fetchOkxPositioning(coin: string): Promise<{ oiChange7d: number | null; longShort: number | null; longShortAvg30: number | null }> {
-  const base = Capacitor.isNativePlatform() ? 'https://www.okx.com' : '/okx-api';
+  const base = `${SITE}/okx-api`;
   const ccy = coin.toUpperCase();
   const get = async (path: string) => {
     try { const r = await fetch(`${base}${path}`); const j = await r.json(); return Array.isArray(j?.data) ? j.data as string[][] : []; }
@@ -2162,9 +2209,9 @@ export async function getGlobalDerivs(coin: string): Promise<GlobalDerivs> {
   const all = [...syms8h, symHl].join(",");
   const now = Math.floor(Date.now() / 1000);
   const [oiRes, frRes, lsRes] = await Promise.all([
-    fetch(`/coinalyze-api/v1/open-interest?symbols=${all}&convert_to_usd=true`).then((r) => r.json()).catch(() => null),
-    fetch(`/coinalyze-api/v1/funding-rate?symbols=${all}`).then((r) => r.json()).catch(() => null),
-    fetch(`/coinalyze-api/v1/long-short-ratio-history?symbols=${c}USDT_PERP.A,${c}USDT.6&interval=1hour&from=${now - 21600}&to=${now}`).then((r) => r.json()).catch(() => null),
+    fetch(`${COINALYZE_BASE}/v1/open-interest?symbols=${all}&convert_to_usd=true`).then((r) => r.json()).catch(() => null),
+    fetch(`${COINALYZE_BASE}/v1/funding-rate?symbols=${all}`).then((r) => r.json()).catch(() => null),
+    fetch(`${COINALYZE_BASE}/v1/long-short-ratio-history?symbols=${c}USDT_PERP.A,${c}USDT.6&interval=1hour&from=${now - 21600}&to=${now}`).then((r) => r.json()).catch(() => null),
   ]);
   const oi = new Map<string, number>();
   if (Array.isArray(oiRes)) for (const r of oiRes) if (typeof r?.value === "number" && r.value > 0) oi.set(r.symbol, r.value);

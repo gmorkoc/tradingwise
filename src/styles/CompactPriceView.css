@@ -286,7 +286,7 @@
 .cpv-round--dark .cpr-toast { background: #fff; color: #0d1421; }
 
 /* Stake / rules sheets */
-.cpr-sheet { display: flex; flex-direction: column; gap: 14px; padding: 4px 4px 12px; }
+.cpr-sheet { display: flex; flex-direction: column; gap: 14px; padding: 4px 16px 12px; }
 .cpr-sheet-sub { margin: 0; font-size: 14px; color: var(--color-text-muted); }
 .cpr-stakes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .cpr-stake,

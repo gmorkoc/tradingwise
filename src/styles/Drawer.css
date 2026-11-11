@@ -161,6 +161,58 @@
 }
 .drawer-coin-select:hover { border-color: rgba(56, 189, 248, 0.45); }
 
+/* Language dropdown (same look as the contact form's custom select). */
+.drawer-lang-wrap { position: relative; }
+.drawer-lang-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  font-family: inherit;
+}
+.drawer-lang-btn svg { color: var(--color-text-secondary); transition: transform 0.2s ease; }
+.drawer-lang-btn--open svg { transform: rotate(180deg); }
+.drawer-lang-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 5;
+  min-width: 180px;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: #1c1c1f;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+}
+html[data-theme="light"] .drawer-lang-list {
+  background: #fff;
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+}
+.drawer-lang-opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+.drawer-lang-opt:active,
+.drawer-lang-opt:hover { background: rgba(127, 127, 127, 0.16); }
+.drawer-lang-opt--on { font-weight: 600; }
+.drawer-lang-opt--on svg { color: #3b82f6; }
+
 .drawer-coming-soon {
   font-size: 0.72rem;
   font-weight: 700;
@@ -282,6 +334,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 16px;
   padding: 11px 0;
   border-bottom: 1px solid var(--color-border);
   font-size: 0.88rem;
@@ -508,7 +561,8 @@ html:not([data-theme="light"]) .drawer-seg-btn--on { background: rgba(255, 255, 
 
 /* ── Mobile ───────────────────────────────────────────────────────────────── */
 @media (max-width: 480px) {
-  .drawer { width: 290px; }
+  /* Wide enough that rows like Theme keep a clear gap from their controls. */
+  .drawer { width: min(330px, 86vw); }
 }
 
 /* ══ Modern look — matches the side nav (.icon-strip.mobile-open) ════════

@@ -1,6 +1,7 @@
 {
   "pushToast": {
     "buySignal": "Buy Signal",
+    "now": "now",
     "sellSignal": "Sell Signal",
     "watchlist": "Watchlist",
     "watchlisted": "Watchlisted",

@@ -145,6 +145,73 @@
   flex-shrink: 0;
 }
 
+.push-toast-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.push-toast-time { flex-shrink: 0; font-size: 0.72rem; color: var(--color-text-secondary); }
+
+/* ── Phones: the plain banner looks and sizes like an iOS notification
+   banner, following the app theme — frosted rounded card 8px in from the
+   edges, app icon, bold title with "now" on the right, message under it,
+   no ✕ (swipe up to dismiss, tap to open). Rich buy-signal layouts keep
+   their own design. ─────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .push-toast:not(.push-toast--rich):not(.push-toast--sheet) {
+    left: 8px;
+    right: 8px;
+    max-width: none;
+    /* iOS banners sit ~3pt above the safe-area line and are ~64pt tall. */
+    top: max(6px, calc(var(--native-safe-area-top, env(safe-area-inset-top, 0px)) - 3px));
+    min-height: 64px;
+    box-sizing: border-box;
+    align-items: center;
+    gap: 10px;
+    /* iOS banner proportions: ~12pt top/bottom around a 38pt icon. */
+    padding: 11px 14px 11px 12px;
+    border: none;
+    border-radius: 24px;
+    background: rgba(246, 246, 248, 0.84);
+    -webkit-backdrop-filter: blur(30px) saturate(180%);
+    backdrop-filter: blur(30px) saturate(180%);
+    box-shadow: 0 10px 34px rgba(0, 0, 0, 0.16);
+  }
+  html:not([data-theme="light"]) .push-toast:not(.push-toast--rich):not(.push-toast--sheet) {
+    background: rgba(40, 40, 44, 0.84);
+    box-shadow: 0 10px 34px rgba(0, 0, 0, 0.5);
+  }
+  /* App icon: rounded square like a home-screen icon at banner size. */
+  .push-toast-app-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.12);
+    flex-shrink: 0;
+  }
+  html:not([data-theme="light"]) .push-toast-app-icon { background: #0b0d14; box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.12); }
+  .push-toast:not(.push-toast--rich):not(.push-toast--sheet) .push-toast-body { gap: 0; }
+  .push-toast:not(.push-toast--rich):not(.push-toast--sheet) .push-toast-body strong {
+    font-size: 15px;
+    line-height: 1.25;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: #111114;
+  }
+  .push-toast:not(.push-toast--rich):not(.push-toast--sheet) .push-toast-body > span:not(.push-toast-eyebrow):not(.push-toast-disclaimer) {
+    font-size: 15px;
+    line-height: 1.25;
+    color: #111114;
+    -webkit-line-clamp: 4;
+  }
+  .push-toast:not(.push-toast--rich):not(.push-toast--sheet) .push-toast-time { font-size: 13px; color: rgba(60, 60, 67, 0.6); }
+  html:not([data-theme="light"]) .push-toast:not(.push-toast--rich):not(.push-toast--sheet) .push-toast-body strong,
+  html:not([data-theme="light"]) .push-toast:not(.push-toast--rich):not(.push-toast--sheet) .push-toast-body > span:not(.push-toast-eyebrow):not(.push-toast-disclaimer) { color: #f5f5f7; }
+  html:not([data-theme="light"]) .push-toast:not(.push-toast--rich):not(.push-toast--sheet) .push-toast-time { color: rgba(235, 235, 245, 0.6); }
+  /* No ✕ on phones — swipe up to dismiss, like iOS. */
+  .push-toast:not(.push-toast--rich):not(.push-toast--sheet) > .push-toast-close { display: none; }
+}
+
 /* ── Rich buy-signal layout — coin logo + price up top, then every
    signal on its OWN row (not one run-on joined string), so nothing
    reads as a cramped, stacked block. ─────────────────────────────────── */

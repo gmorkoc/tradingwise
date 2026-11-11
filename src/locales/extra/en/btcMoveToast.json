@@ -6,6 +6,8 @@
     "bearish": "BEARISH",
     "priceAlert": "{{coin}} PRICE ALERT",
     "inLastMove": "{{change}} ({{pct}}%) in last move",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "snooze": "Snooze 1h",
+    "snoozeAria": "Snooze whale alerts for 1 hour"
   }
 }

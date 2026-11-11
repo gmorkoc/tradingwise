@@ -97,11 +97,17 @@ export default defineConfig(({ mode }) => {
           rewrite: (path) => path.replace(/^\/coinbase-api/, ''),
           headers: { 'accept': 'application/json' },
         },
+        // Same as middleware.ts: the key is added here, never in the app.
         '/gecko-api': {
-          target: 'https://api.coingecko.com',
+          target: env.COINGECKO_PLAN === 'pro' ? 'https://pro-api.coingecko.com' : 'https://api.coingecko.com',
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/gecko-api/, ''),
-          headers: { 'accept': 'application/json' },
+          headers: {
+            'accept': 'application/json',
+            ...((env.COINGECKO_API_KEY || env.VITE_COINGECKO_API_KEY)
+              ? { [env.COINGECKO_PLAN === 'pro' ? 'x-cg-pro-api-key' : 'x-cg-demo-api-key']: env.COINGECKO_API_KEY || env.VITE_COINGECKO_API_KEY }
+              : {}),
+          },
         },
         '/fred-api': {
           target: 'https://fred.stlouisfed.org',

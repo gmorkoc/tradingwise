@@ -30,7 +30,7 @@ function syncPanelPos(el: HTMLElement) {
   root.style.setProperty("--alerts-panel-right", `${Math.max(clampedRight, 12)}px`);
 }
 
-export function PriceAlerts({ coin, currentPrice, coinChatOpen }: Props) {
+export function PriceAlerts({ coin, currentPrice }: Props) {
   const { t } = useTranslation();
   const { user, profile } = useAuth();
   const alertSoundRef = useRef(profile?.alert_sound ?? "bell");
@@ -42,10 +42,8 @@ export function PriceAlerts({ coin, currentPrice, coinChatOpen }: Props) {
   const [alerts, setAlerts]     = useState<PriceAlert[]>(loadAlerts);
   const [input, setInput]       = useState("");
   const [selectedCoin, setSelectedCoin] = useState<CoinSymbol>(coin);
-  const [toast, setToast]       = useState<PriceAlert | null>(null);
   const [prices, setPrices]     = useState<Record<string, number>>({});
   const prevPricesRef           = useRef<Record<string, number>>({});
-  const toastTimerRef           = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bellRef                 = useRef<HTMLButtonElement>(null);
 
   // Opening the panel fresh defaults the coin picker to whatever chart is
@@ -55,11 +53,6 @@ export function PriceAlerts({ coin, currentPrice, coinChatOpen }: Props) {
     if (open) setSelectedCoin(coin);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
-
-  // Global switch hides an already-showing toast too, not just future ones.
-  useEffect(() => {
-    if (!notificationsEnabled) setToast(null);
-  }, [notificationsEnabled]);
 
   // Keep resize/scroll in sync while open
   useEffect(() => {
@@ -142,9 +135,16 @@ export function PriceAlerts({ coin, currentPrice, coinChatOpen }: Props) {
         if (hit) {
           if (notificationsEnabledRef.current) {
             playAlertSoundFile(alertSoundRef.current);
-            setToast(alert);
-            if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-            toastTimerRef.current = setTimeout(() => setToast(null), 6000);
+            // Same banner (style + position) as every other in-app
+            // notification — PushToast listens for this event.
+            const target = `$${alert.targetPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            window.dispatchEvent(new CustomEvent("push-toast", {
+              detail: {
+                title: t("priceAlerts.toastTitle"),
+                body: `${alert.coin} ${alert.direction === "above" ? t("priceAlerts.toastReached") : t("priceAlerts.toastDropped")} ${target}`,
+                data: { type: "price_alert", coin: alert.coin },
+              },
+            }));
           }
           return { ...alert, triggered: true };
         }
@@ -268,19 +268,6 @@ export function PriceAlerts({ coin, currentPrice, coinChatOpen }: Props) {
             </>
           )}
 
-          {toast && (
-            <div
-              className={`alert-toast${coinChatOpen ? " alert-toast--chat-open" : ""}`}
-              onClick={() => setToast(null)}
-            >
-              <div className="alert-toast-icon">🔔</div>
-              <div className="alert-toast-body">
-                <strong>{t("priceAlerts.toastTitle")}</strong>
-                <span>{toast.coin} {toast.direction === "above" ? t("priceAlerts.toastReached") : t("priceAlerts.toastDropped")} ${toast.targetPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              </div>
-              <button className="alert-toast-close">✕</button>
-            </div>
-          )}
         </>,
         document.body
       )}

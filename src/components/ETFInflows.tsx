@@ -242,6 +242,9 @@ export function ETFInflows() {
   const totalAum  = data.rows.reduce((s, r) => s + r.aumUsd, 0);
   const totalVol  = data.rows.reduce((s, r) => s + r.volumeUsd, 0);
   const maxAbsFlow = Math.max(...sorted.map(r => Math.abs(r.dailyFlowUsd)), 1);
+  // Hide columns the data source left empty for every fund (rows of "–").
+  const hasFlow = sorted.some(r => r.dailyFlowUsd !== 0);
+  const hasPct = sorted.some(r => Number.isFinite(r.priceChangePct));
 
   const displayDate = historyDay ? historyDay.date : data.latestDate;
 
@@ -292,10 +295,10 @@ export function ETFInflows() {
           <thead>
             <tr>
               <th>{t("etf.table.fund")}</th>
-              <th>{t("etf.table.dailyFlow")}</th>
+              {hasFlow && <th>{t("etf.table.dailyFlow")}</th>}
               <th>{t("etf.table.price")}</th>
-              <th>{t("etf.table.dayPct")}</th>
-              <th>{t("etf.table.aum")}</th>
+              {hasPct && <th>{t("etf.table.dayPct")}</th>}
+              <th className="etf-aum-h">{t("etf.table.aum")}</th>
               <th>{t("etf.table.volume")}</th>
             </tr>
           </thead>
@@ -306,33 +309,39 @@ export function ETFInflows() {
                   <div className="etf-ticker">{row.ticker}</div>
                   <div className="etf-name-sub">{row.name}</div>
                 </td>
-                <td className="etf-flow-cell">
-                  <div className={`etf-flow-val ${cls(row.dailyFlowUsd)}`}>
-                    {row.dailyFlowUsd === 0 ? "–" : fmtUsd(row.dailyFlowUsd)}
-                  </div>
-                  <FlowBar value={row.dailyFlowUsd} max={maxAbsFlow} />
-                </td>
+                {hasFlow && (
+                  <td className="etf-flow-cell">
+                    <div className={`etf-flow-val ${cls(row.dailyFlowUsd)}`}>
+                      {row.dailyFlowUsd === 0 ? "–" : fmtUsd(row.dailyFlowUsd)}
+                    </div>
+                    <FlowBar value={row.dailyFlowUsd} max={maxAbsFlow} />
+                  </td>
+                )}
                 <td className="etf-flow-cell">
                   <div className="etf-flow-val zero">
                     ${row.priceUsd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
                 </td>
-                <td className="etf-flow-cell">
-                  <div className={`etf-flow-val ${Number.isFinite(row.priceChangePct) ? cls(row.priceChangePct) : "zero"}`}>
-                    {Number.isFinite(row.priceChangePct) ? fmtPct(row.priceChangePct) : "–"}
-                  </div>
-                </td>
+                {hasPct && (
+                  <td className="etf-flow-cell">
+                    <div className={`etf-flow-val ${Number.isFinite(row.priceChangePct) ? cls(row.priceChangePct) : "zero"}`}>
+                      {Number.isFinite(row.priceChangePct) ? fmtPct(row.priceChangePct) : "–"}
+                    </div>
+                  </td>
+                )}
                 <td className="etf-aum">{row.aumUsd > 0 ? fmtUsd(row.aumUsd, 2) : "–"}</td>
                 <td className="etf-aum">{row.volumeUsd > 0 ? fmtUsd(row.volumeUsd) : "–"}</td>
               </tr>
             ))}
             <tr className="etf-total-row">
               <td>{t("etf.table.total", { count: data.rows.length })}</td>
-              <td className="etf-flow-cell">
-                <div className={`etf-flow-val ${cls(totalFlow)}`}>{fmtUsd(totalFlow)}</div>
-              </td>
+              {hasFlow && (
+                <td className="etf-flow-cell">
+                  <div className={`etf-flow-val ${cls(totalFlow)}`}>{fmtUsd(totalFlow)}</div>
+                </td>
+              )}
               <td></td>
-              <td></td>
+              {hasPct && <td></td>}
               <td className="etf-aum">{fmtUsd(totalAum, 2)}</td>
               <td className="etf-aum">{fmtUsd(totalVol)}</td>
             </tr>

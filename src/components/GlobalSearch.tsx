@@ -104,11 +104,16 @@ interface Props {
   // floating at some guessed position.
   // rowH: the header's height — the field sits centred in that row and
   // the results card starts right under it.
-  anchorRect?: { top: number; left: number; width: number; rowH?: number } | null;
+  anchorRect?: { top: number; left: number; width: number; rowH?: number; mobile?: boolean } | null;
+  /** Recently opened coins (newest first), shown as chips when the field is empty. */
+  recentCoins?: string[];
+  onClearRecent?: () => void;
+  /** Live 24h tickers, for the % change on the chips. */
+  coinTickers?: Map<string, { change: number }>;
 }
 
 /* ── Component ─────────────────────────────────────────────────────────────── */
-export function GlobalSearch({ open, onClose, onCoinSelect, onSectionSelect, variant = "docked", anchorRect }: Props) {
+export function GlobalSearch({ open, onClose, onCoinSelect, onSectionSelect, variant = "docked", anchorRect, recentCoins = [], onClearRecent, coinTickers }: Props) {
   const { t } = useTranslation();
   // Display text in the current language; the English label/desc stay in
   // the search haystack too, so English queries still match.
@@ -282,7 +287,54 @@ export function GlobalSearch({ open, onClose, onCoinSelect, onSectionSelect, var
       {docked && (
         <button type="button" className="gs-cancel-btn" onClick={onClose}>{t("globalSearch.cancel")}</button>
       )}
+      {/* Phones (header search): a round glass ✕ beside the field. */}
+      {anchorRect?.mobile && (
+        <button type="button" className="gs-close-circle" onClick={onClose} aria-label={t("common.close")}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+        </button>
+      )}
       </div>
+
+      {/* Empty field: recent coins, then the top 10 by market cap. Outside
+          the results list so they stay put while the page list scrolls. */}
+      {!query.trim() && (() => {
+          const known = new Set(COINS.map(c => c.symbol as string));
+          const recent = recentCoins.filter(s => known.has(s)).slice(0, 9);
+          const top = COINS.slice(0, 10).map(c => c.symbol as string);
+          const chip = (sym: string) => {
+            const chg = coinTickers?.get(sym)?.change;
+            return (
+              <button key={sym} type="button" className="gs-chip" onClick={() => { onCoinSelect(sym as CoinSymbol); onClose(); }}>
+                <span className="gs-chip-icon">{COIN_ICONS[sym] ?? sym[0]}</span>
+                <span className="gs-chip-sym">{sym}</span>
+                {chg != null && Number.isFinite(chg) && (
+                  <span className={`gs-chip-chg ${chg >= 0 ? "gs-chip-chg--up" : "gs-chip-chg--down"}`}>
+                    {chg >= 0 ? "↗" : "↘"} {Math.abs(chg).toFixed(2)}%
+                  </span>
+                )}
+              </button>
+            );
+          };
+          return (
+            <div className="gs-chips-block">
+              {recent.length > 0 && (
+                <>
+                  <div className="gs-chips-head">
+                    <span className="gs-group-label gs-group-label--inline">{t("globalSearch.recent")}</span>
+                    {onClearRecent && (
+                      <button type="button" className="gs-chips-clear" onClick={onClearRecent}>{t("globalSearch.clearRecent")}</button>
+                    )}
+                  </div>
+                  <div className="gs-chips">{recent.map(chip)}</div>
+                </>
+              )}
+              <div className="gs-chips-head">
+                <span className="gs-group-label gs-group-label--inline">{t("globalSearch.topCoins")}</span>
+              </div>
+              <div className="gs-chips">{top.map(chip)}</div>
+            </div>
+          );
+        })()}
 
       {/* Results */}
       <ul className="gs-list" ref={listRef}>
@@ -364,8 +416,12 @@ export function GlobalSearch({ open, onClose, onCoinSelect, onSectionSelect, var
     <>
       <div className="gs-anchored-catcher" onMouseDown={onClose} />
       <div
-        className="gs-anchored"
-        style={anchorRect ? ({ top: anchorRect.top, left: anchorRect.left, width: Math.max(anchorRect.width, 360), ...(anchorRect.rowH ? { "--gs-row-h": `${anchorRect.rowH}px` } : null) } as CSSProperties) : undefined}
+        className={`gs-anchored${anchorRect?.mobile ? " gs-anchored--mobile" : ""}`}
+        style={anchorRect ? (anchorRect.mobile
+          // Phones: full screen; the field row lines up with the header's
+          // button row (anchorRect.top), results fill everything below.
+          ? ({ top: 0, left: 0, right: 0, bottom: 0, paddingTop: anchorRect.top, "--gs-row-h": `${anchorRect.rowH ?? 64}px` } as CSSProperties)
+          : ({ top: anchorRect.top, left: anchorRect.left, width: Math.max(anchorRect.width, 360), ...(anchorRect.rowH ? { "--gs-row-h": `${anchorRect.rowH}px` } : null) } as CSSProperties)) : undefined}
       >
         {content}
       </div>

@@ -94,7 +94,9 @@ function readCols(): ColKey[] {
 type SortKey = "rank" | "name" | "price" | ColKey;
 const sortVal = (c: CoinRow, k: SortKey): number | string | null => {
   switch (k) {
-    case "rank": return c.market_cap_rank ?? null;
+    // Rank = market cap order. The backup data sources (used when CoinGecko
+    // is out of quota) can lack a rank (0) or rank differently.
+    case "rank": return c.market_cap ? -c.market_cap : null;
     case "name": return c.name.toLowerCase();
     case "price": return c.current_price;
     case "h1": return c.price_change_percentage_1h_in_currency ?? null;
@@ -374,6 +376,13 @@ export function MarketSignalTable({ coins: coinsProp, onSelectCoin, onOpenAuth, 
   const resetFilters = () => { setCapIdx(0); setVolIdx(0); setSigF("any"); setChgF("any"); setHideStables(false); };
 
   const rows = list.slice(0, shown);
+  // # = the coin's position by market cap (the backup data sources' own
+  // rank numbers can be missing or jumbled).
+  const capRank = useMemo(() => {
+    const m = new Map<string, number>();
+    [...coins].sort((a, b) => (b.market_cap ?? 0) - (a.market_cap ?? 0)).forEach((c, i) => m.set(c.id, i + 1));
+    return m;
+  }, [coins]);
   // Sparklines/signals for the rows on screen; filtering or sorting by
   // signal needs them for every coin.
   const needAllSparks = sigOpen && (sigF !== "any" || sort.key === "sig");
@@ -673,7 +682,7 @@ export function MarketSignalTable({ coins: coinsProp, onSelectCoin, onOpenAuth, 
                 >
                   {on ? "★" : "☆"}
                 </button>
-                <span className="mst-rank-n">{c.market_cap_rank ?? "—"}</span>
+                <span className="mst-rank-n">{capRank.get(c.id) ?? c.market_cap_rank ?? "—"}</span>
               </span>
               <span className="mst-c-coin">
                 <img src={c.image} alt="" className="mst-logo" loading="lazy" />

@@ -134,6 +134,7 @@ import { ResolutionBanner } from "./components/ResolutionBanner";
 import TermsGateModal from "./components/TermsGateModal";
 import UsernameGateModal from "./components/UsernameGateModal";
 import { PortfolioValueChart } from "./components/PortfolioValueChart";
+import { setPendingPredict } from "./services/pendingPredict";
 import "./App.css";
 
 // Coins the chart has candle data for (the app's COINS roster).
@@ -247,6 +248,13 @@ function slugToCoin(slug: string): string | null {
   const s = decodeURIComponent(slug).toLowerCase();
   const hit = COINS.find((c) => coinSlug(c.symbol) === s || c.symbol.toLowerCase() === s);
   return hit ? hit.symbol : null;
+}
+// Web: a shared predictions link (/chart/<coin>?predict=1) — remember it
+// before routing rewrites the URL; PriceChart opens predictions from it.
+if (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("predict")) {
+  const m = window.location.pathname.match(/^\/chart\/([^/]+)/);
+  const sym = m ? slugToCoin(m[1]) : null;
+  if (sym) setPendingPredict(sym);
 }
 const isSection = (s: string): s is SectionId => NAV_ITEMS.some((n) => n.id === s) || s === "advance-chart";
 /** Section + coin from the current URL: an old #hash link wins (so it can
@@ -773,6 +781,7 @@ function AppDashboard({
       if (!/(^|\.)coinhintz\.io$/i.test(u.hostname)) return;
       const m = u.pathname.replace(/\/+$/, "").match(/^\/chart\/([^/]+)$/);
       const sym = m ? slugToCoin(m[1]) : null;
+      if (sym && u.searchParams.has("predict")) setPendingPredict(sym);
       if (sym) openChartCoinRef.current(sym, { recent: true, navigate: true });
     });
     return () => { sub.then((s) => s.remove()); };
@@ -1410,7 +1419,24 @@ function AppDashboard({
   // not a centered modal — this is that button's measured position/width,
   // fed to GlobalSearch's "anchored" variant below.
   const topNavSearchRef = useRef<HTMLButtonElement>(null);
-  const [searchAnchor, setSearchAnchor] = useState<{ top: number; left: number; width: number; rowH?: number } | null>(null);
+  const [searchAnchor, setSearchAnchor] = useState<{ top: number; left: number; width: number; rowH?: number; mobile?: boolean } | null>(null);
+  // Phones: same as desktop — the field appears in the header row, growing
+  // right → left from the bell, results dropping down under the header.
+  const openMobileSearch = () => {
+    const header = document.querySelector<HTMLElement>(".main-panel > .main-coin-header");
+    const bell = header?.querySelector<HTMLElement>(".mch-right");
+    const h = header?.getBoundingClientRect();
+    const b = bell?.getBoundingClientRect();
+    if (h && b) {
+      // The button row under any status-bar padding: centred on the bell.
+      const rowH = 64;
+      const top = b.top + b.height / 2 - rowH / 2;
+      setSearchAnchor({ top, left: h.left + 16, width: h.width - 32, rowH, mobile: true });
+    } else {
+      setSearchAnchor(null);
+    }
+    setGlobalSearch(true);
+  };
   const openGlobalSearch = () => {
     // Coinbase-style: the panel's search field sits where the round search
     // button is and grows right → left to a wide bar (to the header's right
@@ -3097,6 +3123,9 @@ function AppDashboard({
                   // Funding / L/S / OI: global (all exchanges) when loaded,
                   // else the single-venue value from btcData.
                   const fr = globalDerivs?.funding ?? (Number.isFinite(btcData.fundingRate) ? btcData.fundingRate! : 0);
+                  // No source answered → "—", never a fake 0.0000% / 1.00.
+                  const frKnown = globalDerivs?.funding != null || btcData.fundingAvailable !== false;
+                  const lsKnown = globalDerivs?.lsRatio != null || btcData.longShortAvailable !== false;
                   const rsi = Number.isFinite(btcData.rsi) ? btcData.rsi! : 50;
                   const macd = Number.isFinite(btcData.macd) ? btcData.macd! : 0;
                   const ls = globalDerivs?.lsRatio ?? (Number.isFinite(btcData.longShortRatio) ? btcData.longShortRatio! : 1);
@@ -3161,17 +3190,19 @@ function AppDashboard({
                         <span
                           className={`mch-stat-value${fr < 0 ? " negative" : ""}`}
                         >
-                          {`${fr >= 0 ? "+" : ""}${(fr * 100).toFixed(4)}%`}
+                          {frKnown ? `${fr >= 0 ? "+" : ""}${(fr * 100).toFixed(4)}%` : "—"}
                         </span>
-                        <span
-                          className={`mch-stat-signal mch-stat-signal--${frSignal}`}
-                        >
-                          {frSignal === "bull"
-                            ? t("stats.sigBullish")
-                            : frSignal === "bear"
-                              ? t("stats.sigCrowded")
-                              : t("stats.sigNeutral")}
-                        </span>
+                        {frKnown && (
+                          <span
+                            className={`mch-stat-signal mch-stat-signal--${frSignal}`}
+                          >
+                            {frSignal === "bull"
+                              ? t("stats.sigBullish")
+                              : frSignal === "bear"
+                                ? t("stats.sigCrowded")
+                                : t("stats.sigNeutral")}
+                          </span>
+                        )}
                       </HoverTip>
                       <HoverTip className="mch-stat" text={t("stats.rsi14Desc")}>
                         <span className="mch-stat-label">
@@ -3216,17 +3247,19 @@ function AppDashboard({
                           {t("stats.lsRatio")}
                         </span>
                         <span
-                          className={`mch-stat-value${ls >= 1 ? " positive" : " negative"}`}
+                          className={`mch-stat-value${!lsKnown ? "" : ls >= 1 ? " positive" : " negative"}`}
                         >
-                          {ls.toFixed(2)}
+                          {lsKnown ? ls.toFixed(2) : "—"}
                         </span>
-                        <span
-                          className={`mch-stat-signal mch-stat-signal--${lsSignal}`}
-                        >
-                          {ls >= 1
-                            ? t("stats.sigLongsLead")
-                            : t("stats.sigShortsLead")}
-                        </span>
+                        {lsKnown && (
+                          <span
+                            className={`mch-stat-signal mch-stat-signal--${lsSignal}`}
+                          >
+                            {ls >= 1
+                              ? t("stats.sigLongsLead")
+                              : t("stats.sigShortsLead")}
+                          </span>
+                        )}
                       </HoverTip>
                       {/* CME gaps removed — they no longer exist. */}
                     </>
@@ -4803,7 +4836,10 @@ function AppDashboard({
         <GlobalSearch
           open={globalSearch}
           onClose={() => setGlobalSearch(false)}
-          onCoinSelect={(c) => { openChartCoin(c, { navigate: true }); }}
+          onCoinSelect={(c) => { openChartCoin(c, { navigate: true, recent: true }); }}
+          recentCoins={recentCoins}
+          onClearRecent={() => { setRecentCoins([]); try { localStorage.removeItem(RECENT_COINS_KEY); } catch { /* ignore */ } }}
+          coinTickers={coinTickers}
           onSectionSelect={(s) => { openSection(s as SectionId); }}
           // Mobile's only remaining path to this is FloatingNavBar's
           // Search icon (the old mobile header search button was moved
@@ -4811,7 +4847,7 @@ function AppDashboard({
           // Desktop used to be a centered ⌘K-style modal; now "anchored"
           // drops it directly under .top-nav-search instead (YouTube's own
           // search-bar-with-suggestions layout, not a page-dimming modal).
-          variant={isWideDesktop ? "anchored" : "docked"}
+          variant={isWideDesktop || searchAnchor?.mobile ? "anchored" : "docked"}
           anchorRect={searchAnchor}
         />
 
@@ -5038,7 +5074,7 @@ function AppDashboard({
       {!isWideDesktop && !distractionFree && !chartFullscreen && (
         <FloatingNavBar
           signalsOpen={signalsOpen}
-          onSearch={() => setGlobalSearch(true)}
+          onSearch={openMobileSearch}
           searchOpen={globalSearch}
           profileOpen={profileOpen}
           agentUnread={agentUnread}
@@ -5121,8 +5157,8 @@ function AppDashboard({
     <BtcMoveToast
       alert={notificationsEnabled && !chartFullscreen ? (btcMoveAlert ?? whaleToast) : null}
       onDismiss={btcMoveAlert ? dismissBtcAlert : dismissWhaleToast}
-      // ✕ on a whale alert snoozes whale alerts for an hour.
-      onClose={btcMoveAlert ? undefined : snoozeWhaleToast}
+      // Whale alerts: ✕ closes this one; "Snooze 1h" pauses them for an hour.
+      onSnooze={btcMoveAlert ? undefined : snoozeWhaleToast}
     />
     {focusToast && ReactDOM.createPortal(
       <div className="focus-toast" role="status">

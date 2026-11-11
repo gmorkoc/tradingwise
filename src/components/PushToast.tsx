@@ -3,6 +3,7 @@ import ReactDOM from "react-dom";
 import { Capacitor } from "@capacitor/core";
 import { useTranslation } from "react-i18next";
 import { Avatar } from "./Avatar";
+import { LogoIcon } from "./CoinHintzLogo";
 import { useAuth } from "../contexts/AuthContext";
 import { toggleMutedSignalCoin } from "../services/supabase";
 import { routeNotificationTap } from "../utils/notificationRouting";
@@ -318,11 +319,15 @@ export function PushToast() {
           </svg>
         </div>
       ) : (
-        <div className="push-toast-icon">🔔</div>
+        // The app's own icon, like an iOS notification banner.
+        <div className="push-toast-icon push-toast-app-icon"><LogoIcon size={30} /></div>
       )}
       <div className="push-toast-body">
         {isBuySignal && <span className="push-toast-eyebrow">{signalLabel}</span>}
-        <strong>{toast.title}</strong>
+        <div className="push-toast-head">
+          <strong>{toast.title}</strong>
+          <span className="push-toast-time">{t("pushToast.now", "now")}</span>
+        </div>
         <span>{toast.body}</span>
         {/* Native push notifications only ever carry title/body/coin/score
             (see the FCM data payload in buy-signal-scan/index.ts) — no

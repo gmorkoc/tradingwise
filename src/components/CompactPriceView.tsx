@@ -18,6 +18,9 @@ import {
 } from "lightweight-charts";
 import { coinglass, type CandleDataPoint, type CoinSymbol, COINS } from "../services/coinglass";
 import { BottomSheet } from "./BottomSheet";
+import { Capacitor } from "@capacitor/core";
+import { Share } from "@capacitor/share";
+import { predictShareUrl } from "../services/pendingPredict";
 import "../styles/CompactPriceView.css";
 
 interface Props {
@@ -296,10 +299,18 @@ export function CompactPriceView({ coin, theme, onClose }: Props) {
     setPick(null);
   };
 
+  // Shares a public link that opens these predictions (in the app when
+  // installed; guests sign up first, then land here) — never the app's own
+  // capacitor:// address.
   const share = () => {
-    const url = window.location.href;
-    const nav = navigator as Navigator & { share?: (d: { title?: string; url?: string }) => Promise<void> };
-    if (nav.share) nav.share({ title: t("predictRound.shareTitle", { mins, name }), url }).catch(() => {});
+    const url = predictShareUrl(name);
+    const title = t("predictRound.shareTitle", { mins, name });
+    if (Capacitor.isNativePlatform()) {
+      Share.share({ title, text: title, url, dialogTitle: t("predictRound.share") }).catch(() => {});
+      return;
+    }
+    const nav = navigator as Navigator & { share?: (d: { title?: string; text?: string; url?: string }) => Promise<void> };
+    if (nav.share) nav.share({ title, text: title, url }).catch(() => {});
     else navigator.clipboard?.writeText(url).catch(() => {});
   };
 
