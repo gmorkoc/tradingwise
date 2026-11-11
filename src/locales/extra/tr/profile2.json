@@ -29,6 +29,9 @@
     "deleteAccount": "Hesabı sil",
     "deleteDesc": "Hesabınızı ve tüm verilerinizi kalıcı olarak kaldırın.",
     "deleteFailed": "Hesap silinemedi",
-    "notAuthenticated": "Giriş yapılmamış"
+    "notAuthenticated": "Giriş yapılmamış",
+    "deleteWarningApple": "Bu işlem hesabını ve tüm verilerini kalıcı olarak siler. Geri alınamaz.",
+    "deleteAppleNotice": "App Store aboneliğin otomatik olarak İPTAL EDİLMEZ. Gelecekteki ödemeleri durdurmak için Apple ID abonelik ayarlarından iptal et.",
+    "deleteAppleManage": "Aboneliği yönet"
   }
 }

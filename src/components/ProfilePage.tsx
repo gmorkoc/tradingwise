@@ -137,6 +137,13 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
   // visibility into each other — billing actions only work from the
   // platform that actually sold the subscription.
   const actualProvider = subscriptionProvider(authProfile, tier);
+  // iOS: an App Store subscription (a paid plan, or ProVision not bought on
+  // the web) keeps billing after account deletion — the delete screen says
+  // so and links to Apple's subscription settings.
+  const provisionLive = ["active", "trialing", "past_due"].includes(authProfile?.provision_status ?? "");
+  const hasAppleSub = isIAPAvailable() && (
+    actualProvider === "apple" || (provisionLive && !authProfile?.provision_stripe_sub_id)
+  );
   const providerMismatch = isPaid && actualProvider !== null && (
     (actualProvider === "apple"  && !isIAPAvailable()) ||
     (actualProvider === "stripe" && isIAPAvailable())
@@ -1060,7 +1067,17 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
                     </div>
                   ) : (
                     <div className="pp-delete-confirm">
-                      <p className="pp-delete-warning">{t("profile.deleteAccount.warning")}</p>
+                      <p className="pp-delete-warning">{hasAppleSub ? t("profile2.deleteWarningApple") : t("profile.deleteAccount.warning")}</p>
+                      {/* App Store subscriptions can't be cancelled by us —
+                          deleting the account doesn't stop Apple billing. */}
+                      {hasAppleSub && (
+                        <div className="pp-delete-apple">
+                          <p>{t("profile2.deleteAppleNotice")}</p>
+                          <button type="button" className="pp-btn pp-btn--ghost" onClick={() => openManageSubscriptions()}>
+                            {t("profile2.deleteAppleManage")}
+                          </button>
+                        </div>
+                      )}
                       <div className="pp-field" style={{ marginBottom: 14 }}>
                         <label>{t("profile.deleteAccount.typeToConfirm")}</label>
                         <input type="text" value={deleteInput}

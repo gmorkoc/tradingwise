@@ -29,6 +29,9 @@
     "deleteAccount": "Delete Account",
     "deleteDesc": "Permanently remove your account and all data.",
     "deleteFailed": "Failed to delete account",
-    "notAuthenticated": "Not signed in"
+    "notAuthenticated": "Not signed in",
+    "deleteWarningApple": "This will permanently delete your account and remove all your data. This cannot be undone.",
+    "deleteAppleNotice": "Your App Store subscription will NOT be cancelled automatically. To stop future charges, cancel it in your Apple ID subscription settings.",
+    "deleteAppleManage": "Manage subscription"
   }
 }

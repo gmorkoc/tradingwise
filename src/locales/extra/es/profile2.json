@@ -29,6 +29,9 @@
     "deleteAccount": "Eliminar cuenta",
     "deleteDesc": "Elimina de forma permanente tu cuenta y todos tus datos.",
     "deleteFailed": "No se pudo eliminar la cuenta",
-    "notAuthenticated": "No has iniciado sesión"
+    "notAuthenticated": "No has iniciado sesión",
+    "deleteWarningApple": "Esto eliminará tu cuenta de forma permanente y borrará todos tus datos. No se puede deshacer.",
+    "deleteAppleNotice": "Tu suscripción del App Store NO se cancelará automáticamente. Para evitar cargos futuros, cancélala en los ajustes de suscripción de tu ID de Apple.",
+    "deleteAppleManage": "Gestionar suscripción"
   }
 }

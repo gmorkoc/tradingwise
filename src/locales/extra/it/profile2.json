@@ -29,6 +29,9 @@
     "deleteAccount": "Elimina account",
     "deleteDesc": "Rimuovi definitivamente il tuo account e tutti i dati.",
     "deleteFailed": "Impossibile eliminare l'account",
-    "notAuthenticated": "Accesso non effettuato"
+    "notAuthenticated": "Accesso non effettuato",
+    "deleteWarningApple": "Il tuo account verrà eliminato definitivamente insieme a tutti i tuoi dati. L'operazione non può essere annullata.",
+    "deleteAppleNotice": "Il tuo abbonamento App Store NON verrà annullato automaticamente. Per evitare addebiti futuri, disdicilo nelle impostazioni abbonamenti del tuo ID Apple.",
+    "deleteAppleManage": "Gestisci abbonamento"
   }
 }

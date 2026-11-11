@@ -52,14 +52,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const customerId = profile?.stripe_customer_id;
 
         if (customerId) {
-          // 3. List all active subscriptions for this customer
+          // 3. List every subscription that can still charge — not just
+          //    "active": a free trial, past_due or unpaid one would bill later.
           const subRes = await fetch(
-            `https://api.stripe.com/v1/subscriptions?customer=${customerId}&status=active&limit=10`,
+            `https://api.stripe.com/v1/subscriptions?customer=${customerId}&status=all&limit=100`,
             { headers: { Authorization: `Bearer ${stripeKey}` } }
           );
           if (subRes.ok) {
-            const { data: subs } = (await subRes.json()) as { data: Array<{ id: string }> };
-            // 4. Cancel each active subscription immediately (no refund, stops future charges)
+            const { data: all } = (await subRes.json()) as { data: Array<{ id: string; status: string }> };
+            const BILLABLE = new Set(["active", "trialing", "past_due", "unpaid", "incomplete", "paused"]);
+            const subs = all.filter((s) => BILLABLE.has(s.status));
+            // 4. Cancel each one immediately (no refund, stops future charges)
             await Promise.all(
               subs.map(sub =>
                 fetch(`https://api.stripe.com/v1/subscriptions/${sub.id}`, {

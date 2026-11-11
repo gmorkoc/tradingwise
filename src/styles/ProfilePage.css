@@ -592,6 +592,19 @@ html[data-theme="light"] .pp-ai-track { background: rgba(0, 0, 0, 0.07); }
   color: #fca5a5;
   line-height: 1.5;
 }
+/* iOS: App Store subscriptions keep billing after deletion — say so. */
+.pp-delete-apple {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+.pp-delete-apple p { margin: 0; font-size: 0.82rem; line-height: 1.5; color: var(--color-text); }
 
 /* ── Notifications ───────────────────────────────────────────────────────── */
 .pp-notif-row {
