@@ -222,7 +222,9 @@ export function ETFInflows() {
     ? data.history.find(d => d.date === selectedDate) ?? null
     : null;
 
-  const latestHistoryFlow = data.history[data.history.length - 1]?.flowUsd ?? 0;
+  // Latest settled day (the newest entry is often today's still-zero row).
+  const latestHistoryFlow = data.history.find(d => d.date === data.latestDate)?.flowUsd
+    ?? data.history[data.history.length - 1]?.flowUsd ?? 0;
   const totalFlow = historyDay ? historyDay.flowUsd : latestHistoryFlow;
 
   // When a date is selected, override each row's dailyFlowUsd with that day's per-fund data
@@ -316,8 +318,8 @@ export function ETFInflows() {
                   </div>
                 </td>
                 <td className="etf-flow-cell">
-                  <div className={`etf-flow-val ${cls(row.priceChangePct)}`}>
-                    {fmtPct(row.priceChangePct)}
+                  <div className={`etf-flow-val ${Number.isFinite(row.priceChangePct) ? cls(row.priceChangePct) : "zero"}`}>
+                    {Number.isFinite(row.priceChangePct) ? fmtPct(row.priceChangePct) : "–"}
                   </div>
                 </td>
                 <td className="etf-aum">{row.aumUsd > 0 ? fmtUsd(row.aumUsd, 2) : "–"}</td>

@@ -1,4 +1,4 @@
-export const config = { matcher: ['/cg-api/:path*', '/cg-sdk/:path*', '/coinalyze-api/:path*', '/bn-api/:path*', '/gecko-api/:path*', '/ff-cal'] };
+export const config = { matcher: ['/cg-api/:path*', '/cg-sdk/:path*', '/coinalyze-api/:path*', '/bn-api/:path*', '/gecko-api/:path*', '/ff-cal', '/etf-api/:path*'] };
 
 // Reflects whatever Origin actually sent the request, instead of checking
 // it against a fixed web-origin allowlist — that allowlist never included
@@ -43,6 +43,31 @@ export default async function middleware(req: Request): Promise<Response> {
       headers: {
         'content-type': 'application/json',
         'cache-control': 'public, s-maxage=1800, stale-while-revalidate=3600',
+        ...corsHeaders(req),
+      },
+    });
+  }
+
+  // ── Spot ETF flows (CoinMarketCap public data API) ───────────────────────
+  // Our CoinGlass plan doesn't include ETF endpoints ("Upgrade plan"), and
+  // CMC's data API sends no CORS header, so it's proxied here (web + app).
+  // Daily data — CDN-cached for 15 min.
+  if (url.pathname.startsWith('/etf-api/')) {
+    const etfPath = url.pathname.replace(/^\/etf-api\//, '');
+    if (!/^[a-z0-9/_-]+$/i.test(etfPath)) {
+      return new Response('bad path', { status: 400, headers: corsHeaders(req) });
+    }
+    const upstream = new URL(`https://api.coinmarketcap.com/data-api/v3/etf/${etfPath}`);
+    upstream.search = url.search;
+    const response = await fetch(upstream.toString(), {
+      headers: { accept: 'application/json', 'user-agent': 'Mozilla/5.0 (compatible; coinhintz)' },
+    });
+    const text = await response.text();
+    return new Response(text, {
+      status: response.status,
+      headers: {
+        'content-type': 'application/json',
+        'cache-control': 'public, s-maxage=900, stale-while-revalidate=3600',
         ...corsHeaders(req),
       },
     });

@@ -26,6 +26,13 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       proxy: {
+        // Spot ETF flows (CoinMarketCap data API) — same route as middleware.ts.
+        '/etf-api': {
+          target: 'https://api.coinmarketcap.com',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/etf-api/, '/data-api/v3/etf'),
+          headers: { 'accept': 'application/json', 'user-agent': 'Mozilla/5.0 (compatible; coinhintz)' },
+        },
         '/cg-api': {
           target: 'https://open-api-v4.coinglass.com',
           changeOrigin: true,

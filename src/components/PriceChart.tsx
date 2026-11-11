@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import ReactDOM from "react-dom";
 import { BottomSheet } from "./BottomSheet";
-import { PeerCompare } from "./PeerCompare";
 import { useTranslation, Trans } from "react-i18next";
 import i18next from "i18next";
 import { Capacitor } from "@capacitor/core";
@@ -1557,8 +1556,6 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const [styleMenuOpen, setStyleMenuOpen] = useState(false);
   // Mobile: one "Show Tools" button opens every chart tool in a sheet.
   const [toolsSheetOpen, setToolsSheetOpen] = useState(false);
-  // Phones: "Compare with peers" bottom sheet (opened from the ⇄ button).
-  const [compareOpen, setCompareOpen] = useState(false);
   // Desktop's Indicators/Chart style dropdowns portal to document.body
   // (like the mobile sheets already do) instead of position:absolute
   // inside the component tree — an ancestor (.main-content) has
@@ -7677,18 +7674,6 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
                   </button>
                 )}
-                {/* Compare with peers → bottom sheet (phones have no peers
-                    section on the page). */}
-                <button
-                  type="button"
-                  className={`cmct-rbtn cmct-rbtn--icon${compareOpen ? " cmct-rbtn--on" : ""}`}
-                  aria-label={t("peerCompare.title")}
-                  onClick={() => { hapticTap(); setCompareOpen(true); }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M7 4 3 8l4 4" /><path d="M3 8h13" /><path d="m17 20 4-4-4-4" /><path d="M21 16H8" />
-                  </svg>
-                </button>
                 <button
                   type="button"
                   className="cmct-rbtn cmct-rbtn--icon"
@@ -10153,17 +10138,6 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         )}
         {intervalSheetPortal}
         {toolsSheetPortal}
-        {phoneCmc && (
-          <BottomSheet
-            open={compareOpen}
-            onClose={() => setCompareOpen(false)}
-            title={t("peerCompare.title")}
-            ariaLabel={t("peerCompare.title")}
-            className="pc-sheet"
-          >
-            <PeerCompare coin={coin} theme={theme === "dark" ? "dark" : "light"} variant="sheet" />
-          </BottomSheet>
-        )}
         <IndicatorPicker
           open={toolsIndOpen}
           onClose={() => setToolsIndOpen(false)}
