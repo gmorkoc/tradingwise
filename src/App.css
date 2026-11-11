@@ -4527,10 +4527,14 @@ html:not([data-theme="light"]) .top-nav-burger-menu { background: #15161b; box-s
   transition: background 0.15s ease;
 }
 .top-nav-login { background: #eef0f3; color: #0a0b0d; }
+/* Hover: the fill fades a shade (text colour unchanged). */
 .top-nav-login:hover { background: #e2e5ea; }
+/* Coinbase blue. */
 .top-nav-signup { background: #0052ff; color: #fff; }
-.top-nav-signup:hover { background: #0045d8; }
+.top-nav-signup:hover { background: #2a6dff; }
 html:not([data-theme="light"]) .top-nav-login { background: rgba(255, 255, 255, 0.1); color: #fff; }
+html:not([data-theme="light"]) .top-nav-login:hover { background: rgba(255, 255, 255, 0.16); color: #fff; }
+.top-nav-login, .top-nav-signup { transition: background-color 0.2s ease; }
 /* Buy/Sell Signals: same box as the other top-bar icon buttons. */
 .top-nav-bar .top-nav-icons .buysig-bell {
   width: 32px;
