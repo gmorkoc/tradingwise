@@ -190,21 +190,40 @@
     flex-shrink: 0;
   }
   html:not([data-theme="light"]) .push-toast-app-icon { background: #0b0d14; box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.12); }
+  /* Content measured off a real iOS banner: SF system font, 13pt
+     semibold title / 13pt regular body in the same colour, ~14.5pt line
+     pitch with no gap between them, "now" ~12pt grey level with the
+     title, 38pt icon 14pt in from the edge and 14pt before the text. */
+  .push-toast:not(.push-toast--rich):not(.push-toast--sheet) {
+    padding-left: 14px;
+    gap: 14px;
+    font-family: -apple-system, "SF Pro Text", system-ui, sans-serif;
+  }
   .push-toast:not(.push-toast--rich):not(.push-toast--sheet) .push-toast-body { gap: 0; }
   .push-toast:not(.push-toast--rich):not(.push-toast--sheet) .push-toast-body strong {
-    font-size: 15px;
-    line-height: 1.25;
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 14.5px;
     font-weight: 600;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.08px;
     color: #111114;
   }
   .push-toast:not(.push-toast--rich):not(.push-toast--sheet) .push-toast-body > span:not(.push-toast-eyebrow):not(.push-toast-disclaimer) {
-    font-size: 15px;
-    line-height: 1.25;
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 14.5px;
+    font-weight: 400;
+    letter-spacing: -0.08px;
     color: #111114;
     -webkit-line-clamp: 4;
   }
-  .push-toast:not(.push-toast--rich):not(.push-toast--sheet) .push-toast-time { font-size: 13px; color: rgba(60, 60, 67, 0.6); }
+  .push-toast:not(.push-toast--rich):not(.push-toast--sheet) .push-toast-head { align-items: baseline; }
+  .push-toast:not(.push-toast--rich):not(.push-toast--sheet) .push-toast-time {
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 400;
+    color: rgba(60, 60, 67, 0.6);
+  }
   html:not([data-theme="light"]) .push-toast:not(.push-toast--rich):not(.push-toast--sheet) .push-toast-body strong,
   html:not([data-theme="light"]) .push-toast:not(.push-toast--rich):not(.push-toast--sheet) .push-toast-body > span:not(.push-toast-eyebrow):not(.push-toast-disclaimer) { color: #f5f5f7; }
   html:not([data-theme="light"]) .push-toast:not(.push-toast--rich):not(.push-toast--sheet) .push-toast-time { color: rgba(235, 235, 245, 0.6); }

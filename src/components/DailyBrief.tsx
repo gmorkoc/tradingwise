@@ -905,34 +905,17 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
           <span className="db-page-head-left">
             {/* Plain title (the 1/2/3 column picker was removed). */}
             <span className="db-head-title db-head-title-static">
-              {/* Same heartbeat line + shimmer as the mobile sheet header,
-                  with the heartbeat after the title here. */}
-              <span className="db-head-title--fancy">{t("dailyBrief.title")}</span>
-              <span className="db-head-pulse" aria-hidden="true">
-                <svg viewBox="0 0 32 16">
-                  <polyline className="db-head-pulse-trail" points="0,8 8,8 11,3 15,13 18,6 20,8 32,8" />
-                  <polyline className="db-head-pulse-line" points="0,8 8,8 11,3 15,13 18,6 20,8 32,8" />
-                </svg>
+              <span>{t("dailyBrief.title")}</span>
+            </span>
+          </span>
+          {/* Just when it was last updated — no LIVE badge or heartbeat. */}
+          {updatedAt !== null && (
+            <span className="db-live">
+              <span className="db-live-updated">
+                {t("dailyBrief.lastUpdated", "Updated")} {timeAgo(updatedAt, t)}
               </span>
             </span>
-          </span>
-          <span className="db-live">
-            <span className="db-live-bars">
-              <span />
-              <span />
-              <span />
-              <span />
-            </span>
-            {t("nav.live")}
-            {updatedAt !== null && (
-              <>
-                <span className="db-live-sep" />
-                <span className="db-live-updated">
-                  {t("dailyBrief.lastUpdated", "Updated")} {timeAgo(updatedAt, t)}
-                </span>
-              </>
-            )}
-          </span>
+          )}
         </div>
         <div className="db-page-list">
           {featured && (
@@ -1006,33 +989,25 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
         >
           <span className="db-handle" />
           <div className="db-head">
-            {/* Title on the left; LIVE/updated stack stays pinned right
-                via justify-content:space-between. */}
+            {/* Just the title — no heartbeat or LIVE badge. */}
             <span className="db-head-title-row">
               {sheetState !== "minimized" && (
-                <>
-                  <span className="db-head-pulse" aria-hidden="true">
-                    <svg viewBox="0 0 32 16">
-                      <polyline className="db-head-pulse-trail" points="0,8 8,8 11,3 15,13 18,6 20,8 32,8" />
-                      <polyline className="db-head-pulse-line" points="0,8 8,8 11,3 15,13 18,6 20,8 32,8" />
-                    </svg>
-                  </span>
-                  <span className="db-head-title db-head-title--fancy">{t("dailyBrief.title")}</span>
-                </>
+                <span className="db-head-title">{t("dailyBrief.title")}</span>
               )}
             </span>
-            {sheetState !== "minimized" && (
-              <span className="db-head-status">
-                <span className="db-live">
-                  <span className="db-live-bars">
-                    <span />
-                    <span />
-                    <span />
-                    <span />
-                  </span>
-                  {t("nav.live")}
-                </span>
-              </span>
+            {/* Apple-standard ✕ (44pt glass circle): closes the brief
+                completely — "minimized" fires onDismiss, which unmounts it. */}
+            {(sheetState === "expanded" || sheetState === "full") && (
+              <button
+                type="button"
+                className="db-close ios-close-btn"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => { e.stopPropagation(); setSheetState("minimized"); }}
+                aria-label={t("common.close", "Close")}
+              >
+                <span className="ios-close-btn-txt">✕</span>
+                <svg className="ios-close-btn-ic" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+              </button>
             )}
             {/* Collapsed (the dock) shows just the plain title now — no
                 headline/news preview text at all, not even the one-line

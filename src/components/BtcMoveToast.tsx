@@ -184,16 +184,6 @@ export function BtcMoveToast({ alert, onDismiss, onClose, onSnooze }: Props) {
               aria-label={t("btcMoveToast.dismiss")}
             >✕</button>
           )}
-          {whale && onSnooze && (
-            <button
-              type="button"
-              className="btc-toast-snooze"
-              onClick={(e) => { e.stopPropagation(); setVisible(false); onSnooze(); }}
-              aria-label={t("btcMoveToast.snoozeAria", "Snooze whale alerts for 1 hour")}
-            >
-              {t("btcMoveToast.snooze", "Snooze 1h")}
-            </button>
-          )}
         </div>
       </div>
 

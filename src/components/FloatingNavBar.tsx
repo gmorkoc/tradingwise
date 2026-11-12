@@ -402,6 +402,30 @@ export function FloatingNavBar({
     if (homeHoldRef.current) { clearTimeout(homeHoldRef.current); homeHoldRef.current = null; }
   };
 
+  // Taps fire on finger-up, not on the browser's synthetic click: iOS
+  // drops that click when the finger drifts a few px, the press runs long,
+  // or the page changes under the finger (our glass lens animates right
+  // then) — which made nav taps sometimes do nothing. The click that may
+  // still follow is swallowed; keyboard/mouse clicks (no pointer-up of
+  // ours) still work through onClick.
+  const tapRef = useRef<{ key: string; x: number; y: number } | null>(null);
+  const firedAtRef = useRef(0);
+  const tapDown = (key: string, e: React.PointerEvent) => { tapRef.current = { key, x: e.clientX, y: e.clientY }; };
+  const tapUp = (key: string, e: React.PointerEvent, run: () => void) => {
+    const d = tapRef.current;
+    tapRef.current = null;
+    if (!d || d.key !== key || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 24) return;
+    firedAtRef.current = Date.now();
+    hapticTap(); // every nav tap buzzes (iOS app only)
+    run();
+  };
+  const viaClick = (run: () => void) => { if (Date.now() - firedAtRef.current > 600) { hapticTap(); run(); } };
+  const openAgent = () => {
+    if (agentLocked) { onAgentLocked(); return; }
+    setShowcasePlaying(false);
+    window.dispatchEvent(new CustomEvent("toggle-trading-agent"));
+  };
+
   const renderItem = (item: (typeof items)[number]) => (
     <button
       key={item.label}
@@ -409,9 +433,12 @@ export function FloatingNavBar({
       type="button"
       className={`fnb-item${item.isActive ? " fnb-item--active" : ""}${pressedLabel === item.label ? " fnb-item--pressed" : ""}${holdTip && item.label === "Home" ? " fnb-item--hint" : ""}`}
       // A long-press already opened the menu → swallow the click that follows.
-      onClick={() => { if (holdFiredRef.current) { holdFiredRef.current = false; return; } item.action(); }}
-      onPointerDown={() => { press(item.label); startHold(item.label); }}
-      onPointerUp={() => { cancelHold(); release(); }}
+      onClick={() => { if (holdFiredRef.current) { holdFiredRef.current = false; return; } viaClick(item.action); }}
+      onPointerDown={(e) => { tapDown(item.label, e); press(item.label); startHold(item.label); }}
+      onPointerUp={(e) => {
+        cancelHold(); release();
+        if (!holdFiredRef.current) tapUp(item.label, e, item.action);
+      }}
       onPointerCancel={() => { cancelHold(); release(); }}
       onPointerLeave={() => { cancelHold(); if (pressedRef.current === item.label) release(); }}
       onContextMenu={(e) => { if (item.label === "Home") e.preventDefault(); }}
@@ -446,11 +473,9 @@ export function FloatingNavBar({
       <button
         type="button"
         className={`fnb-item fnb-agent-item${showcasePlaying ? " fnb-agent-item--showcase" : ""}`}
-        onClick={() => {
-          if (agentLocked) { onAgentLocked(); return; }
-          setShowcasePlaying(false);
-          window.dispatchEvent(new CustomEvent("toggle-trading-agent"));
-        }}
+        onPointerDown={(e) => tapDown("agent", e)}
+        onPointerUp={(e) => tapUp("agent", e, openAgent)}
+        onClick={() => viaClick(openAgent)}
         aria-label={t("floatingNav.tradingAgent")}
       >
         <span className="fnb-item-icon-wrap">

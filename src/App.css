@@ -78,6 +78,48 @@ html body {
   animation: boot-screen-in 0.4s ease both;
 }
 
+/* Launch screen (Coinbase's sequence, our look) — the first frame must
+   match ios/App/App/Assets.xcassets/Splash (2732² light/dark images,
+   aspect-fill): app background, our logo (62pt circle) dead centre, no pop-in.
+   Then the spinner runs and only the name fades in at the bottom (the
+   background never changes); on hand-off a copy (--leaving) fades out
+   over the app. */
+html .app-boot-screen.app-boot-screen--brand {
+  z-index: 2147483000;
+  background: var(--color-background);
+  padding: 0;
+  animation: none;
+}
+.app-boot-screen--brand .boot-logo-wrap { animation: none; }
+/* Logo circle 62pt on a 440×956pt iPhone, dead centre (Coinbase's is
+   100pt). Our circle is 34/36 of the SVG box, so the box is 65.6pt
+   = 6.87vh — the launch images draw it at the same 6.87% of height. */
+html .app-boot-screen.app-boot-screen--brand .st-logo-icon { width: 6.87vh; height: 6.87vh; }
+/* Coinbase's wordmark: lowercase letters 10.3pt tall (Inter's x-height
+   is ~0.546em → 19px), baseline 80pt above the screen's bottom edge
+   (line-height 1 puts Inter's baseline ~0.137em above the box bottom). */
+html .app-boot-screen.app-boot-screen--brand .boot-brand-word.st-logo-wordmark {
+  font-size: 21px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  bottom: calc(80px - 0.137em);
+}
+.boot-brand-word.st-logo-wordmark {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 28px);
+  opacity: 0;
+  animation: boot-brand-word-in 0.6s ease 0.45s both;
+}
+@keyframes boot-brand-word-in { from { opacity: 0; } to { opacity: 1; } }
+html .app-boot-screen.app-boot-screen--brand.app-boot-screen--leaving {
+  pointer-events: none;
+  animation: boot-brand-out 0.5s ease forwards;
+}
+.app-boot-screen--leaving .boot-brand-word { opacity: 1; animation: none; }
+@keyframes boot-brand-out { from { opacity: 1; } to { opacity: 0; } }
+
 .app-boot-screen .st-logo {
   gap: 12px;
 }
@@ -8568,12 +8610,16 @@ html.is-native-app [contenteditable="true"] * {
   /* The pill's old moving-rim shine, now on the "Live market" letters: a
      purple → blue → green sweep across the text every few minutes (same
      180s cadence as before), plain text the rest of the time. */
+  /* The sweep is the "Trade BTC P" button's green (#00ffa3 dark,
+     --action-green light) — it also plays every time the logo spins
+     (.mode-switch-title--sweep, re-keyed from App.tsx). */
   html body .main-coin-header .mode-switch-pill--glint .mode-switch-title {
     --mst-c: #d8dbe4;
+    --mst-g: #00ffa3;
     background-image: linear-gradient(100deg,
       var(--mst-c) 0%, var(--mst-c) 38%,
-      #a78bfa 44%, #7c3aed 47%, #3b82f6 50%, #22c55e 53%,
-      var(--mst-c) 59%, var(--mst-c) 100%);
+      var(--mst-g) 45%, var(--mst-g) 53%,
+      var(--mst-c) 60%, var(--mst-c) 100%);
     background-size: 300% 100%;
     background-position: 100% 0;
     -webkit-background-clip: text;
@@ -8582,7 +8628,14 @@ html.is-native-app [contenteditable="true"] * {
     color: transparent;
     animation: mst-text-glint 180s ease-in-out 6s infinite;
   }
-  html[data-theme="light"] body .main-coin-header .mode-switch-pill--glint .mode-switch-title { --mst-c: #1c1c1e; }
+  html[data-theme="light"] body .main-coin-header .mode-switch-pill--glint .mode-switch-title { --mst-c: #1c1c1e; --mst-g: var(--action-green, #0f9b6c); }
+  html body .main-coin-header .mode-switch-pill--glint .mode-switch-title.mode-switch-title--sweep {
+    animation: mst-text-sweep 1.3s ease-in-out, mst-text-glint 180s ease-in-out 180s infinite;
+  }
+  @keyframes mst-text-sweep {
+    from { background-position: 100% 0; }
+    to   { background-position: 0% 0; }
+  }
   @keyframes mst-text-glint {
     0%    { background-position: 100% 0; }
     1.6%  { background-position: 0% 0; }

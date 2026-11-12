@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, lazy, Suspense } from "react";
+import { Fragment, useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, lazy, Suspense } from "react";
 import { CoinUnavailableSheet } from "./components/CoinUnavailableSheet";
 import ReactDOM from "react-dom";
 import { useTranslation, Trans } from "react-i18next";
@@ -1754,6 +1754,35 @@ function AppDashboard({
     return () => window.removeEventListener("coin-header-price", on);
   }, []);
   const showHdrPrice = !!hdrPrice && activeSection === "chart" && !inPaper && !isDesktopWidth;
+  // Advance Chart and Candle Insights (phones): same price line once the
+  // page is scrolled down, from the live 24h tickers.
+  const [pageScrolled, setPageScrolled] = useState(false);
+  const scrollPriceSection = (activeSection === "advance-chart" || activeSection === "candleai") && !inPaper && !isDesktopWidth;
+  useEffect(() => {
+    setPageScrolled(false);
+    const el = mainContentRef.current;
+    if (!el || !scrollPriceSection) return;
+    // Capture: the page may scroll inside its own container, not .main-content.
+    const onScroll = (e: Event) => {
+      const t = e.target as HTMLElement | Document;
+      const top = t instanceof HTMLElement ? t.scrollTop : 0;
+      setPageScrolled(top > 120);
+    };
+    el.addEventListener("scroll", onScroll, { passive: true, capture: true });
+    return () => el.removeEventListener("scroll", onScroll, { capture: true });
+  }, [scrollPriceSection, activeSection]);
+  const scrollTicker = scrollPriceSection && pageScrolled ? coinTickers.get(coin) : undefined;
+  const hdrPriceShown: { price: string; chg: number | null } | null = showHdrPrice
+    ? hdrPrice
+    : scrollTicker && scrollTicker.price > 0
+      ? {
+          price: `$${scrollTicker.price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: scrollTicker.price >= 1 ? 2 : 6 })}`,
+          chg: Number.isFinite(scrollTicker.change) ? scrollTicker.change : null,
+        }
+      : null;
+  // "Live market" green sweep: on every logo spin (tap) and each refresh.
+  const [titleSweepKey, setTitleSweepKey] = useState(0);
+  useEffect(() => { if (refreshing) setTitleSweepKey((k) => k + 1); }, [refreshing]);
   // "account-switcher" (sketch #1) or "wallet-chip" (sketch #3).
   const HEADER_MODE_STYLE = "account-switcher" as string;
   const accountSwitcher = (
@@ -1766,7 +1795,7 @@ function AppDashboard({
         onClick={() => {
           hapticTap();
           setModeMenuOpen((v) => !v);
-          if (inPaper) setPaperTabSpinKey((k) => k + 1); else setChartTabSpinKey((k) => k + 1);
+          if (inPaper) setPaperTabSpinKey((k) => k + 1); else { setChartTabSpinKey((k) => k + 1); setTitleSweepKey((k) => k + 1); }
         }}
       >
         {inPaper ? (
@@ -1783,13 +1812,16 @@ function AppDashboard({
           </span>
         )}
         <span className="mode-switch-text">
-          <span className="mode-switch-title">{inPaper ? t("appShell.mode.paperTrading") : liveLabel}</span>
-          {showHdrPrice ? (
+          <span
+            key={titleSweepKey}
+            className={`mode-switch-title${titleSweepKey > 0 ? " mode-switch-title--sweep" : ""}`}
+          >{inPaper ? t("appShell.mode.paperTrading") : liveLabel}</span>
+          {hdrPriceShown ? (
             <span className="mode-switch-sub mode-switch-sub--price">
-              <b>{hdrPrice!.price}</b>
-              {hdrPrice!.chg !== null && (
-                <i className={hdrPrice!.chg >= 0 ? "hdr-price-up" : "hdr-price-dn"}>
-                  {hdrPrice!.chg >= 0 ? "▲" : "▼"}{Math.abs(hdrPrice!.chg).toFixed(2)}%
+              <b>{hdrPriceShown.price}</b>
+              {hdrPriceShown.chg !== null && (
+                <i className={hdrPriceShown.chg >= 0 ? "hdr-price-up" : "hdr-price-dn"}>
+                  {hdrPriceShown.chg >= 0 ? "▲" : "▼"}{Math.abs(hdrPriceShown.chg).toFixed(2)}%
                 </i>
               )}
             </span>
@@ -2871,6 +2903,7 @@ function AppDashboard({
     setRefreshing(false);
   };
 
+  const [ptrKey, setPtrKey] = useState(0);
   // Native-only: iOS has no built-in pull-to-refresh for a WKWebView the
   // way a browser tab does, so this reimplements the gesture — reuses the
   // same refresh path as the header logo's manual refresh button.
@@ -2879,7 +2912,17 @@ function AppDashboard({
     progress: ptrProgress,
     refreshing: ptrRefreshing,
     dragging: ptrDragging,
-  } = usePullToRefresh(mainContentRef, fetchBTCData, { enabled: Capacitor.isNativePlatform() });
+  } = usePullToRefresh(
+    mainContentRef,
+    // Rebuild the current page in place (no loading screen): bumping
+    // ptrKey remounts the page's sections so each fetches its data again,
+    // plus the coin's own stats.
+    async () => {
+      setPtrKey((k) => k + 1);
+      await Promise.all([fetchBTCData(), new Promise((r) => setTimeout(r, 600))]);
+    },
+    { enabled: Capacitor.isNativePlatform() },
+  );
 
   useEffect(() => {
     let cached: Partial<BTCData> | null = null;
@@ -4226,6 +4269,9 @@ function AppDashboard({
                 </span>
               )}
             </div>
+            {/* Pull-to-refresh rebuilds everything below (new key), so each
+                section loads its data again — no full app reload. */}
+            <Fragment key={ptrKey}>
             {profile?.subscription_status === "past_due" && (
               <div className="pastdue-banner">
                 <span>⚠️ {t("billing.pastDue.message")}</span>
@@ -4718,6 +4764,7 @@ function AppDashboard({
                 {chartRightColTabbedEl}
               </div>
             )}
+            </Fragment>
           </div>
           {/* Paper Trading / Buy Signals, added as a real column here
               when activated from their top-bar icons (desktop only —
@@ -5317,10 +5364,50 @@ function AppGate() {
   }, [user]);
 
   // Blank screen while Supabase resolves the session — prevents any flicker
-  if (authLoading || (user && profileLoading && isInitialLoad) || (user && !minTimeElapsed)) {
+  // The launch screen holds for at least 1s for everyone (signed in or not).
+  const booting = !!(authLoading || (user && profileLoading && isInitialLoad) || !minTimeElapsed);
+  // Coinbase-style hand-off: when the boot screen goes, a copy of it is laid
+  // over the app and faded out, so the app cross-fades in under the logo.
+  const wasBootingRef = useRef(booting);
+  const bootHtmlRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (booting) { wasBootingRef.current = true; return; }
+    if (!wasBootingRef.current) return;
+    wasBootingRef.current = false;
+    if (!bootHtmlRef.current) return;
+    const wrap = document.createElement("div");
+    wrap.innerHTML = bootHtmlRef.current;
+    const el = wrap.firstElementChild as HTMLElement | null;
+    if (!el) return;
+    el.classList.add("app-boot-screen--leaving");
+    el.removeAttribute("role");
+    el.setAttribute("aria-hidden", "true");
+    document.body.appendChild(el);
+    const id = window.setTimeout(() => el.remove(), 600);
+    return () => { window.clearTimeout(id); el.remove(); };
+  }, [booting]);
+
+  if (booting) {
     return (
-      <div className="app-boot-screen">
-        <CoinHintzLogo loading={true} />
+      // Coinbase's launch sequence with our look: the app background and
+      // our logo (with its loading spinner) dead centre — the same spot and
+      // size as the iOS launch screen (Splash.imageset), so start-up flows
+      // straight on — then only the name fades in at the bottom.
+      <div
+        ref={(el) => { if (el) bootHtmlRef.current = el.outerHTML; }}
+        className="app-boot-screen app-boot-screen--brand"
+        role="status"
+        aria-label="coinhintz"
+      >
+        <span className="boot-logo-wrap">
+          <span className="boot-glow" />
+          <span className="boot-spinner-ring" />
+          <LogoIcon size={66} animated />
+        </span>
+        <span className="boot-brand-word st-logo-wordmark" aria-hidden="true">
+          <span className="st-logo-simply">coinhint</span>
+          <span className="st-logo-ai">z</span>
+        </span>
       </div>
     );
   }

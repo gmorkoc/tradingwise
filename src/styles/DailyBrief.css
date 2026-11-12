@@ -217,6 +217,30 @@ html[data-theme="light"] .db-sheet--full {
   padding: 14px 0 10px 16px;
 }
 
+/* Close ✕ like Apple's sheet close: 30pt visible circle inside a 44pt
+   tap area, vertically centred on the title, 16pt from the right edge
+   (same inset as the title on the left). */
+.db-head:has(.db-close) { padding-right: 9px; }
+html .db-head .db-close.ios-close-btn {
+  margin: -7px 0;
+  align-self: center;
+  top: -4px; /* a touch higher, optically level with the title */
+}
+/* iOS system close (UIButton .close): tertiarySystemFill circle, no
+   border/blur, secondaryLabel-coloured bold ✕. */
+html .db-head .db-close.ios-close-btn::before {
+  inset: 7px;
+  border: 0;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background: rgba(118, 118, 128, 0.24);
+}
+html[data-theme="light"] .db-head .db-close.ios-close-btn::before { background: rgba(118, 118, 128, 0.12); }
+html .db-head .db-close.ios-close-btn { color: rgba(235, 235, 245, 0.6); }
+html[data-theme="light"] .db-head .db-close.ios-close-btn { color: rgba(60, 60, 67, 0.6); }
+html .db-head .db-close .ios-close-btn-ic { width: 11px; height: 11px; }
+html .db-head .db-close .ios-close-btn-ic path { stroke-width: 2.4; }
+
 .db-head-title-row {
   display: flex;
   align-items: center;
