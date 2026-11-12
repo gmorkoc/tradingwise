@@ -108,7 +108,7 @@ export function BtcMoveToast({ alert, onDismiss, onClose, onSnooze }: Props) {
 
   return ReactDOM.createPortal(
     <div
-      className={`btc-toast${visible ? " btc-toast--visible" : ""} ${isUp ? "btc-toast--up" : "btc-toast--down"}`}
+      className={`btc-toast${visible ? " btc-toast--visible" : ""} ${isUp ? "btc-toast--up" : "btc-toast--down"}${whale ? " btc-toast--whale" : ""}`}
       onClick={() => { if (!dragging) dismiss(); }}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
@@ -153,9 +153,6 @@ export function BtcMoveToast({ alert, onDismiss, onClose, onSnooze }: Props) {
                 {t("btcMoveToast.whaleAlert")}{whale.sentiment !== "neutral" ? ` · ${whale.sentiment === "bullish" ? t("btcMoveToast.bullish") : t("btcMoveToast.bearish")}` : ""}
               </span>
             </div>
-            <div className="btc-toast-price">
-              {fmtBtc(whale.amount)} BTC{whale.usd ? <span className="btc-toast-usd"> ≈ {fmtUsdShort(whale.usd)}</span> : null}
-            </div>
             <div className="btc-toast-change btc-toast-transfer">{whale.from} → {whale.to}</div>
           </div>
         ) : (
@@ -168,6 +165,15 @@ export function BtcMoveToast({ alert, onDismiss, onClose, onSnooze }: Props) {
             <div className="btc-toast-change">
               {isUp ? "▲" : "▼"} {t("btcMoveToast.inLastMove", { change: `${isUp ? "+" : "−"}$${fmtChange}`, pct: move!.changePct.toFixed(2) })}
             </div>
+          </div>
+        )}
+
+        {/* Whale alerts: amount + USD on the right, so the left isn't three
+            lines deep. */}
+        {whale && (
+          <div className="btc-toast-amt">
+            <b>{fmtBtc(whale.amount)} BTC</b>
+            {whale.usd ? <span>≈ {fmtUsdShort(whale.usd)}</span> : null}
           </div>
         )}
 
@@ -186,6 +192,22 @@ export function BtcMoveToast({ alert, onDismiss, onClose, onSnooze }: Props) {
           )}
         </div>
       </div>
+
+      {/* Whale alerts: the old card's quiet footer strip — clock + "Snooze 1h". */}
+      {whale && onSnooze && (
+        <button
+          type="button"
+          className="btc-toast-snooze-footer"
+          onClick={(e) => { e.stopPropagation(); setVisible(false); onSnooze(); }}
+          aria-label={t("btcMoveToast.snoozeAria", "Snooze whale alerts for 1 hour")}
+        >
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="12" cy="13" r="8" />
+            <path d="M12 9v4l3 2" />
+          </svg>
+          {t("btcMoveToast.snooze", "Snooze 1h")}
+        </button>
+      )}
 
       {/* Progress bar */}
       <div className="btc-toast-bar" style={{ width: `${progress}%` }} />

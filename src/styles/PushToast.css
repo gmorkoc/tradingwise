@@ -159,13 +159,16 @@
     right: 8px;
     max-width: none;
     /* iOS banners sit ~3pt above the safe-area line and are ~64pt tall. */
-    top: max(6px, calc(var(--native-safe-area-top, env(safe-area-inset-top, 0px)) - 3px));
-    min-height: 64px;
+    /* Measured off real iOS banners on the same phone: top 58.7pt.
+       At least 81pt tall (the chosen Tinted Glass sketch); grows with
+       longer content, like iOS banners do. */
+    top: max(6px, calc(var(--native-safe-area-top, env(safe-area-inset-top, 0px)) - 5px));
+    min-height: 81px;
     box-sizing: border-box;
     align-items: center;
     gap: 10px;
-    /* iOS banner proportions: ~12pt top/bottom around a 38pt icon. */
-    padding: 11px 14px 11px 12px;
+    /* iOS banner proportions: 14pt above/below the 38pt icon = 66pt. */
+    padding: 14px 14px 14px 12px;
     border: none;
     border-radius: 24px;
     background: rgba(246, 246, 248, 0.84);
@@ -196,7 +199,7 @@
      title, 38pt icon 14pt in from the edge and 14pt before the text. */
   .push-toast:not(.push-toast--rich):not(.push-toast--sheet) {
     padding-left: 14px;
-    gap: 14px;
+    gap: 13px; /* iOS text starts at 72.7pt: 8 + 14 + 38 + 13 = 73 */
     font-family: -apple-system, "SF Pro Text", system-ui, sans-serif;
   }
   .push-toast:not(.push-toast--rich):not(.push-toast--sheet) .push-toast-body { gap: 0; }
@@ -580,3 +583,16 @@ span.push-toast-disclaimer--compact {
 /* Swipe-to-dismiss (PushToast.tsx swipeHandlers): the card owns its
    drags so iOS doesn't start a page scroll and cancel the touch. */
 .push-toast { touch-action: none; }
+
+/* "Tinted Glass" (chosen from the banner sketches): frosted glass with a
+   faint green wash from the left, and a 0.5pt light rim. Phones only. */
+@media (max-width: 900px) {
+  html .push-toast:not(.push-toast--rich):not(.push-toast--sheet) {
+    background: linear-gradient(120deg, rgba(34, 197, 94, 0.18), rgba(248, 248, 250, 0.74) 55%);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), inset 0 0 0 0.5px rgba(255, 255, 255, 0.8);
+  }
+  html:not([data-theme="light"]) .push-toast:not(.push-toast--rich):not(.push-toast--sheet) {
+    background: linear-gradient(120deg, rgba(34, 197, 94, 0.22), rgba(30, 30, 36, 0.62) 55%);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), inset 0 0 0 0.5px rgba(255, 255, 255, 0.14);
+  }
+}

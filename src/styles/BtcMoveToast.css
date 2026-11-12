@@ -214,6 +214,62 @@
 html[data-theme="light"] .btc-toast-close.btc-toast-close { background: none; border: none; }
 html[data-theme="light"] .btc-toast-snooze { background: none; color: #111114; }
 
+/* Whale alerts: amount + USD right-aligned on the right. */
+.btc-toast-amt {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+  gap: 1px;
+  line-height: 1.1;
+}
+.btc-toast-amt b { font-size: 1.05rem; font-weight: 900; letter-spacing: -0.02em; color: #fff; }
+.btc-toast-amt span { font-size: 0.72rem; font-weight: 700; color: rgba(255, 255, 255, 0.7); }
+html[data-theme="light"] .btc-toast-amt b { color: #111114; }
+html[data-theme="light"] .btc-toast-amt span { color: rgba(60, 60, 67, 0.75); }
+
+/* Whale banner stays the standard ~64pt banner height with the snooze
+   strip inside it: two-line content, tighter padding, smaller icon. */
+@media (max-width: 900px) {
+  /* Same as the chosen sketch: 81pt content row + 25pt snooze row. */
+  html .btc-toast.btc-toast--whale { justify-content: flex-start; min-height: 106px; }
+  html .btc-toast--whale .btc-toast-inner { padding: 14px 14px 8px 12px; gap: 10px; flex: 1; align-items: center; }
+  html .btc-toast--whale .btc-toast-btc-icon { width: 38px; height: 38px; }
+  html .btc-toast--whale .btc-toast-whale { font-size: 1.25rem; }
+  html .btc-toast--whale .btc-toast-body { gap: 1px; }
+  html .btc-toast--whale .btc-toast-actions { display: none; }
+  html .btc-toast--whale .btc-toast-snooze-footer { padding: 5px 12px 7px; font-size: 11px; line-height: 13px; }
+}
+
+/* Whale alerts: thin footer strip under the card (the old whale card's
+   snooze bar) — hairline on top, faint tint, small grey clock + text. */
+.btc-toast-snooze-footer {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  padding: 6px 12px;
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(235, 235, 245, 0.6);
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.btc-toast-snooze-footer:active { color: #fff; }
+html[data-theme="light"] .btc-toast-snooze-footer {
+  border-top-color: rgba(0, 0, 0, 0.08);
+  background: rgba(0, 0, 0, 0.03);
+  color: rgba(60, 60, 67, 0.6);
+}
+html[data-theme="light"] .btc-toast-snooze-footer:active { color: #111114; }
+
 /* Progress bar */
 .btc-toast-bar {
   position: relative;
@@ -239,8 +295,11 @@ html[data-theme="light"] .btc-toast-snooze { background: none; color: #111114; }
 @media (max-width: 900px) {
   html .btc-toast {
     width: calc(100vw - 16px);
-    top: max(6px, calc(var(--native-safe-area-top, env(safe-area-inset-top, 0px)) - 3px));
-    min-height: 64px;
+    /* Measured off real iOS banners on the same phone: top 58.7pt.
+       At least 81pt tall (the chosen Tinted Glass sketch); grows with
+       longer content, like iOS banners do. */
+    top: max(6px, calc(var(--native-safe-area-top, env(safe-area-inset-top, 0px)) - 5px));
+    min-height: 81px;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -273,4 +332,47 @@ html[data-theme="light"] .btc-toast-snooze { background: none; color: #111114; }
   html[data-theme="light"] .btc-toast-usd { color: rgba(60, 60, 67, 0.75); }
   html[data-theme="light"] .btc-toast-inner { color: #111114; }
   html[data-theme="light"] .btc-toast-close { background: rgba(0, 0, 0, 0.06); border-color: rgba(0, 0, 0, 0.08); }
+}
+
+/* "Tinted Glass" (chosen from the banner sketches), phones: frosted glass
+   with a faint wash from the left — the move's colour (green up / red
+   down) on price alerts, blue on whale alerts — and a 0.5pt light rim.
+   The whale snooze row loses its fill and full-width line for a hairline
+   that fades out at both ends. */
+@media (max-width: 900px) {
+  html .btc-toast {
+    background: linear-gradient(120deg, color-mix(in srgb, var(--btc-color, #22c55e) 22%, transparent), rgba(30, 30, 36, 0.62) 55%);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), inset 0 0 0 0.5px rgba(255, 255, 255, 0.14);
+  }
+  html[data-theme="light"] .btc-toast {
+    background: linear-gradient(120deg, color-mix(in srgb, var(--btc-color, #22c55e) 18%, transparent), rgba(248, 248, 250, 0.74) 55%);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), inset 0 0 0 0.5px rgba(255, 255, 255, 0.8);
+  }
+  html .btc-toast.btc-toast--whale {
+    background: linear-gradient(120deg, rgba(59, 130, 246, 0.26), rgba(30, 30, 36, 0.62) 55%);
+  }
+  html[data-theme="light"] .btc-toast.btc-toast--whale {
+    background: linear-gradient(120deg, rgba(59, 130, 246, 0.18), rgba(248, 248, 250, 0.74) 55%);
+  }
+  html .btc-toast--whale .btc-toast-btc-icon { background: rgba(59, 130, 246, 0.22); border-color: rgba(59, 130, 246, 0.35); box-shadow: none; }
+  html[data-theme="light"] .btc-toast--whale .btc-toast-btc-icon { background: rgba(59, 130, 246, 0.14); }
+
+  html .btc-toast-snooze-footer {
+    border-top: 0;
+    background: none;
+    color: rgba(255, 255, 255, 0.62);
+  }
+  html .btc-toast-snooze-footer::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 18%;
+    right: 18%;
+    height: 0.5px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+  }
+  html[data-theme="light"] .btc-toast-snooze-footer { border-top: 0; background: none; color: rgba(0, 0, 0, 0.55); }
+  html[data-theme="light"] .btc-toast-snooze-footer::before {
+    background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.16), transparent);
+  }
 }
