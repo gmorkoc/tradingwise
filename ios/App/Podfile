@@ -1,6 +1,8 @@
 require_relative '../../node_modules/@capacitor/ios/scripts/pods_helpers'
 
-platform :ios, '13.0'
+# iOS 15 minimum — App Store Connect requires 15.0+ from April 2027
+# (ITMS-90068).
+platform :ios, '15.0'
 use_frameworks!
 
 # workaround to avoid Xcode caching of Pods that requires
@@ -34,4 +36,13 @@ end
 
 post_install do |installer|
   assertDeploymentTarget(installer)
+  # Every bundled library targets iOS 15 too, so nothing in the upload
+  # still declares an older minimum.
+  installer.pods_project.targets.each do |target|
+    target.build_configurations.each do |config|
+      if config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_f < 15.0
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+      end
+    end
+  end
 end
