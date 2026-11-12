@@ -627,7 +627,7 @@
         {
           "icon": "✦",
           "title": "AI Market Intelligence",
-          "desc": "GPT-4o reads the market for you — patterns, momentum, and bias at a glance."
+          "desc": "AI reads the market for you — patterns, momentum, and bias at a glance."
         },
         {
           "icon": "⛓",
@@ -657,7 +657,7 @@
         {
           "icon": "🕯️",
           "title": "Candle Insights — Full Chart Analysis",
-          "desc": "Elliott Wave, ICT/SMC, Wyckoff patterns — GPT-4o reads your chart and explains every move in plain language."
+          "desc": "Elliott Wave, ICT/SMC, Wyckoff patterns — AI reads your chart and explains every move in plain language."
         },
         {
           "icon": "〰️",
@@ -876,7 +876,7 @@
       "badge": "✦ AI-Powered Crypto Analytics",
       "titleLine1": "Trade smarter with",
       "titleGradient": "AI market intelligence",
-      "desc": "Real-time Bitcoin & crypto analytics powered by GPT-4o. Liquidation maps, on-chain signals, price prediction scenarios, and custom strategy alerts — all in one dashboard.",
+      "desc": "Real-time Bitcoin & crypto analytics powered by AI. Liquidation maps, on-chain signals, price prediction scenarios, and custom strategy alerts — all in one dashboard.",
       "startFree": "Start for free ✦",
       "headline": "Read the Market Like an Institution",
       "sub": "AI-powered analysis across price action, on-chain data, liquidations, and sentiment — all in one dashboard.",
@@ -910,7 +910,7 @@
         {
           "icon": "🤖",
           "title": "AI Market Intelligence",
-          "desc": "GPT-4o analyzes funding rate, liquidations, open interest, and on-chain data to deliver a full market thesis in seconds."
+          "desc": "AI analyzes funding rate, liquidations, open interest, and on-chain data to deliver a full market thesis in seconds."
         },
         {
           "icon": "🎯",
@@ -932,7 +932,7 @@
         {
           "icon": "✦",
           "title": "AI Market Intelligence",
-          "desc": "GPT-4o reads price action, funding rates, open interest and on-chain data — then gives you a plain-English bias with confidence level."
+          "desc": "AI reads price action, funding rates, open interest and on-chain data — then gives you a plain-English bias with confidence level."
         },
         {
           "icon": "📈",
@@ -1137,7 +1137,7 @@
     "loading": "Loading weekly candle data…",
     "title": "Long-Term Analysis",
     "sub": "HTF · Weekly · Cycle Tracking · {{coin}}/USD",
-    "aiLabel": "GPT-4o",
+    "aiLabel": "AI",
     "sections": {
       "monthly": {
         "title": "Monthly Returns",
@@ -1169,7 +1169,7 @@
       },
       "ai": {
         "title": "AI Outlook",
-        "sub": "GPT-4o macro analysis"
+        "sub": "AI macro analysis"
       }
     },
     "stats": {
@@ -1222,7 +1222,7 @@
       "bear": "Bear Case"
     },
     "ai": {
-      "ctaText": "AI-powered cycle analysis — cycle phase, 6-month and 12-month outlooks, key levels, and an actionable long-term take, powered by GPT-4o.",
+      "ctaText": "AI-powered cycle analysis — cycle phase, 6-month and 12-month outlooks, key levels, and an actionable long-term take, powered by AI.",
       "getOutlook": "Get AI Outlook",
       "analysing": "Analysing…",
       "refreshBtn": "Refresh Analysis",
@@ -1403,7 +1403,7 @@
     "lowCycle": "■ Low cycle",
     "bothCycles": "■ Both",
     "aiTitle": "AI Gann Analysis",
-    "aiSub": "GPT-4o analyses all Gann data and delivers a structured prediction",
+    "aiSub": "AI analyses all Gann data and delivers a structured prediction",
     "keyLevels": "Key Levels to Watch",
     "priceTarget": "Price Target",
     "nextCycleAlert": "Next Cycle Alert",

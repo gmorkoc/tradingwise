@@ -571,7 +571,7 @@
         {
           "icon": "✦",
           "title": "YZ Piyasa İstihbaratı",
-          "desc": "GPT-4o piyasayı sizin için okur — formasyonlar, momentum ve eğilim bir bakışta."
+          "desc": "YZ piyasayı sizin için okur — formasyonlar, momentum ve eğilim bir bakışta."
         },
         {
           "icon": "⛓",
@@ -599,7 +599,7 @@
         {
           "icon": "🕯️",
           "title": "Inside the Candle — Full Chart Analysis",
-          "desc": "Elliott Wave, ICT/SMC, Wyckoff — GPT-4o interprets every move on your chart."
+          "desc": "Elliott Wave, ICT/SMC, Wyckoff — YZ interprets every move on your chart."
         },
         {
           "icon": "〰️",
@@ -803,7 +803,7 @@
       "badge": "✦ YZ Destekli Kripto Analizi",
       "titleLine1": "Daha Akıllı İşlem Yapın",
       "titleGradient": "YZ piyasa zekasıyla",
-      "desc": "GPT-4o ile güçlendirilmiş gerçek zamanlı Bitcoin ve kripto analitiği. Tasfiye haritaları, zincir üzeri sinyaller, fiyat tahmin senaryoları ve özel strateji uyarıları — hepsi tek bir panoda.",
+      "desc": "YZ ile güçlendirilmiş gerçek zamanlı Bitcoin ve kripto analitiği. Tasfiye haritaları, zincir üzeri sinyaller, fiyat tahmin senaryoları ve özel strateji uyarıları — hepsi tek bir panoda.",
       "startFree": "Ücretsiz başla ✦",
       "headline": "Piyasayı Bir Kurum Gibi Okuyun",
       "sub": "Fiyat hareketi, zincir üzeri veri, tasfiyeler ve duyarlılıkta YZ destekli analiz — hepsi tek bir panoda.",
@@ -823,7 +823,7 @@
         {
           "icon": "🤖",
           "title": "YZ Piyasa İstihbaratı",
-          "desc": "GPT-4o fonlama oranını, tasfiyeleri, açık faizi ve zincir üzeri veriyi analiz ederek saniyeler içinde tam bir piyasa tezi sunar."
+          "desc": "YZ fonlama oranını, tasfiyeleri, açık faizi ve zincir üzeri veriyi analiz ederek saniyeler içinde tam bir piyasa tezi sunar."
         },
         {
           "icon": "🎯",
@@ -845,7 +845,7 @@
         {
           "icon": "✦",
           "title": "YZ Piyasa İstihbaratı",
-          "desc": "GPT-4o fiyat hareketini, fonlama oranlarını, açık faizi ve zincir üzeri veriyi okur — ardından size güven düzeyli sade bir eğilim sunar."
+          "desc": "YZ fiyat hareketini, fonlama oranlarını, açık faizi ve zincir üzeri veriyi okur — ardından size güven düzeyli sade bir eğilim sunar."
         },
         {
           "icon": "📈",
@@ -1003,7 +1003,7 @@
     "loading": "Haftalık mum verileri yükleniyor…",
     "title": "Uzun Vadeli Analiz",
     "sub": "HTF · Haftalık · Döngü Takibi · {{coin}}/USD",
-    "aiLabel": "GPT-4o",
+    "aiLabel": "YZ",
     "sections": {
       "monthly": {
         "title": "Aylık Getiriler",
@@ -1031,7 +1031,7 @@
       },
       "ai": {
         "title": "YZ Görünümü",
-        "sub": "GPT-4o makro analiz"
+        "sub": "YZ makro analiz"
       }
     },
     "stats": {
@@ -1084,7 +1084,7 @@
       "bear": "Ayı Senaryosu"
     },
     "ai": {
-      "ctaText": "YZ destekli döngü analizi — döngü aşaması, 6 aylık ve 12 aylık görünümler, kritik seviyeler ve GPT-4o tarafından sunulan uygulanabilir uzun vadeli değerlendirme.",
+      "ctaText": "YZ destekli döngü analizi — döngü aşaması, 6 aylık ve 12 aylık görünümler, kritik seviyeler ve YZ tarafından sunulan uygulanabilir uzun vadeli değerlendirme.",
       "getOutlook": "YZ Görünümünü Al",
       "analysing": "Analiz ediliyor…",
       "refreshBtn": "Analizi Yenile",
@@ -1265,7 +1265,7 @@
     "lowCycle": "■ Düşük döngü",
     "bothCycles": "■ Her ikisi",
     "aiTitle": "YZ Gann Analizi",
-    "aiSub": "GPT-4o tüm Gann verilerini analiz eder ve yapılandırılmış bir tahmin sunar",
+    "aiSub": "YZ tüm Gann verilerini analiz eder ve yapılandırılmış bir tahmin sunar",
     "keyLevels": "İzlenecek Ana Seviyeler",
     "priceTarget": "Fiyat Hedefi",
     "nextCycleAlert": "Sonraki Döngü Uyarısı",

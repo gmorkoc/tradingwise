@@ -22,6 +22,28 @@ export default function UsernameGateModal({ userId, onSaved }: Props) {
   const [status,   setStatus]   = useState<Status>("idle");
   const [busy,     setBusy]     = useState(false);
   const [error,    setError]    = useState("");
+  // App Review (Guideline 4, Sign in with Apple): people who signed in with
+  // Apple/Google must not be asked for more details before using the app.
+  // So a username is assigned automatically ("trader" + 6 digits; they can
+  // change it later in Profile) and they go straight in. The form below
+  // only shows if that fails 5 times in a row.
+  const [autoFailed, setAutoFailed] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      for (let i = 0; i < 5 && alive; i++) {
+        const candidate = `trader${Math.floor(100000 + Math.random() * 900000)}`;
+        try {
+          await saveUsername(userId, candidate);
+          if (alive) await onSaved();
+          return;
+        } catch { /* taken or network — try another */ }
+      }
+      if (alive) setAutoFailed(true);
+    })();
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   useEffect(() => {
     const trimmed = username.trim();
@@ -55,6 +77,10 @@ export default function UsernameGateModal({ userId, onSaved }: Props) {
     }
     setBusy(false);
   };
+
+  // Assigning a username in the background — just the plain app
+  // background for that split second, no form.
+  if (!autoFailed) return <div className="app-boot-screen" aria-busy="true" />;
 
   return (
     <div className="auth-backdrop">
