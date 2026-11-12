@@ -503,3 +503,117 @@ html:not([data-theme="light"]) .mkst-panel:hover { background: rgba(255, 255, 25
   .mkst-panel > .mkst-news .mkst-news-text { font-size: 15px; }
   .mkst--loading .mkst-panel { height: 300px; }
 }
+
+/* ── Desktop: pinned "Hot now" live feed (HotNow.tsx) ──────────────────── */
+/* Laid over the carousel's left end (the carousel keeps its exact size;
+   cards slide underneath), full height, on the page background. */
+.mkst.mkst--has-hot { position: relative; }
+.mkst--has-hot > .hot {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 436px;
+  z-index: 4;
+  background: var(--color-background);
+}
+/* The left arrow sits just past the pinned card. */
+.mkst--has-hot > .mkst-arrow--prev { left: 452px; }
+/* Same width as one carousel card at each size (384px up to 1512px). */
+@media (max-width: 1512px) {
+  .mkst--has-hot > .hot { width: 384px; padding: 22px 20px 18px 26px; }
+  .mkst--has-hot > .mkst-arrow--prev { left: 400px; }
+}
+/* Cards line up from the pinned card's edge: snap each card's start to
+   it (MarketStories edgeOffset() scrolls there too), and no left fade —
+   only the right edge fades. */
+.mkst--has-hot .mkst-track {
+  scroll-padding-left: 436px;
+  -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 120px), rgba(0,0,0,0.25) calc(100% - 40px), transparent 100%);
+  mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 120px), rgba(0,0,0,0.25) calc(100% - 40px), transparent 100%);
+}
+.mkst--has-hot .mkst-panel { scroll-snap-align: start; }
+@media (max-width: 1512px) {
+  .mkst--has-hot .mkst-track { scroll-padding-left: 384px; }
+}
+.hot {
+  --hot-line: color-mix(in srgb, var(--color-text) 7%, transparent);
+  --hot-muted: color-mix(in srgb, var(--color-text) 58%, transparent);
+  --hot-red: #e5484d;
+  --hot-green: #16a34a;
+  --hot-amber: #d97706;
+  flex: 0 0 436px;
+  box-sizing: border-box;
+  padding: 26px 26px 22px 30px;
+  border-right: 1px solid var(--hot-line);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+  min-width: 0;
+}
+html:not([data-theme="light"]) .hot { --hot-green: #22c55e; --hot-amber: #f59e0b; --hot-red: #f2555a; }
+.hot-head { display: flex; align-items: center; gap: 8px; }
+.hot-pulse {
+  position: relative; width: 9px; height: 9px; border-radius: 50%; background: var(--hot-red);
+}
+.hot-pulse::after {
+  content: ""; position: absolute; inset: -5px; border-radius: 50%;
+  border: 2px solid var(--hot-red); opacity: 0;
+  animation: hot-ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+@keyframes hot-ping { 0% { transform: scale(0.5); opacity: 0.8; } 100% { transform: scale(1.6); opacity: 0; } }
+.hot-title { font-size: 13px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-text); }
+.hot-live {
+  margin-left: auto; font-size: 10.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--hot-red); padding: 2px 8px; border-radius: 99px;
+  background: color-mix(in srgb, var(--hot-red) 12%, transparent);
+}
+.hot-window {
+  position: relative; overflow: hidden;
+  /* Soft fade at the bottom so the next item slides in from under it. */
+  -webkit-mask-image: linear-gradient(180deg, #000 78%, transparent);
+  mask-image: linear-gradient(180deg, #000 78%, transparent);
+}
+.hot-list { list-style: none; margin: 0; padding: 0; transform: translateY(0); }
+.hot-list--shift { transform: translateY(calc(-1 * var(--hot-row))); transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1); }
+.hot-row { box-sizing: border-box; border-bottom: 1px solid var(--hot-line); }
+.hot-btn {
+  all: unset; box-sizing: border-box; width: 100%; height: 100%;
+  display: flex; align-items: center; gap: 12px; padding: 0 6px; border-radius: 10px; cursor: pointer;
+  transition: background 0.15s ease;
+}
+.hot-btn:disabled { cursor: default; }
+.hot-btn:not(:disabled):hover { background: color-mix(in srgb, var(--color-text) 4%, transparent); }
+.hot-btn:focus-visible { outline: 2px solid var(--hot-red); outline-offset: -2px; }
+.hot-coin { width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; }
+.hot-ic { width: 10px; height: 10px; margin: 0 10px; border-radius: 50%; flex-shrink: 0; background: var(--hot-muted); }
+.hot-ic--breaking { background: var(--hot-red); box-shadow: 0 0 0 4px color-mix(in srgb, var(--hot-red) 18%, transparent); }
+.hot-ic--macro { background: var(--hot-amber); box-shadow: 0 0 0 4px color-mix(in srgb, var(--hot-amber) 18%, transparent); }
+.hot-text { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.hot-meta { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.hot-tag {
+  flex-shrink: 0; font-size: 10px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 1px 6px; border-radius: 4px;
+}
+.hot-tag--breaking { color: #fff; background: var(--hot-red); }
+.hot-tag--drop { color: var(--hot-red); background: color-mix(in srgb, var(--hot-red) 13%, transparent); }
+.hot-tag--pump { color: var(--hot-green); background: color-mix(in srgb, var(--hot-green) 13%, transparent); }
+.hot-tag--macro { color: var(--hot-amber); background: color-mix(in srgb, var(--hot-amber) 14%, transparent); }
+.hot-tag--news { color: var(--hot-muted); background: color-mix(in srgb, var(--color-text) 6%, transparent); }
+.hot-sub { font-size: 12px; color: var(--hot-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.hot-line {
+  font-size: 14px; font-weight: 600; line-height: 1.3; color: var(--color-text);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+/* The newest item at the top glows briefly as it lands. */
+.hot-row--top .hot-btn { animation: hot-land 1.2s ease-out; }
+@keyframes hot-land {
+  0% { background: color-mix(in srgb, var(--hot-red) 10%, transparent); }
+  100% { background: transparent; }
+}
+.hot-empty { display: grid; place-items: center; height: 100%; font-size: 13px; color: var(--hot-muted); }
+@media (prefers-reduced-motion: reduce) {
+  .hot-pulse::after, .hot-row--top .hot-btn { animation: none; }
+  .hot-list--shift { transition: none; }
+}

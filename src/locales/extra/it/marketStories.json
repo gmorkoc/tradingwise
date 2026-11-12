@@ -18,6 +18,23 @@
     "carouselPosition": "Posizione del carosello",
     "goTo": "Vai a {{n}} di {{total}}",
     "autoPlay": "Riproduzione automatica",
-    "ago": { "m": "{{n}}m", "h": "{{n}}h", "d": "{{n}}g" }
+    "ago": { "m": "{{n}}m", "h": "{{n}}h", "d": "{{n}}g" },
+    "hot": {
+      "title": "Adesso",
+      "breaking": "Ultim'ora",
+      "news": "Notizie",
+      "drop": "Calo improvviso",
+      "pump": "Rialzo improvviso",
+      "macro": "Macro",
+      "move1h": "{{sym}} {{pct}}% nell'ultima ora",
+      "move24h": "{{sym}} {{pct}}% in 24 ore",
+      "price": "Ora {{price}}",
+      "inH": "tra {{n}} h",
+      "inM": "tra {{n}} min",
+      "outM": "pubblicato {{n}} min fa",
+      "outH": "pubblicato {{n}} h fa",
+      "forecast": "Previsione {{v}}",
+      "empty": "Osservando il mercato…"
+    }
   }
 }

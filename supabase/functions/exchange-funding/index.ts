@@ -42,6 +42,17 @@ async function getJson(url: string): Promise<unknown> {
   }
 }
 
+// Coinbase's public product data stopped updating (funding_time frozen at
+// 2026-10-01), so a rate is only used when its funding_time is recent —
+// otherwise it's "no data" rather than a stale number shown as live.
+const COINBASE_MAX_AGE_MS = 12 * 60 * 60 * 1000;
+// deno-lint-ignore no-explicit-any
+function freshCoinbaseRate(details: any): number | null {
+  const t = Date.parse(details?.funding_time ?? "");
+  if (!Number.isFinite(t) || Date.now() - t > COINBASE_MAX_AGE_MS) return null;
+  return num(details?.funding_rate);
+}
+
 async function loadRates(coin: string): Promise<Rates> {
   const sym = `${coin}USDT`;
   // deno-lint-ignore no-explicit-any
@@ -63,7 +74,7 @@ async function loadRates(coin: string): Promise<Rates> {
     // Used as-is: checked against Binance/Bybit/OKX/Bitget on BTC, ETH and
     // SOL it lines up as an 8h-comparable figure (×8 would put it 5–10×
     // above every other exchange, which arbitrage wouldn't allow).
-    Coinbase: num(cb?.future_product_details?.perpetual_details?.funding_rate),
+    Coinbase: freshCoinbaseRate(cb?.future_product_details?.perpetual_details),
   };
 }
 
@@ -99,7 +110,7 @@ async function loadAll(): Promise<AllRates> {
   for (const r of (Array.isArray(bg?.data) ? bg.data : [])) put(r.symbol, "Bitget", r.fundingRate);
   for (const p of cb?.products ?? []) {
     if (!String(p.product_id).endsWith("-PERP-INTX")) continue;
-    put(p.product_id, "Coinbase", p?.future_product_details?.perpetual_details?.funding_rate);
+    put(p.product_id, "Coinbase", freshCoinbaseRate(p?.future_product_details?.perpetual_details));
   }
   return all;
 }

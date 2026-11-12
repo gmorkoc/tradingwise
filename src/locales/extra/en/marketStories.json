@@ -18,6 +18,23 @@
     "carouselPosition": "Carousel position",
     "goTo": "Go to {{n}} of {{total}}",
     "autoPlay": "Auto-play",
-    "ago": { "m": "{{n}}m", "h": "{{n}}h", "d": "{{n}}d" }
+    "ago": { "m": "{{n}}m", "h": "{{n}}h", "d": "{{n}}d" },
+    "hot": {
+      "title": "Hot now",
+      "breaking": "Breaking",
+      "news": "News",
+      "drop": "Sudden drop",
+      "pump": "Sudden pump",
+      "macro": "Macro",
+      "move1h": "{{sym}} {{pct}}% in the last hour",
+      "move24h": "{{sym}} {{pct}}% in 24 hours",
+      "price": "Now {{price}}",
+      "inH": "in {{n}}h",
+      "inM": "in {{n}}m",
+      "outM": "released {{n}}m ago",
+      "outH": "released {{n}}h ago",
+      "forecast": "Forecast {{v}}",
+      "empty": "Watching the market…"
+    }
   }
 }

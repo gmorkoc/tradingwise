@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { BlurGate } from "./MembershipGate";
 import { BottomSheet } from "./BottomSheet";
@@ -29,6 +30,46 @@ export function PaywallPromo({ open, onClose, requiredTier, featureName, onOpenA
   const signedIn = useAuthFirst(open, onOpenAuth, onClose);
   const { t } = useTranslation();
   const planName = requiredTier === "elite" ? "Elite" : "Pro";
+  const [phone, setPhone] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width: 900px)").matches);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 900px)");
+    const on = () => setPhone(mq.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
+  const gate = (
+    <BlurGate
+      requiredTier={requiredTier}
+      featureName={featureName}
+      // Stays open under the sign-in window, so it's still here (now with
+      // the signed-in upgrade button) once sign-in / sign-up finishes.
+      onOpenAuth={() => { onOpenAuth(); }}
+      onOpenUpgrade={() => { onClose(); onOpenUpgrade(); }}
+      className="bg-root--promo"
+      extraFeature={extraFeature}
+      eyebrow={t("paywallPromo.eyebrow", { feature: featureName, plan: planName })}
+    >
+      <div />
+    </BlurGate>
+  );
+  // Phones: the same full-screen page as the Elite upsell (EliteUpsellModal)
+  // — its background, ✕ top-right, scrolling card — not a bottom sheet.
+  if (phone) {
+    if (!open || !signedIn) return null;
+    return createPortal(
+      <div className="bg-modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+        <div
+          className={`bg-elite-card bg-elite-card--modal paywall-promo-modal paywall-promo-modal--${requiredTier === "elite" ? "elite" : "pro"}`}
+          role="dialog"
+          aria-label={t("paywallPromo.ariaLabel", { feature: featureName })}
+        >
+          <button className="bg-modal-close" onClick={onClose} aria-label={t("eliteUpsell.close")}>✕</button>
+          {gate}
+        </div>
+      </div>,
+      document.body,
+    );
+  }
   return (
     <BottomSheet
       open={open && signedIn}
@@ -37,19 +78,7 @@ export function PaywallPromo({ open, onClose, requiredTier, featureName, onOpenA
       className={`paywall-promo-sheet paywall-promo-sheet--${requiredTier === "elite" ? "elite" : "pro"}`}
       ariaLabel={t("paywallPromo.ariaLabel", { feature: featureName })}
     >
-      <BlurGate
-        requiredTier={requiredTier}
-        featureName={featureName}
-        // Stays open under the sign-in window, so it's still here (now with
-        // the signed-in upgrade button) once sign-in / sign-up finishes.
-        onOpenAuth={() => { onOpenAuth(); }}
-        onOpenUpgrade={() => { onClose(); onOpenUpgrade(); }}
-        className="bg-root--promo"
-        extraFeature={extraFeature}
-        eyebrow={t("paywallPromo.eyebrow", { feature: featureName, plan: planName })}
-      >
-        <div />
-      </BlurGate>
+      {gate}
     </BottomSheet>
   );
 }

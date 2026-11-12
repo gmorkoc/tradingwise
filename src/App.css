@@ -94,7 +94,17 @@ html .app-boot-screen.app-boot-screen--brand {
 /* Logo circle 62pt on a 440×956pt iPhone, dead centre (Coinbase's is
    100pt). Our circle is 34/36 of the SVG box, so the box is 65.6pt
    = 6.87vh — the launch images draw it at the same 6.87% of height. */
-html .app-boot-screen.app-boot-screen--brand .st-logo-icon { width: 6.87vh; height: 6.87vh; }
+html .app-boot-screen.app-boot-screen--brand .st-logo-icon {
+  width: 6.87vh;
+  height: 6.87vh;
+  /* Spins super fast (like the header logo on hover) the whole time the
+     launch screen is up, until the app has loaded. */
+  animation: boot-logo-whirl 0.12s linear infinite; /* same speed as the header logo's hover spin */
+}
+@keyframes boot-logo-whirl { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  html .app-boot-screen.app-boot-screen--brand .st-logo-icon { animation: none; }
+}
 /* Coinbase's wordmark: lowercase letters 10.3pt tall (Inter's x-height
    is ~0.546em → 19px), baseline 80pt above the screen's bottom edge
    (line-height 1 puts Inter's baseline ~0.137em above the box bottom). */
@@ -4066,6 +4076,21 @@ html[data-theme="light"] .top-nav-bar {
 @keyframes top-nav-logo-spin { from { transform: rotate(-360deg); } to { transform: rotate(0deg); } }
 .top-nav-logo-hover { display: inline-flex; }
 .top-nav-logo:hover .top-nav-logo-hover { animation: top-nav-logo-loop 0.12s linear infinite; }
+/* Hover keeps growing the C the longer it's held — slowly, over 4s — and
+   stops at 1.6×; leaving shrinks it back quickly. `scale` (not transform,
+   which the spin animations own) never changes layout, so nothing around
+   it moves. */
+.top-nav-logo-ic {
+  scale: 1;
+  transition: scale 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  position: relative;
+  z-index: 1;
+}
+.top-nav-logo:hover .top-nav-logo-ic {
+  scale: 1.6;
+  transition: scale 4s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+@media (prefers-reduced-motion: reduce) { .top-nav-logo-ic { transition: none; } }
 @keyframes top-nav-logo-loop { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .top-nav-logo-ic, .top-nav-logo-ic.chart-tab-logo-spin { animation: none; } }
 /* Positioned off the whole wordmark's own top-right corner — not nested

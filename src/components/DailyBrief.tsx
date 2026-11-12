@@ -4,9 +4,9 @@ import { Browser } from "@capacitor/browser";
 import { useTranslation } from "react-i18next";
 import type { Ticker24h } from "../services/coinglass";
 import { formatLivePrice } from "./PriceChart";
+import { BottomSheet } from "./BottomSheet";
+import { GenericCover } from "./MarketStories";
 import "../styles/DailyBrief.css";
-
-const IS_IOS = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios";
 
 // Native: keep the reader inside the app via an in-app browser instead of
 // handing off to Safari. Web: let the anchor's own target="_blank" handle it.
@@ -312,13 +312,6 @@ export function timeAgo(ts: number, t: (key: string, opts?: Record<string, unkno
   return t("dailyBrief.daysAgo", { count: days });
 }
 
-const DRAG_THRESHOLD = 40;
-const TAP_THRESHOLD = 6;
-// A tap-detected sheet toggle waits this long before actually applying —
-// long enough to see a same-instant backgrounding (see endDrag), short
-// enough that a real tap still feels instant.
-const TAP_CONFIRM_DELAY_MS = 200;
-
 // No thumbnail in the feed — a real category-themed photo (stored locally
 // in /public/daily-brief, not hotlinked) reads far better than an icon.
 // Same three images regardless of which specific outlet/article is missing
@@ -337,6 +330,28 @@ const ThumbPlaceholder: React.FC<{ category: Category; className: string }> = ({
     loading="lazy"
   />
 );
+
+// A story photo that never shows a broken-image icon: http → https, no
+// Referer sent (several news CDNs refuse hotlinks from the app's
+// capacitor:// origin), and if it still fails — or there's no photo — the
+// same generated cover the Markets news carousel uses.
+function NewsThumb({ item, className }: { item: BriefItem; className: string }) {
+  const [broken, setBroken] = useState(false);
+  const src = item.thumbnail ? item.thumbnail.replace(/^http:\/\//i, "https://") : "";
+  if (!src || broken) {
+    return <span className={`${className} dby-cover`}><GenericCover item={item} /></span>;
+  }
+  return (
+    <img
+      className={className}
+      src={src}
+      alt=""
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      onError={() => setBroken(true)}
+    />
+  );
+}
 
 // "collapsed" = the small persistent dock (title + handle only). "expanded"
 // = the compact teaser card (title + one featured story) that now auto-
@@ -415,16 +430,9 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
     };
     document.documentElement.style.setProperty("--db-page-width", widths[sectionCols]);
   }, [sectionCols, variant]);
-  const [dragY, setDragY] = useState(0);
-  const [dragging, setDragging] = useState(false);
-  const [scrollHidden, setScrollHidden] = useState(false);
   const [chatActive, setChatActive] = useState(false);
   const [newUrls, setNewUrls] = useState<Set<string>>(new Set());
   const [video, setVideo] = useState<FeaturedVideo | null>(null);
-  const [videoPlaying, setVideoPlaying] = useState(false);
-  const [videoEmbedFailed, setVideoEmbedFailed] = useState(false);
-  const sheetRef = useRef<HTMLDivElement>(null);
-  const dragStartY = useRef<number | null>(null);
   const knownUrlsRef = useRef<Set<string> | null>(null);
   const listRowsRef = useRef<HTMLDivElement>(null);
   const prevRowRectsRef = useRef<Map<string, DOMRect>>(new Map());
@@ -437,41 +445,6 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
     const onCoinChat = (e: Event) => setChatActive((e as CustomEvent<boolean>).detail);
     window.addEventListener("coin-chat-active", onCoinChat);
     return () => window.removeEventListener("coin-chat-active", onCoinChat);
-  }, []);
-
-  // Yahoo Finance-style auto-hide: slide the (collapsed, resting) sheet out
-  // of the way while the user scrolls down through the page, back in on any
-  // scroll-up. Listens in the capture phase on document so it picks up
-  // whichever nested panel is actually scrolling (chart, watchlist, etc.)
-  // without needing to know which one that is.
-  useEffect(() => {
-    const SCROLL_HIDE_THRESHOLD = 8;
-    const lastScrollTop = new WeakMap<EventTarget, number>();
-    const onScroll = (e: Event) => {
-      const target = e.target as HTMLElement | Document;
-      // Scrolling the brief's OWN article list (.db-card's internal
-      // overflow, reachable while "expanded" or "full") must never affect
-      // its own visibility — someone actively reading through that list
-      // needs to be able to scroll it freely without the whole thing
-      // collapsing/hiding out from under them mid-read. Only scrolling
-      // something OUTSIDE the sheet — the page behind it — should.
-      if (target instanceof Node && sheetRef.current?.contains(target)) return;
-      const scrollTop = target instanceof Document
-        ? (target.scrollingElement?.scrollTop ?? 0)
-        : target.scrollTop;
-      const prev = lastScrollTop.get(target) ?? scrollTop;
-      lastScrollTop.set(target, scrollTop);
-      const delta = scrollTop - prev;
-      if (Math.abs(delta) < SCROLL_HIDE_THRESHOLD) return;
-      // Drops either open size ("expanded," the teaser that auto-opens on
-      // page load, or "full") straight to "collapsed," which the logic
-      // right below then immediately slides off-screen on a scroll-down.
-      setSheetState((s) => (s === "expanded" || s === "full" ? "collapsed" : s));
-      if (delta > 0 && scrollTop > 40) setScrollHidden(true);
-      else if (delta < 0) setScrollHidden(false);
-    };
-    document.addEventListener("scroll", onScroll, { capture: true, passive: true });
-    return () => document.removeEventListener("scroll", onScroll, { capture: true });
   }, []);
 
   // Diffs each fetch against the URLs we've already shown so genuinely new
@@ -550,81 +523,6 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
     }
   }, [items]);
 
-  const onPointerDown = (e: React.PointerEvent) => {
-    dragStartY.current = e.clientY;
-    setDragging(true);
-    (e.target as Element).setPointerCapture?.(e.pointerId);
-  };
-
-  const onPointerMove = (e: React.PointerEvent) => {
-    if (dragStartY.current === null) return;
-    const delta = e.clientY - dragStartY.current;
-    // Resist dragging past the sheet's natural resting bounds — collapsed can
-    // go either way (up to expand, down to minimize), the other two states
-    // can only be dragged back toward collapsed.
-    let clamped = delta;
-    if (sheetState === "full") clamped = Math.max(0, delta);
-    if (sheetState === "minimized") clamped = Math.min(0, delta);
-    setDragY(clamped);
-  };
-
-  const endDrag = (e: React.PointerEvent) => {
-    if (dragStartY.current === null) return;
-    const delta = e.clientY - dragStartY.current;
-    dragStartY.current = null;
-    setDragging(false);
-    setDragY(0);
-
-    if (Math.abs(delta) < TAP_THRESHOLD) {
-      // Splitting pointercancel from pointerup (below) turned out not to be
-      // the whole story — on a real device this still toggled the sheet
-      // open on some app-minimizes, meaning iOS sometimes delivers a
-      // genuine pointerup (not cancel) with near-zero movement for the
-      // exact same reason: the swipe-to-home gesture zone and this drag
-      // handle both live at the bottom of the screen, so the touch that
-      // starts the system gesture also reads as a real tap here before iOS
-      // finishes taking over. Since the event type alone can't be trusted,
-      // this buffers the actual toggle by one tick and cancels it if the
-      // page is backgrounded within that window on either side — covers
-      // both "tap event, then hide" and "hide, then tap event" orderings.
-      setTimeout(() => {
-        if (document.visibilityState === "hidden") return;
-        // Steps up one size at a time: dock → teaser → full reading view,
-        // then back down to dock (tapping while "full" doesn't close it
-        // outright — same "never a surprise dismissal from a tap" idea as
-        // the rest of this gesture set).
-        setSheetState((s) => {
-          if (s === "collapsed") return "expanded";
-          if (s === "expanded") return "full";
-          return "collapsed";
-        });
-      }, TAP_CONFIRM_DELAY_MS);
-    } else if (delta < -DRAG_THRESHOLD) {
-      // dragged up — straight to "full" from either resting state below it
-      setSheetState((s) => (s === "minimized" ? "collapsed" : "full"));
-    } else if (delta > DRAG_THRESHOLD) {
-      // dragged down — straight to "collapsed" (the dock) from either state
-      // above it, never straight to "minimized"/dismissed from a drag on
-      // "full" or "expanded" — only dragging down FROM "collapsed" itself
-      // (the else branch below) goes all the way to "minimized."
-      setSheetState((s) => (s === "full" || s === "expanded" ? "collapsed" : "minimized"));
-    }
-  };
-
-  // A pointercancel is NOT a completed tap — iOS fires exactly this right as
-  // its own swipe-to-home/app-switcher gesture takes over a touch that
-  // started on the sheet (minimizing/backgrounding the app), typically
-  // before any real movement was recorded. Reusing endDrag's tap-detection
-  // for it meant that interrupted touch — near-zero delta, same as a real
-  // tap — was toggling the sheet open every time someone backgrounded the
-  // app with a finger over it. Cancel just abandons the gesture: reset drag
-  // state, don't touch sheetState at all.
-  const cancelDrag = () => {
-    dragStartY.current = null;
-    setDragging(false);
-    setDragY(0);
-  };
-
   // "collapsed" (the dock) used to be a legitimate persistent resting
   // state, reached by scrolling, tapping, or dragging, that kept the
   // brief sitting there docked rather than closing. News is now mounted
@@ -641,10 +539,14 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
   // the flat list rather than just being items[0]/[1]/[2]: the full feed
   // is a mix of crypto/markets/geopolitics sorted purely by time, so the
   // newest item overall isn't reliably a crypto story.
+  // Bitcoin stories first (titles that name Bitcoin/BTC), then other crypto.
   const cryptoItems = items.filter((i) => i.category === "crypto");
-  const featured = cryptoItems[0];
-  const timelineItems = featured ? cryptoItems.slice(1, 3) : [];
-  const usedUrls = new Set([featured, ...timelineItems].filter(Boolean).map((i) => i!.url));
+  const isBtc = (i: BriefItem) => /\bbitcoin\b|\bbtc\b/i.test(i.title);
+  const btcFirst = [...cryptoItems.filter(isBtc), ...cryptoItems.filter((i) => !isBtc(i))];
+  const featured = btcFirst[0];
+  const timelineItems = featured ? btcFirst.slice(1, 3) : [];
+  const pairItems = featured ? btcFirst.slice(3, 5) : [];
+  const usedUrls = new Set([featured, ...timelineItems, ...pairItems].filter(Boolean).map((i) => i!.url));
   const latestItems = items.filter((item) => !usedUrls.has(item.url));
 
   // Re-searches only when the lead headline itself changes, not on a
@@ -653,31 +555,31 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
   useEffect(() => {
     if (!featured) { setVideo(null); return; }
     let cancelled = false;
-    setVideoPlaying(false);
-    setVideoEmbedFailed(false);
     fetchVideoForTitle(featured.title).then((v) => { if (!cancelled) setVideo(v); });
     return () => { cancelled = true; };
   }, [featured?.title]);
 
-  // YouTube's embedded player posts its own error events (invalid embed
-  // origin, or the uploader disabled embedding for this specific video) —
-  // catch that and swap to a plain "watch on YouTube" link instead of
-  // leaving YouTube's own error card sitting inside the card.
-  useEffect(() => {
-    if (!videoPlaying) return;
-    const onMessage = (e: MessageEvent) => {
-      if (e.origin !== "https://www.youtube.com") return;
-      try {
-        const data = typeof e.data === "string" ? JSON.parse(e.data) : e.data;
-        if (data?.event === "onError") setVideoEmbedFailed(true);
-      } catch { /* ignore non-JSON postMessages */ }
-    };
-    window.addEventListener("message", onMessage);
-    return () => window.removeEventListener("message", onMessage);
-  }, [videoPlaying]);
+  // ── Yahoo Finance "daily brief" layout (phone sheet), Bitcoin-led ──────
+  // Coin chips the way Yahoo shows tickers: symbol + live 24h change in
+  // red/green, no pill. Only coins we have a live ticker for.
+  const tickerChips = (title: string, lead?: string) => {
+    const syms = extractChips(title).filter((s) => coinTickers?.has(s));
+    if (lead && coinTickers?.has(lead) && !syms.includes(lead)) syms.unshift(lead);
+    return syms.slice(0, 3).map((s) => {
+      const tk = coinTickers!.get(s)!;
+      const up = tk.change >= 0;
+      return (
+        <span key={s} className={`dby-tk${up ? " dby-tk--up" : " dby-tk--dn"}`}>
+          {s} <b>{up ? "+" : ""}{tk.change.toFixed(2)}%</b>
+        </span>
+      );
+    });
+  };
+  const thumb = (item: BriefItem, cls: string) => <NewsThumb key={item.url} item={item} className={cls} />;
 
+  // "Your latest": bordered card — source • time, headline, chips, photo right.
   const renderRow = (item: BriefItem) => {
-    const chips = extractChips(item.title);
+    const chips = tickerChips(item.title);
     return (
       <a
         key={item.url}
@@ -685,167 +587,115 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
         href={item.url}
         target="_blank"
         rel="noopener noreferrer"
-        className={`db-list-item db-list-item--${item.category}${newUrls.has(item.url) ? " db-item--new" : ""}`}
+        className={`dby-row${newUrls.has(item.url) ? " db-item--new" : ""}`}
         onClick={(e) => openNewsLink(e, item.url)}
       >
-        {item.thumbnail ? (
-          <img className="db-list-thumb" src={item.thumbnail} alt="" loading="lazy" />
-        ) : (
-          <ThumbPlaceholder className="db-list-thumb" category={item.category} />
-        )}
-        <span className="db-list-body">
-          <span className="db-list-title">{item.title}</span>
-          <span className="db-list-meta">
-            <span className={`db-cat-dot db-cat-dot--${item.category}`} />
-            {item.source} <span className="db-list-dot">•</span> {timeAgo(item.pubDate, t)}
-          </span>
-          {chips.length > 0 && (
-            <span className="db-list-chips">
-              {chips.map((c) => renderChip(c, item.category, coinTickers))}
-            </span>
-          )}
+        <span className="dby-row-body">
+          <span className="dby-meta">{item.source} • {timeAgo(item.pubDate, t)}</span>
+          <span className="dby-row-title">{item.title}</span>
+          {chips.length > 0 && <span className="dby-tks">{chips}</span>}
         </span>
+        {thumb(item, "dby-row-thumb")}
       </a>
     );
   };
-
   const latestRows = latestItems.map((item) => renderRow(item));
 
+  // Lead card: "coinhintz markets blog • LIVE", headline + photo, chips,
+  // then a two-step timeline. With a matching video, the photo opens it.
   const featuredCard = featured && (
-    <div className={`db-featured db-featured--${featured.category}${newUrls.has(featured.url) ? " db-item--new" : ""}`}>
-      <div className="db-featured-main">
-        {/* A video actually about this headline (see fetchVideoForTitle)
-            replaces the static photo entirely — click-to-play, so no
-            iframe loads until tapped. Falls back to the plain photo when
-            no matching video was found. */}
+    <div className={`dby-lead${newUrls.has(featured.url) ? " db-item--new" : ""}`}>
+      <div className="dby-blog">
+        <span className="dby-blog-name"><span className="dby-blog-brand">coinhintz</span> {t("dailyBrief2.blog", "markets blog")}</span>
+        <span className="dby-live"><i />{t("dailyBrief2.live", "LIVE")}</span>
+      </div>
+      <div className="dby-lead-main">
+        <a href={featured.url} target="_blank" rel="noopener noreferrer" className="dby-lead-text" onClick={(e) => openNewsLink(e, featured.url)}>
+          <span className="dby-lead-title">{featured.title}</span>
+          <span className="dby-tks">{tickerChips(featured.title, "BTC")}</span>
+        </a>
         {video ? (
-          videoPlaying ? (
-            videoEmbedFailed ? (
-              <div className="db-video-frame-wrap">
-                <button
-                  type="button"
-                  className="db-video-thumb-btn"
-                  onClick={() => openExternalLink(`https://www.youtube.com/watch?v=${video.videoId}`)}
-                >
-                  {featured.thumbnail ? (
-                    <img className="db-video-thumb" src={featured.thumbnail} alt="" loading="lazy" />
-                  ) : (
-                    <ThumbPlaceholder className="db-video-thumb" category={featured.category} />
-                  )}
-                  <span className="db-video-play">▶</span>
-                  <span className="db-video-info">
-                    <span className="db-video-channel">{t("dailyBrief2.cantPlay")}</span>
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  className="db-video-close"
-                  onClick={() => { setVideoPlaying(false); setVideoEmbedFailed(false); }}
-                  aria-label={t("dailyBrief2.backToThumb")}
-                  title={t("dailyBrief2.backToThumb")}
-                >
-                  ✕
-                </button>
-              </div>
-            ) : (
-              <div className="db-video-frame-wrap">
-                <iframe
-                  className="db-video-frame"
-                  // "origin" has to be the app's real https:// domain, not
-                  // wherever this is actually running — on iOS, Capacitor
-                  // serves from capacitor://localhost, which YouTube's
-                  // player rejects as an invalid embed origin (error 153)
-                  // without this override.
-                  src={`https://www.youtube.com/embed/${video.videoId}?autoplay=1&playsinline=1&enablejsapi=1&origin=https://www.coinhintz.io`}
-                  title={video.title}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                />
-                <button
-                  type="button"
-                  className="db-video-close"
-                  onClick={() => setVideoPlaying(false)}
-                  aria-label={t("dailyBrief2.backToThumb")}
-                  title={t("dailyBrief2.backToThumb")}
-                >
-                  ✕
-                </button>
-              </div>
-            )
-          ) : (
-            <button
-              type="button"
-              className="db-video-thumb-btn"
-              onClick={() => {
-                // YouTube's embedded player won't initialize inside
-                // Capacitor's capacitor://localhost WebView on iOS (not
-                // an https origin, regardless of the ?origin= param) —
-                // open it in the in-app browser instead of trying to
-                // embed it inline there. A real web browser has no such
-                // restriction, so the inline embed stays for web.
-                if (Capacitor.isNativePlatform()) {
-                  openExternalLink(`https://www.youtube.com/watch?v=${video.videoId}`);
-                } else {
-                  setVideoPlaying(true);
-                }
-              }}
-            >
-              {featured.thumbnail ? (
-                <img className="db-video-thumb" src={featured.thumbnail} alt="" loading="lazy" />
-              ) : (
-                <ThumbPlaceholder className="db-video-thumb" category={featured.category} />
-              )}
-              <span className="db-video-play">▶</span>
-            </button>
-          )
+          <button type="button" className="dby-lead-media" onClick={() => openExternalLink(`https://www.youtube.com/watch?v=${video.videoId}`)} aria-label={video.title}>
+            {thumb(featured, "dby-lead-thumb")}
+            <span className="dby-play">▶</span>
+          </button>
         ) : (
-          <a
-            href={featured.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => openNewsLink(e, featured.url)}
-          >
-            {featured.thumbnail ? (
-              <img className="db-featured-thumb" src={featured.thumbnail} alt="" loading="lazy" />
-            ) : (
-              <ThumbPlaceholder className="db-featured-thumb" category={featured.category} />
-            )}
+          <a href={featured.url} target="_blank" rel="noopener noreferrer" className="dby-lead-media" onClick={(e) => openNewsLink(e, featured.url)}>
+            {thumb(featured, "dby-lead-thumb")}
           </a>
         )}
-        <a
-          href={featured.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="db-featured-title-link"
-          onClick={(e) => openNewsLink(e, featured.url)}
-        >
-          <span className="db-featured-title">{featured.title}</span>
-          {(() => {
-            const chips = extractChips(featured.title);
-            return chips.length > 0 && (
-              <span className="db-list-chips">{chips.map((c) => renderChip(c, featured.category, coinTickers))}</span>
-            );
-          })()}
-        </a>
       </div>
       {timelineItems.length > 0 && (
-        <div className="db-timeline">
-          {timelineItems.map((item, i) => (
-            <a
-              key={item.url}
-              href={item.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`db-timeline-item${i === timelineItems.length - 1 ? " db-timeline-item--last" : ""}${newUrls.has(item.url) ? " db-item--new" : ""}`}
-              onClick={(e) => openNewsLink(e, item.url)}
-            >
-              <span className="db-timeline-marker" />
-              <span className="db-timeline-time">{timeAgo(item.pubDate, t)}</span>
-              <span className="db-timeline-title">{item.title}</span>
+        <div className="dby-tl">
+          {timelineItems.map((item) => (
+            <a key={item.url} href={item.url} target="_blank" rel="noopener noreferrer" className="dby-tl-item" onClick={(e) => openNewsLink(e, item.url)}>
+              <span className="dby-tl-dot" />
+              <span className="dby-tl-time">{timeAgo(item.pubDate, t)}</span>
+              <span className="dby-tl-title">{item.title}</span>
             </a>
           ))}
         </div>
       )}
+    </div>
+  );
+
+  // BTC block + "Why BTC is moving".
+  const btc = coinTickers?.get("BTC");
+  const btcMove = btc ? Math.abs(btc.change) : 0;
+  const coinBlock = btc && btc.price > 0 && (
+    <>
+      <div className="dby-coin">
+        <div className="dby-coin-left">
+          <span className="dby-coin-sym">BTC</span>
+          <span className="dby-coin-px">
+            {formatLivePrice(btc.price)}{" "}
+            <b className={btc.change >= 0 ? "dby-up" : "dby-dn"}>{btc.change >= 0 ? "+" : ""}{btc.change.toFixed(2)}%</b>
+          </span>
+        </div>
+        <span className="dby-coin-pill">
+          {btcMove >= 3 ? t("dailyBrief2.bigMove", "Significant price movement")
+            : btcMove >= 1 ? t("dailyBrief2.notableMove", "Notable price movement")
+            : t("dailyBrief2.steady", "Steady today")}
+        </span>
+      </div>
+      {featured && (
+        <div className="dby-why">
+          <span className="dby-why-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z" fill="currentColor" /></svg>
+          </span>
+          <div className="dby-why-body">
+            <span className="dby-why-title">{t("dailyBrief2.whyMoving", { coin: "BTC", defaultValue: "Why BTC is moving" })}</span>
+            <span className="dby-why-text">
+              {t(btc.change >= 0 ? "dailyBrief2.whyUp" : "dailyBrief2.whyDown", {
+                name: "Bitcoin",
+                pct: Math.abs(btc.change).toFixed(2),
+                price: formatLivePrice(btc.price),
+                headline: featured.title,
+              })}
+            </span>
+            <span className="dby-why-foot">
+              <span>{updatedAt !== null ? t("dailyBrief2.updated", { ago: timeAgo(updatedAt, t) }) : ""}</span>
+              <a href={featured.url} target="_blank" rel="noopener noreferrer" onClick={(e) => openNewsLink(e, featured.url)}>{t("dailyBrief2.viewMore", "View more")}</a>
+            </span>
+          </div>
+        </div>
+      )}
+    </>
+  );
+
+  // Two side-by-side cards: photo on top, source • time, headline, chips.
+  const pairCards = pairItems.length === 2 && (
+    <div className="dby-pair">
+      {pairItems.map((item) => (
+        <a key={item.url} href={item.url} target="_blank" rel="noopener noreferrer" className="dby-tile" onClick={(e) => openNewsLink(e, item.url)}>
+          {thumb(item, "dby-tile-img")}
+          <span className="dby-tile-body">
+            <span className="dby-meta">{item.source} • {timeAgo(item.pubDate, t)}</span>
+            <span className="dby-tile-title">{item.title}</span>
+            <span className="dby-tks">{tickerChips(item.title)}</span>
+          </span>
+        </a>
+      ))}
     </div>
   );
 
@@ -963,69 +813,20 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
   if (chatActive || (items.length === 0 && briefDone)) return null;
   const briefLoading = items.length === 0;
 
+  // Phones: the app's shared BottomSheet (same drag, pull-up-to-full and
+  // ✕ as every other sheet) — replaces the old hand-built drag sheet.
+  // Closing it ("minimized") fires onDismiss, which unmounts the brief.
   return (
-    <>
-      {sheetState === "full" && (
-        <div className="db-backdrop" onClick={() => setSheetState("expanded")} />
-      )}
-      {sheetState === "expanded" && (
-        <div className="db-backdrop db-backdrop--soft" onClick={() => setSheetState("collapsed")} />
-      )}
-      <div
-        ref={sheetRef}
-        className={`db-sheet${sheetState === "collapsed" ? " db-sheet--collapsed" : ""}${sheetState === "expanded" ? " db-sheet--expanded" : ""}${sheetState === "full" ? " db-sheet--full" : ""}${sheetState === "minimized" ? " db-sheet--minimized" : ""}${(sheetState === "collapsed" || (IS_IOS && sheetState === "minimized")) && scrollHidden ? " db-sheet--scroll-hidden" : ""}`}
-        style={{ "--db-drag-y": `${dragY}px` } as React.CSSProperties}
-      >
-        {/* No close (X) button anymore — dismissing is drag-only now
-            (drag down past "collapsed" into "minimized," which the effect
-            above already treats as a real close). */}
-        <div
-          className="db-drag-zone"
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={endDrag}
-          onPointerCancel={cancelDrag}
-          style={dragging ? { transition: "none" } : undefined}
-        >
-          <span className="db-handle" />
-          <div className="db-head">
-            {/* Just the title — no heartbeat or LIVE badge. */}
-            <span className="db-head-title-row">
-              {sheetState !== "minimized" && (
-                <span className="db-head-title">{t("dailyBrief.title")}</span>
-              )}
-            </span>
-            {/* Apple-standard ✕ (44pt glass circle): closes the brief
-                completely — "minimized" fires onDismiss, which unmounts it. */}
-            {(sheetState === "expanded" || sheetState === "full") && (
-              <button
-                type="button"
-                className="db-close ios-close-btn"
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => { e.stopPropagation(); setSheetState("minimized"); }}
-                aria-label={t("common.close", "Close")}
-              >
-                <span className="ios-close-btn-txt">✕</span>
-                <svg className="ios-close-btn-ic" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
-              </button>
-            )}
-            {/* Collapsed (the dock) shows just the plain title now — no
-                headline/news preview text at all, not even the one-line
-                truncated version this used to show. "expanded"/"full"
-                never showed it either (they already show the real
-                featured card in full below), so nothing renders this
-                anymore — kept as dead code isn't worth it here, just
-                removed. */}
-          </div>
-        </div>
-
-        {/* Collapsed (the dock) shows the plain title only — this used to
-            stay mounted and just get visually clipped by the sheet's
-            76px max-height/overflow:hidden, but a sliver of it (its own
-            glossy background, a cut-off word of the featured badge text)
-            still peeked out past that clip. Unmounting it outright for
-            "collapsed"/"minimized" is the actual fix, not a tighter clip. */}
-        {sheetState !== "collapsed" && sheetState !== "minimized" && (
+    <BottomSheet
+      open={sheetState !== "minimized" && sheetState !== "collapsed"}
+      onClose={() => setSheetState("minimized")}
+      title={<>{t("dailyBrief.title")}</>}
+      ariaLabel={t("dailyBrief.title")}
+      className="db-bsheet"
+    >
+        {/* .db-sheet keeps the brief's content styles; --in-bs switches off
+            the old sheet's own position/size (DailyBrief.css). */}
+        <div className="db-sheet db-sheet--in-bs">
           <div className="db-card">
             {briefLoading ? (
               <div className="db-skel" aria-busy="true" aria-label={t("dailyBrief2.loadingBrief")}>
@@ -1038,17 +839,18 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
                 ))}
               </div>
             ) : (
-            <div className="db-card-list">
+            <div className="dby">
               {featuredCard}
-              {latestRows.length > 0 && <div className="db-section-label">{t("dailyBrief.latest", "Your latest")}</div>}
-              <div ref={listRowsRef} className="db-list-rows">
+              {coinBlock}
+              {pairCards}
+              {latestRows.length > 0 && <h3 className="dby-h">{t("dailyBrief2.yourLatest", "Your latest")}</h3>}
+              <div ref={listRowsRef} className="dby-rows">
                 {latestRows}
               </div>
             </div>
             )}
           </div>
-        )}
-      </div>
-    </>
+        </div>
+    </BottomSheet>
   );
 };

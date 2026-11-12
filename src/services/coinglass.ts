@@ -1342,31 +1342,39 @@ export interface PositionData {
   smartMoney: LSRatioPoint[];
 }
 
-function parseLSRatio(raw: Record<string, number | string>[], longKey: string, shortKey: string): LSRatioPoint[] {
-  return raw.map(d => ({
-    time:       Math.floor(Number(d.time) / 1000),
-    longRatio:  Number(d[longKey])  / 100,
-    shortRatio: Number(d[shortKey]) / 100,
-  }));
-}
-
+// Retail (all accounts) and top-trader long/short — from OKX's free public
+// stats (the CoinGlass endpoints this used need a higher plan and always
+// came back empty, so both rows showed "—"). OKX gives a long/short ratio
+// r per period; long share = r / (1 + r). Always via our /okx-api proxy:
+// OKX's rubik endpoints send no CORS header, so the app can't call direct.
 export async function getPositionData(coin: CoinSymbol | string = 'BTC', interval = '4h', limit = 180): Promise<PositionData> {
-  const symbol = toCgSymbol(coin);
-  const params = { symbol, interval, limit, exchange: 'Binance' };
-
-  const [retailRes, smartRes] = await Promise.all([
-    api.get('futures/global-long-short-account-ratio/history', { params }).catch(() => null),
-    api.get('futures/top-long-short-account-ratio/history',    { params }).catch(() => null),
-  ]);
-
-  return {
-    retail:     retailRes?.data?.code === '0'
-      ? parseLSRatio(retailRes.data.data ?? [], 'global_account_long_percent', 'global_account_short_percent')
-      : [],
-    smartMoney: smartRes?.data?.code  === '0'
-      ? parseLSRatio(smartRes.data.data  ?? [], 'top_account_long_percent',    'top_account_short_percent')
-      : [],
+  const ccy = String(coin).toUpperCase();
+  const base = `${SITE}/okx-api/api/v5/rubik/stat/contracts`;
+  // All-accounts supports 5m / 1H / 1D; top traders also support 4H.
+  const iv = interval.toLowerCase();
+  const retailPeriod = iv === '1d' ? '1D' : iv === '5m' ? '5m' : '1H';
+  const topPeriod = iv === '1d' ? '1D' : iv === '4h' ? '4H' : iv === '5m' ? '5m' : '1H';
+  const get = async (url: string): Promise<LSRatioPoint[]> => {
+    try {
+      const j = await fetch(url).then((r) => r.json());
+      const rows: string[][] = Array.isArray(j?.data) ? j.data : [];
+      return rows
+        .map(([ts, r]) => {
+          const ratio = parseFloat(r);
+          if (!isFinite(ratio) || ratio <= 0) return null;
+          const longRatio = ratio / (1 + ratio);
+          return { time: Math.floor(Number(ts) / 1000), longRatio, shortRatio: 1 - longRatio };
+        })
+        .filter((p): p is LSRatioPoint => !!p)
+        .reverse()            // OKX sends newest first
+        .slice(-limit);
+    } catch { return []; }
   };
+  const [retail, smartMoney] = await Promise.all([
+    get(`${base}/long-short-account-ratio?ccy=${ccy}&period=${retailPeriod}`),
+    get(`${base}/long-short-account-ratio-contract-top-trader?instId=${ccy}-USDT-SWAP&period=${topPeriod}`),
+  ]);
+  return { retail, smartMoney };
 }
 
 export interface LSExchangeSnapshot {

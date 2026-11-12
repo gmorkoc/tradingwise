@@ -18,6 +18,23 @@
     "carouselPosition": "Karusel konumu",
     "goTo": "{{total}} içinden {{n}}. öğeye git",
     "autoPlay": "Otomatik oynat",
-    "ago": { "m": "{{n}}dk", "h": "{{n}}sa", "d": "{{n}}g" }
+    "ago": { "m": "{{n}}dk", "h": "{{n}}sa", "d": "{{n}}g" },
+    "hot": {
+      "title": "Şu an gündemde",
+      "breaking": "Son dakika",
+      "news": "Haber",
+      "drop": "Ani düşüş",
+      "pump": "Ani yükseliş",
+      "macro": "Makro",
+      "move1h": "{{sym}} son bir saatte %{{pct}}",
+      "move24h": "{{sym}} 24 saatte %{{pct}}",
+      "price": "Şu an {{price}}",
+      "inH": "{{n}} sa sonra",
+      "inM": "{{n}} dk sonra",
+      "outM": "{{n}} dk önce açıklandı",
+      "outH": "{{n}} sa önce açıklandı",
+      "forecast": "Beklenti {{v}}",
+      "empty": "Piyasa izleniyor…"
+    }
   }
 }

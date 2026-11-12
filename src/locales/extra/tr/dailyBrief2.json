@@ -2,6 +2,17 @@
   "dailyBrief2": {
     "cantPlay": "Burada oynatılamıyor — YouTube'da izleyin",
     "backToThumb": "Küçük resme dön",
-    "loadingBrief": "Özet yükleniyor"
+    "loadingBrief": "Özet yükleniyor",
+    "blog": "piyasa blogu",
+    "live": "CANLI",
+    "bigMove": "Önemli fiyat hareketi",
+    "notableMove": "Dikkat çeken fiyat hareketi",
+    "steady": "Bugün sakin",
+    "whyMoving": "{{coin}} neden hareket ediyor",
+    "whyUp": "{{name}} son 24 saatte %{{pct}} yükseldi, {{price}} seviyesinde. Haberlerde: {{headline}}",
+    "whyDown": "{{name}} son 24 saatte %{{pct}} düştü, {{price}} seviyesinde. Haberlerde: {{headline}}",
+    "updated": "{{ago}} güncellendi",
+    "viewMore": "Daha fazla",
+    "yourLatest": "Sana özel son haberler"
   }
 }

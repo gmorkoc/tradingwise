@@ -442,9 +442,15 @@ export function ChartEventAnnotations({ chartRef, seriesRef, candlesRef, srLevel
   // its PriceChart.tsx call site), but the feed is also the desktop
   // Order Book replacement's only source for this data, which needs it
   // regardless of whether the dots are shown here.
+  // onEventsChange is an inline arrow at the PriceChart call site (a new
+  // function every render) and it sets parent state with a fresh array —
+  // keeping it in the deps re-ran this effect on every parent render,
+  // an infinite update loop. Read it through a ref instead.
+  const onEventsChangeRef = useRef(onEventsChange);
+  onEventsChangeRef.current = onEventsChange;
   useEffect(() => {
-    onEventsChange?.(buildChartEvents(candlesRef.current ?? [], srLevels, zone, coin, 7));
-  }, [srLevels, zone, coin, candlesRef, onEventsChange]);
+    onEventsChangeRef.current?.(buildChartEvents(candlesRef.current ?? [], srLevels, zone, coin, 7));
+  }, [srLevels, zone, coin, candlesRef]);
 
   const reposition = useCallback(() => {
     const chart = chartRef.current;
@@ -507,10 +513,10 @@ export function ChartEventAnnotations({ chartRef, seriesRef, candlesRef, srLevel
   // needs to tick even when nothing is visible on-chart to recompute.
   useEffect(() => {
     const id = window.setInterval(() => {
-      onEventsChange?.(buildChartEvents(candlesRef.current ?? [], srLevels, zone, coin, 7));
+      onEventsChangeRef.current?.(buildChartEvents(candlesRef.current ?? [], srLevels, zone, coin, 7));
     }, 2000);
     return () => window.clearInterval(id);
-  }, [srLevels, zone, coin, candlesRef, onEventsChange]);
+  }, [srLevels, zone, coin, candlesRef]);
 
   // Cards are 88% width with a real margin-gap between them (not 100%
   // flush), so the scroll step per card is each card's own measured

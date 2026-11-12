@@ -222,3 +222,11 @@ html:not([data-theme="light"]) .bg-elite-card--pv :is(.bg-elite-eyebrow, .bg-eli
   .bg-root--promo .bg-elite-feat-desc { font-size: 0.72rem; }
   .bg-root--promo .bg-elite-cta { padding-top: 13px; padding-bottom: 13px; }
 }
+
+/* Phones: the promo sits in the Elite upsell's full-screen card
+   (.bg-elite-card--modal gives the background, safe-area padding, ✕ and
+   scrolling), so the inner card adds no padding or frame of its own. */
+html .paywall-promo-modal .bg-root.bg-root--promo .bg-overlay .bg-elite-card {
+  padding: 0;
+  gap: 18px;
+}

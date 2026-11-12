@@ -93,6 +93,24 @@
   color: var(--color-text-secondary, var(--color-text-muted));
   cursor: pointer;
 }
+/* Phones: no ✕ on any sheet — like most iOS apps, a sheet closes by
+   dragging it down or tapping outside it. (Desktop modals keep theirs.) */
+@media (max-width: 900px) {
+  html .bs-sheet .bs-close { display: none; }
+  html .bs-sheet .bs-header-row { padding-right: 0; }
+  /* iOS sheet corners (38pt, as on the system's in-app browser sheet) on
+     every sheet — also when pulled to full screen; floating sheets round
+     all four corners. The header shares the radius so its fill can't
+     poke past the curve. */
+  html body .bs-sheet,
+  html body .bs-sheet.bs-sheet--full {
+    border-top-left-radius: 38px !important;
+    border-top-right-radius: 38px !important;
+    overflow: hidden;
+  }
+  html body .bs-sheet.bs-sheet--float { border-radius: 38px !important; }
+  html body .bs-sheet .bs-header { border-top-left-radius: 38px; border-top-right-radius: 38px; }
+}
 .bs-body {
   padding: 4px 0 16px;
 }

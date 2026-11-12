@@ -4,6 +4,7 @@ import { Capacitor } from '@capacitor/core'
 import { StatusBar } from '@capacitor/status-bar'
 import { initKeyboardAvoidance } from './utils/keyboardAvoidance'
 import { installInAppLinks } from './utils/externalLinks'
+import { installFastTap } from './utils/fastTap'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import App from './App.tsx'
 import './index.css'
@@ -61,6 +62,7 @@ if (Capacitor.isNativePlatform()) {
 }
 
 initKeyboardAvoidance();
+installFastTap();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

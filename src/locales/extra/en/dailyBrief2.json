@@ -2,6 +2,17 @@
   "dailyBrief2": {
     "cantPlay": "Can't play here — watch on YouTube",
     "backToThumb": "Back to thumbnail",
-    "loadingBrief": "Loading the brief"
+    "loadingBrief": "Loading the brief",
+    "blog": "markets blog",
+    "live": "LIVE",
+    "bigMove": "Significant price movement",
+    "notableMove": "Notable price movement",
+    "steady": "Steady today",
+    "whyMoving": "Why {{coin}} is moving",
+    "whyUp": "{{name}} is up {{pct}}% in the last 24 hours, trading at {{price}}. In the news: {{headline}}",
+    "whyDown": "{{name}} is down {{pct}}% in the last 24 hours, trading at {{price}}. In the news: {{headline}}",
+    "updated": "Updated {{ago}}",
+    "viewMore": "View more",
+    "yourLatest": "Your latest"
   }
 }

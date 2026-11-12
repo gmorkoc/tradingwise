@@ -1444,3 +1444,166 @@ html:not([data-theme="light"]) .db-sheet .db-card {
 .db-skel-lines i:last-child { width: 55%; }
 @keyframes db-skel { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .db-skel-hero, .db-skel-row { animation: none; } }
+
+/* Inside the shared BottomSheet (phones): .db-sheet only carries the
+   content styles here — the sheet's own position, size, frame and drag
+   transform are switched off, and the BottomSheet does the scrolling
+   (no inner scroll box fighting its drag-to-close). */
+html .db-sheet.db-sheet--in-bs {
+  position: static;
+  inset: auto;
+  z-index: auto;
+  margin: 0;
+  max-height: none;
+  height: auto;
+  /* !important: the old sheet's dark-theme rules add a top border and a
+     big shadow that drew a second line under the sheet's own divider. */
+  background: none !important;
+  border: 0 !important;
+  border-radius: 0;
+  box-shadow: none !important;
+  overflow: visible;
+  transform: none;
+  transition: none;
+  display: block;
+}
+html .db-sheet--in-bs .db-card,
+html:not([data-theme="light"]) .db-sheet.db-sheet--in-bs .db-card {
+  margin: 0;
+  max-height: none;
+  overflow: visible;
+  /* The sheet draws the surface and the line under the title — the old
+     card's own black fill and top highlight doubled them. */
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+}
+/* Lead story block: same surface as the rest of the sheet (no black slab). */
+html .db-sheet--in-bs .db-featured { background: none !important; box-shadow: none !important; }
+
+/* ── Yahoo Finance "Your daily brief" layout (phone sheet) ─────────────── */
+.db-bsheet .bs-title { font-size: 1.3rem; font-weight: 800; letter-spacing: -0.02em; }
+html .db-bsheet .bs-header { border-bottom: none; }
+.dby {
+  --dby-line: color-mix(in srgb, var(--color-text) 12%, transparent);
+  --dby-muted: color-mix(in srgb, var(--color-text) 58%, transparent);
+  --dby-up: #15803d;
+  --dby-dn: #dc2626;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 16px 24px;
+}
+html:not([data-theme="light"]) .dby { --dby-up: #22c55e; --dby-dn: #f87171; }
+.dby a { color: inherit; text-decoration: none; }
+.dby-meta { font-size: 13.5px; color: var(--dby-muted); }
+.dby-tks { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.dby-tks:empty { display: none; }
+.dby-tk { font-size: 13.5px; font-weight: 500; }
+.dby-tk b { font-weight: 600; }
+.dby-tk--up { color: var(--dby-up); }
+.dby-tk--dn { color: var(--dby-dn); }
+.dby-up { color: var(--dby-up); }
+.dby-dn { color: var(--dby-dn); }
+
+/* Lead card */
+.dby-lead {
+  border: 1px solid var(--dby-line);
+  border-radius: 14px;
+  padding: 14px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.dby-blog { display: flex; align-items: center; gap: 6px; }
+.dby-blog-name { font-size: 15px; font-weight: 800; letter-spacing: -0.02em; color: var(--color-text); }
+.dby-blog-brand { color: #6d28d9; }
+html:not([data-theme="light"]) .dby-blog-brand { color: #a78bfa; }
+.dby-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: #e11d2e;
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 800;
+}
+.dby-live i { width: 6px; height: 6px; border-radius: 50%; background: #fff; }
+.dby-lead-main { display: flex; gap: 12px; align-items: flex-start; }
+.dby-lead-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.dby-lead-title { font-size: 19px; font-weight: 600; line-height: 1.25; letter-spacing: -0.01em; }
+.dby-lead-media { position: relative; flex-shrink: 0; padding: 0; border: 0; background: none; cursor: pointer; }
+.dby-lead-thumb { display: block; width: 84px; height: 84px; border-radius: 8px; object-fit: cover; }
+.dby-play {
+  position: absolute; inset: 0; margin: auto; width: 28px; height: 28px;
+  display: grid; place-items: center; border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55); color: #fff; font-size: 11px;
+}
+.dby-tl { display: flex; flex-direction: column; gap: 14px; position: relative; padding-left: 18px; }
+.dby-tl::before { content: ""; position: absolute; left: 3px; top: 8px; bottom: 26px; width: 1px; background: var(--dby-line); }
+.dby-tl-item { display: flex; flex-direction: column; gap: 4px; position: relative; }
+.dby-tl-dot { position: absolute; left: -18px; top: 5px; width: 7px; height: 7px; border-radius: 50%; background: #e11d2e; }
+.dby-tl-time { font-size: 13.5px; color: var(--dby-muted); }
+.dby-tl-title { font-size: 15px; font-weight: 500; line-height: 1.3; }
+
+/* BTC block */
+.dby-coin { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 6px 2px 0; }
+.dby-coin-left { display: flex; flex-direction: column; gap: 2px; }
+.dby-coin-sym { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; }
+.dby-coin-px { font-size: 15px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.dby-coin-px b { font-weight: 600; }
+.dby-coin-pill {
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+  white-space: nowrap;
+}
+
+/* "Why BTC is moving" — gradient border */
+.dby-why {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(var(--color-background), var(--color-background)) padding-box,
+    linear-gradient(120deg, #14b8a6, #3b82f6) border-box;
+}
+.dby-why-icon { color: #14b8a6; flex-shrink: 0; padding-top: 1px; }
+.dby-why-body { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.dby-why-title { font-size: 15px; font-weight: 700; }
+.dby-why-text {
+  font-size: 14px; line-height: 1.4;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.dby-why-foot { display: flex; justify-content: space-between; align-items: center; font-size: 13.5px; color: var(--dby-muted); }
+.dby-why-foot a { color: #2563eb !important; font-weight: 600; font-size: 15px; }
+html:not([data-theme="light"]) .dby-why-foot a { color: #60a5fa !important; }
+
+/* Two side-by-side cards */
+.dby-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.dby-tile { border: 1px solid var(--dby-line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
+.dby-tile-img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+.dby-tile-body { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px 12px; }
+.dby-tile-title { font-size: 15px; font-weight: 600; line-height: 1.3; }
+
+/* "Your latest" */
+.dby-h { margin: 6px 2px 0; font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
+.dby-rows { display: flex; flex-direction: column; gap: 10px; }
+.dby-row {
+  display: flex; gap: 12px; align-items: flex-start;
+  border: 1px solid var(--dby-line); border-radius: 14px;
+  padding: 12px 12px 12px 14px;
+}
+.dby-row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.dby-row-title { font-size: 15px; font-weight: 600; line-height: 1.3; }
+.dby-row-thumb { flex-shrink: 0; width: 84px; height: 84px; border-radius: 8px; object-fit: cover; }
+/* Fallback cover (no photo, or it failed): the Markets carousel's
+   generated cover, filling the same box as the photo would. */
+.dby-cover { position: relative; display: block; overflow: hidden; }
+.dby-cover .mkst-cover-mark { margin: 8px 9px 0 0; font-size: 22px; }
+.dby-tile-img.dby-cover .mkst-cover-mark { margin: 12px 14px 0 0; font-size: 40px; }

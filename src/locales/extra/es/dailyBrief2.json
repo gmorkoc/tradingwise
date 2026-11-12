@@ -2,6 +2,17 @@
   "dailyBrief2": {
     "cantPlay": "No se puede reproducir aquí — míralo en YouTube",
     "backToThumb": "Volver a la miniatura",
-    "loadingBrief": "Cargando el resumen"
+    "loadingBrief": "Cargando el resumen",
+    "blog": "blog de mercados",
+    "live": "EN VIVO",
+    "bigMove": "Movimiento de precio importante",
+    "notableMove": "Movimiento de precio notable",
+    "steady": "Estable hoy",
+    "whyMoving": "Por qué se mueve {{coin}}",
+    "whyUp": "{{name}} sube un {{pct}}% en las últimas 24 horas y cotiza a {{price}}. En las noticias: {{headline}}",
+    "whyDown": "{{name}} baja un {{pct}}% en las últimas 24 horas y cotiza a {{price}}. En las noticias: {{headline}}",
+    "updated": "Actualizado {{ago}}",
+    "viewMore": "Ver más",
+    "yourLatest": "Lo último para ti"
   }
 }

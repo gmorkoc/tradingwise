@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import { fetchBrief, extractChips, renderChip, type BriefItem } from "./DailyBrief";
 import type { Ticker24h } from "../services/coinglass";
 import { getMarkets, requestSparklines, useSparklines, withSparklines } from "../services/marketData";
+import { HotNow } from "./HotNow";
 import "../styles/MarketStories.css";
 
 type Outcome = { label: string; prob: number; color: string; history: number[] };
@@ -94,7 +95,7 @@ const COVERS: Record<BriefItem["category"], [string, string][]> = {
   geopolitics: [["#a78bfa", "#1e1b4b"], ["#c084fc", "#3b0764"], ["#818cf8", "#0f172a"], ["#f472b6", "#312e81"]],
 };
 const hash = (s: string) => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); };
-function GenericCover({ item }: { item: BriefItem }) {
+export function GenericCover({ item }: { item: BriefItem }) {
   const set = COVERS[item.category] ?? COVERS.crypto;
   const [a, b] = set[hash(item.title) % set.length];
   const angle = 110 + (hash(item.url) % 70);
@@ -392,6 +393,12 @@ export function MarketStories({ onSelectCoin, coinTickers }: { onSelectCoin: (sy
   const edgeOffset = () => {
     const el = trackRef.current;
     if (!el) return 0;
+    // Desktop with "Hot now" pinned on the left: cards line up starting
+    // right at its edge (no half card peeking beside it).
+    if (!isPhone) {
+      const hot = el.parentElement?.querySelector<HTMLElement>(".hot");
+      if (hot) return hot.offsetWidth;
+    }
     const cw = (el.children[0] as HTMLElement | undefined)?.offsetWidth ?? 0;
     return Math.max(0, (el.clientWidth - cw) / 2);
   };
@@ -475,7 +482,7 @@ export function MarketStories({ onSelectCoin, coinTickers }: { onSelectCoin: (sy
   return (
     <div className="mkst-wrap">
     <section
-      className="mkst"
+      className={`mkst${isPhone ? "" : " mkst--has-hot"}`}
       aria-label={t("marketStories.ariaStories")}
       // Hover-pause is desktop only; on phones a tap fires these too and
       // would re-render the whole carousel for nothing.
@@ -504,6 +511,10 @@ export function MarketStories({ onSelectCoin, coinTickers }: { onSelectCoin: (sy
       <button type="button" className="mkst-arrow mkst-arrow--next" onClick={() => scroll(1)} aria-label={t("marketStories.next")}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
       </button>
+      {/* Desktop: "Hot now" pinned over the carousel's left end — the
+          carousel itself (size, cards, scrolling) is unchanged and its
+          cards slide underneath. Phones keep the plain carousel. */}
+      {!isPhone && <HotNow news={news} coins={coins} onSelectCoin={onSelectCoin} openLink={openLink} />}
     </section>
     {/* Under the carousel: position dots (auto-play on) · Auto-play switch. */}
     <div className={`mkst-ctrl${isPhone ? " mkst-ctrl--phone" : ""}`}>

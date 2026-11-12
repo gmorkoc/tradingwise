@@ -5225,7 +5225,7 @@ function AppGate() {
   const { user, profile, profileLoading, loading: authLoading, refreshProfile } = useAuth();
   const [minTimeElapsed, setMinTimeElapsed] = useState(false);
   useEffect(() => {
-    const t = setTimeout(() => setMinTimeElapsed(true), 1000);
+    const t = setTimeout(() => setMinTimeElapsed(true), 1500);
     return () => clearTimeout(t);
   }, []);
 
@@ -5364,7 +5364,8 @@ function AppGate() {
   }, [user]);
 
   // Blank screen while Supabase resolves the session — prevents any flicker
-  // The launch screen holds for at least 1s for everyone (signed in or not).
+  // The launch screen holds for at least 1.5s for everyone (signed in or
+  // not) — long enough to see the logo whirl, stop and the name fade in.
   const booting = !!(authLoading || (user && profileLoading && isInitialLoad) || !minTimeElapsed);
   // Coinbase-style hand-off: when the boot screen goes, a copy of it is laid
   // over the app and faded out, so the app cross-fades in under the logo.
