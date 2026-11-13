@@ -4,7 +4,7 @@
 //   trial-available  → start the 3-day free trial
 //   trial-ended      → buy the ProVision plan ($99/yr)
 //   pro-limit        → buy the plan for unlimited, or move up to Elite
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { PvLockReason } from "../hooks/useProVisionAccess";
 import { PV_PRO_COINS_PER_DAY, PV_TRIAL_DAYS } from "../hooks/useProVisionAccess";
 import { onProVisionPaywall, useProVisionGate } from "../hooks/useProVisionGate";
@@ -266,13 +266,23 @@ export function ProVisionPaywall({
  */
 export function ProVisionPaywallHost({ onOpenAuth, onOpenUpgrade }: { onOpenAuth: () => void; onOpenUpgrade: () => void }) {
   const { t } = useTranslation();
-  const { refreshProfile } = useAuth();
+  const { refreshProfile, tier } = useAuth();
   const { setOn, access } = useProVisionGate();
   const [req, setReq] = useState<{ reason: PvLockReason; coin?: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => onProVisionPaywall((r) => { setError(null); setReq(r); }), []);
+  // Elite already includes unlimited ProVision: never offer or sell it to
+  // an Elite account — just switch ProVision on instead.
+  const eliteRef = useRef(false);
+  eliteRef.current = tier === "elite";
+  const setOnRef = useRef(setOn);
+  setOnRef.current = setOn;
+  useEffect(() => onProVisionPaywall((r) => {
+    if (eliteRef.current) { setOnRef.current(true); return; }
+    setError(null); setReq(r);
+  }), []);
+  useEffect(() => { if (tier === "elite") setReq(null); }, [tier]);
   // iOS: ask Apple about the free trial early (after RevenueCat has had
   // time to start), so the paywall opens with the right button.
   useEffect(() => {
@@ -315,6 +325,7 @@ export function ProVisionPaywallHost({ onOpenAuth, onOpenUpgrade }: { onOpenAuth
   };
 
   const buyPlan = async () => {
+    if (eliteRef.current) { setReq(null); setOn(true); return; } // Elite includes it
     setBusy(true); setError(null);
     try {
       if (isIAPAvailable()) {
