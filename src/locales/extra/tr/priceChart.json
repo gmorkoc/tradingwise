@@ -50,6 +50,9 @@
       "freeTrial": "ProVision ücretsiz deneme",
       "floatSub": "Pro sinyaller · 3 gün ücretsiz · kart gerekmez",
       "mobileSub": "3 gün ücretsiz · kart gerekmez",
+      "ghostSubApple": "Gerçek grafikte gör · 3 gün ücretsiz · istediğin zaman iptal et",
+      "floatSubApple": "Pro sinyaller · 3 gün ücretsiz · istediğin zaman iptal et",
+      "mobileSubApple": "3 gün ücretsiz · istediğin zaman iptal et",
       "tryFree": "Ücretsiz dene"
     },
     "intro": {
@@ -379,6 +382,7 @@
       "start": "Başla",
       "keepFor": "Tüm coinleri ve zaman dilimlerini {{price}}/yıl ile koruyun.",
       "noCard": "Tüm coinler ve zaman dilimleri. Kart gerekmez.",
+      "noCardApple": "Tüm coinler ve zaman dilimleri. 3 gün ücretsiz, istediğin zaman iptal et.",
       "try": "ProVision'ı dene",
       "unlock": "ProVision kilidini aç"
     },

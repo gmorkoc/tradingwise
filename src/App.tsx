@@ -135,6 +135,7 @@ import TermsGateModal from "./components/TermsGateModal";
 import UsernameGateModal from "./components/UsernameGateModal";
 import { PortfolioValueChart } from "./components/PortfolioValueChart";
 import { setPendingPredict } from "./services/pendingPredict";
+import { isIAPAvailable } from "./services/revenuecat";
 import "./App.css";
 
 // Coins the chart has candle data for (the app's COINS roster).
@@ -3976,7 +3977,7 @@ function AppDashboard({
                             </svg>
                             <span className="pv-float-buy">▲ {t("appShell.pv.buy")}</span>
                           </span>
-                          <span className="pv-float-sub">{t("appShell.pv.sub")}</span>
+                          <span className="pv-float-sub">{t(isIAPAvailable() ? "appShell.pv.subApple" : "appShell.pv.sub")}</span>
                           <span className="pv-float-cta pv-callout-cta">{t("appShell.pv.cta")}</span>
                         </button>
                       </div>

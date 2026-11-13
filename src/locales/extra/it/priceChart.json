@@ -50,6 +50,9 @@
       "freeTrial": "Prova gratuita di ProVision",
       "floatSub": "Segnali Pro · 3 giorni gratis · nessuna carta",
       "mobileSub": "3 giorni gratis · nessuna carta",
+      "ghostSubApple": "Guardalo sul grafico reale · 3 giorni gratis · annulla quando vuoi",
+      "floatSubApple": "Segnali Pro · 3 giorni gratis · annulla quando vuoi",
+      "mobileSubApple": "3 giorni gratis · annulla quando vuoi",
       "tryFree": "Prova gratis"
     },
     "intro": {
@@ -379,6 +382,7 @@
       "start": "Inizia",
       "keepFor": "Mantieni tutte le monete e i timeframe a {{price}}/anno.",
       "noCard": "Tutte le monete e i timeframe. Nessuna carta richiesta.",
+      "noCardApple": "Tutte le monete e i timeframe. 3 giorni gratis, annulla quando vuoi.",
       "try": "Prova ProVision",
       "unlock": "Sblocca ProVision"
     },

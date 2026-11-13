@@ -12,13 +12,21 @@ import { onProVisionPaywall, useProVisionGate } from "../hooks/useProVisionGate"
 import { useAuth } from "../contexts/AuthContext";
 import { startProVisionTrial } from "../services/supabase";
 import { PROVISION_PRICE_ID, redirectToCheckout } from "../services/stripeService";
-import { getProVisionIAPPackage, isIAPAvailable, purchaseProVisionIAP, restoreProVisionIAP, syncIAPEntitlement } from "../services/revenuecat";
+import { checkProVisionTrialEligible, knownProVisionTrialEligible, getProVisionIAPPackage, isIAPAvailable, purchaseProVisionIAP, restoreProVisionIAP, syncIAPEntitlement } from "../services/revenuecat";
 import { useStorePrices } from "../hooks/useStorePrices";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import "../styles/MembershipGate.css";
 import "../styles/PaywallPromo.css";
 import { useAuthFirst } from "../hooks/useAuthFirst";
+import { PlanSheet, usePhoneWidth, type PlanFeature } from "./PlanSheet";
+
+// Benefits list on the phone plan screen.
+const PV_SHEET_FEATURES: [string, PlanFeature["icon"]][] = [
+  ["pvChart", "trend"], ["pvSignals", "arrows"], ["pvStrong", "bolt"], ["pvTakeProfit", "target"],
+  ["pvInvalidation", "band"], ["pvSignalCheck", "gauge"], ["pvTimeframes", "clock"],
+  ["pvSafeguards", "shield"], ["pvTrack", "bars"],
+];
 
 // Terms / Privacy pages exist in these languages (same as UpgradeModal).
 const LOCALIZED_LEGAL_LANGS = ["es", "it", "tr"];
@@ -67,8 +75,23 @@ export function ProVisionPaywall({
   const { t, i18n } = useTranslation();
   const legalSuffix = LOCALIZED_LEGAL_LANGS.includes(i18n.language) ? `.${i18n.language}` : "";
   const iap = isIAPAvailable();
+  const phone = usePhoneWidth();
+  // iOS: only promise the free trial when Apple will actually give it to
+  // this Apple ID. Until the answer is in (and if it's no), the sheet
+  // offers the yearly plan at its price instead.
+  const [appleTrial, setAppleTrial] = useState<boolean | null>(knownProVisionTrialEligible);
+  useEffect(() => {
+    if (!open || !iap || reason !== "trial-available") return;
+    let live = true;
+    checkProVisionTrialEligible().then((ok) => { if (live) setAppleTrial(ok); });
+    return () => { live = false; };
+  }, [open, iap, reason]);
+  const appleNoTrial = iap && reason === "trial-available" && appleTrial !== true;
+
   const head =
-    reason === "pro-limit"
+    appleNoTrial
+      ? { kicker: t("pvPaywall.kickerYearly"), title: t("pvPaywall.titleGet") }
+      : reason === "pro-limit"
       ? { kicker: t("pvPaywall.kickerLimit", { n: PV_PRO_COINS_PER_DAY }), title: t("pvPaywall.titleUnlimited") }
       : reason === "trial-ended"
         ? { kicker: t("pvPaywall.kickerEnded"), title: t("pvPaywall.titleKeep") }
@@ -79,9 +102,50 @@ export function ProVisionPaywall({
   const sub =
     reason === "pro-limit"
       ? `${coin ? t("pvPaywall.subLimitCoin", { n: PV_PRO_COINS_PER_DAY, coin }) : t("pvPaywall.subLimit", { n: PV_PRO_COINS_PER_DAY })}${nextFreeAt ? ` ${t("pvPaywall.subSlot", { when: fmtWhen(nextFreeAt, t) })}` : ""}`
-      : reason === "trial-ended" || reason === "trial-active"
+      : reason === "trial-ended" || reason === "trial-active" || appleNoTrial
         ? t("pvPaywall.subPlan")
-        : t("pvPaywall.subTrial", { days: PV_TRIAL_DAYS });
+        : t(iap ? "pvPaywall.subTrialApple" : "pvPaywall.subTrial", { days: PV_TRIAL_DAYS });
+
+  // Phones: the full-screen plan screen (same layout as Pro / Elite).
+  if (phone) {
+    const showsTrial = reason === "signin" || (reason === "trial-available" && !appleNoTrial);
+    const cta =
+      reason === "signin"
+        ? { label: t("pvPaywall.ctaSignUp"), onClick: onSignIn }
+        : reason === "trial-available"
+          ? iap
+            ? { label: appleNoTrial ? t("pvPaywall.ctaGet", { price: PV_PLAN_PRICE }) : t("pvPaywall.ctaTryFree", { days: PV_TRIAL_DAYS }), onClick: onBuyPlan }
+            : { label: t("pvPaywall.ctaStartTrial", { days: PV_TRIAL_DAYS }), onClick: onStartTrial }
+          : { label: reason === "trial-ended" ? t("pvPaywall.ctaKeep", { price: PV_PLAN_PRICE }) : t("pvPaywall.ctaGet", { price: PV_PLAN_PRICE }), onClick: onBuyPlan };
+    return (
+      <PlanSheet
+        open={open}
+        onClose={onClose}
+        tone="pv"
+        badgeLabel="ProVision"
+        title={t("planSheet.titlePv")}
+        intro={sub}
+        benefits={t("planSheet.benefitsPv")}
+        features={PV_SHEET_FEATURES.map(([k, icon]) => ({ key: k, icon, label: t(`planSheet.features.${k}`) }))}
+        price={{
+          amount: PV_PLAN_PRICE,
+          period: t("planSheet.yearly"),
+          sub: showsTrial ? undefined : t("planSheet.everyCoin"),
+          badge: showsTrial ? t("planSheet.daysFree", { days: PV_TRIAL_DAYS }) : undefined,
+        }}
+        cta={cta}
+        secondary={reason === "pro-limit" ? (
+          <button type="button" className="ps-secondary" onClick={onUpgradeElite} disabled={busy}>
+            {t("pvPaywall.orGo")} Elite{t("pvPaywall.eliteIncluded")}
+          </button>
+        ) : undefined}
+        error={error}
+        busy={busy}
+        legalTail={iap ? t(showsTrial ? "planSheet.legalTrialApple" : "planSheet.legalApple", { days: PV_TRIAL_DAYS, price: PV_PLAN_PRICE }) : t("planSheet.legalWeb")}
+        onRestore={iap ? onRestore : undefined}
+      />
+    );
+  }
 
   return (
     // Same card as the Pro / Elite upgrade popup (BlurGate's .bg-elite-card,
@@ -139,9 +203,16 @@ export function ProVisionPaywall({
                 {t("pvPaywall.ctaSignUp")}
               </button>
             )}
+            {/* iOS: one button that buys the yearly plan through the App
+                Store, with Apple's 3-day free trial (introductory offer)
+                applied. Web keeps our own no-card trial. */}
             {reason === "trial-available" && (
-              <button type="button" className="bg-elite-cta bg-elite-cta--pv" onClick={onStartTrial} disabled={busy}>
-                {busy ? t("pvPaywall.starting") : t("pvPaywall.ctaStartTrial", { days: PV_TRIAL_DAYS })}
+              <button type="button" className="bg-elite-cta bg-elite-cta--pv" onClick={iap ? onBuyPlan : onStartTrial} disabled={busy}>
+                {busy
+                  ? t(iap ? "pvPaywall.opening" : "pvPaywall.starting")
+                  : appleNoTrial
+                    ? t("pvPaywall.ctaGet", { price: PV_PLAN_PRICE })
+                    : t(iap ? "pvPaywall.ctaTryFree" : "pvPaywall.ctaStartTrial", { days: PV_TRIAL_DAYS })}
               </button>
             )}
             {(reason === "trial-ended" || reason === "trial-active" || reason === "pro-limit") && (
@@ -153,7 +224,11 @@ export function ProVisionPaywall({
 
             <p className="bg-card-trust bg-card-trust--split">
               <span>
-                {reason === "signin" || reason === "trial-available"
+                {appleNoTrial
+                  ? t("pvPaywall.trustApple", { price: PV_PLAN_PRICE })
+                  : reason === "trial-available" && iap
+                  ? t("pvPaywall.trustTrialApple", { days: PV_TRIAL_DAYS, price: PV_PLAN_PRICE })
+                  : reason === "signin" || reason === "trial-available"
                   ? t("pvPaywall.trustTrial", { days: PV_TRIAL_DAYS, price: PV_PLAN_PRICE })
                   : iap
                     // App Store: Apple handles billing and refunds.
@@ -201,6 +276,13 @@ export function ProVisionPaywallHost({ onOpenAuth, onOpenUpgrade }: { onOpenAuth
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => onProVisionPaywall((r) => { setError(null); setReq(r); }), []);
+  // iOS: ask Apple about the free trial early (after RevenueCat has had
+  // time to start), so the paywall opens with the right button.
+  useEffect(() => {
+    if (!isIAPAvailable()) return;
+    const id = setTimeout(() => { void checkProVisionTrialEligible(); }, 4000);
+    return () => clearTimeout(id);
+  }, []);
 
   // Opened signed out ("sign in to try") → once signed in and the profile
   // has loaded, show the offer that fits this account instead — or close

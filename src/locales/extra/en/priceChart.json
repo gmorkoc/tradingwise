@@ -50,6 +50,9 @@
       "freeTrial": "ProVision free trial",
       "floatSub": "Pro signals · 3 days free · no card",
       "mobileSub": "3 days free · no card",
+      "ghostSubApple": "See this on the real chart · 3 days free · cancel anytime",
+      "floatSubApple": "Pro signals · 3 days free · cancel anytime",
+      "mobileSubApple": "3 days free · cancel anytime",
       "tryFree": "Try free"
     },
     "intro": {
@@ -379,6 +382,7 @@
       "start": "Start",
       "keepFor": "Keep every coin and timeframe for {{price}}/year.",
       "noCard": "Every coin and timeframe. No card needed.",
+      "noCardApple": "Every coin and timeframe. 3 days free, cancel anytime.",
       "try": "Try ProVision",
       "unlock": "Unlock ProVision"
     },

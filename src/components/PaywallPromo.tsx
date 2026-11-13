@@ -1,8 +1,8 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import { type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { BlurGate } from "./MembershipGate";
 import { BottomSheet } from "./BottomSheet";
+import { TierPlanSheet, usePhoneWidth } from "./PlanSheet";
 import { useAuthFirst } from "../hooks/useAuthFirst";
 import type { Tier } from "../services/supabase";
 import "../styles/PaywallPromo.css";
@@ -30,13 +30,7 @@ export function PaywallPromo({ open, onClose, requiredTier, featureName, onOpenA
   const signedIn = useAuthFirst(open, onOpenAuth, onClose);
   const { t } = useTranslation();
   const planName = requiredTier === "elite" ? "Elite" : "Pro";
-  const [phone, setPhone] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width: 900px)").matches);
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 900px)");
-    const on = () => setPhone(mq.matches);
-    mq.addEventListener("change", on);
-    return () => mq.removeEventListener("change", on);
-  }, []);
+  const phone = usePhoneWidth();
   const gate = (
     <BlurGate
       requiredTier={requiredTier}
@@ -52,22 +46,17 @@ export function PaywallPromo({ open, onClose, requiredTier, featureName, onOpenA
       <div />
     </BlurGate>
   );
-  // Phones: the same full-screen page as the Elite upsell (EliteUpsellModal)
-  // — its background, ✕ top-right, scrolling card — not a bottom sheet.
+  // Phones: the full-screen plan screen, opened on the plan this feature
+  // needs (Pro | Elite tabs).
   if (phone) {
-    if (!open || !signedIn) return null;
-    return createPortal(
-      <div className="bg-modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-        <div
-          className={`bg-elite-card bg-elite-card--modal paywall-promo-modal paywall-promo-modal--${requiredTier === "elite" ? "elite" : "pro"}`}
-          role="dialog"
-          aria-label={t("paywallPromo.ariaLabel", { feature: featureName })}
-        >
-          <button className="bg-modal-close" onClick={onClose} aria-label={t("eliteUpsell.close")}>✕</button>
-          {gate}
-        </div>
-      </div>,
-      document.body,
+    return (
+      <TierPlanSheet
+        open={open && signedIn}
+        onClose={onClose}
+        promoted={requiredTier === "elite" ? "elite" : "pro"}
+        onOpenAuth={onOpenAuth}
+        withAnalyzeChart={!!extraFeature}
+      />
     );
   }
   return (

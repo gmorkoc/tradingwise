@@ -1,5 +1,5 @@
 import { Capacitor } from "@capacitor/core";
-import { Purchases, LOG_LEVEL, type PurchasesPackage } from "@revenuecat/purchases-capacitor";
+import { Purchases, LOG_LEVEL, INTRO_ELIGIBILITY_STATUS, type PurchasesPackage } from "@revenuecat/purchases-capacitor";
 import { supabase, type Tier } from "./supabase";
 
 const FN_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
@@ -111,9 +111,38 @@ export async function getProVisionIAPPackage(): Promise<{ pkg: PurchasesPackage;
   }
 }
 
+// Does Apple give THIS Apple ID the ProVision free trial? True only when
+// Apple says ELIGIBLE (someone who subscribed before gets no trial, and
+// "no intro offer" / unknown count as no trial, as RevenueCat advises).
+// Asked fresh on every call — the Apple ID or the offer can change while
+// the app is open; only a check already in flight is shared.
+let pvTrialCheck: Promise<boolean> | null = null;
+let pvTrialKnown: boolean | null = null;
+/** Last answer from checkProVisionTrialEligible(), or null if not known yet. */
+export const knownProVisionTrialEligible = () => pvTrialKnown;
+export function checkProVisionTrialEligible(): Promise<boolean> {
+  if (!isIAPAvailable()) return Promise.resolve(false);
+  if (!pvTrialCheck) {
+    pvTrialCheck = (async () => {
+      const found = await getProVisionIAPPackage(); // loads the product first
+      if (!found) throw new Error("ProVision product not loaded");
+      const id = found.pkg.product.identifier;
+      const res = await Purchases.checkTrialOrIntroductoryPriceEligibility({ productIdentifiers: [id] });
+      console.log("ProVision trial eligibility:", id, res[id]?.status, res[id]?.description);
+      pvTrialKnown = res[id]?.status === INTRO_ELIGIBILITY_STATUS.INTRO_ELIGIBILITY_STATUS_ELIGIBLE;
+      return pvTrialKnown;
+    })().catch((err) => {
+      console.error("ProVision trial eligibility check failed:", err);
+      return pvTrialKnown ?? false;
+    }).finally(() => { pvTrialCheck = null; });
+  }
+  return pvTrialCheck;
+}
+
 export async function purchaseProVisionIAP(pkg: PurchasesPackage): Promise<{ success: boolean; cancelled: boolean; error?: string }> {
   try {
     const { customerInfo } = await Purchases.purchasePackage({ aPackage: pkg });
+    pvTrialCheck = null; pvTrialKnown = null; // a purchase uses up the trial
     const ok = !!customerInfo.entitlements.active[PROVISION_ENTITLEMENT];
     return ok ? { success: true, cancelled: false } : { success: false, cancelled: false, error: "Purchase didn't unlock ProVision" };
   } catch (err: any) {

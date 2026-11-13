@@ -699,9 +699,23 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
                       </button>
                     )
                   ) : (
-                    <button className="pp-btn pp-btn--primary" onClick={() => { onClose(); onOpenUpgrade(); }}>
-                      {t("profile.subscription.upgradePlan")}
-                    </button>
+                    <>
+                      <button className="pp-btn pp-btn--primary" onClick={() => { onClose(); onOpenUpgrade(); }}>
+                        {t("profile.subscription.upgradePlan")}
+                      </button>
+                      {/* ProVision on its own (no Pro/Elite) still needs a
+                          way to manage or cancel it: App Store on iOS,
+                          Stripe's billing page on the web. */}
+                      {provisionLive && (isIAPAvailable() ? hasAppleSub : !!authProfile?.provision_stripe_sub_id) && (
+                        <button className="pp-btn pp-btn--ghost" onClick={handleManageBilling} disabled={portalLoading}>
+                          {portalLoading
+                            ? t("profile.subscription.loadingPortal")
+                            : isIAPAvailable()
+                            ? t("profile.subscription.manageAppleSubscription")
+                            : t("profile.subscription.manageBilling")}
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               </div>

@@ -5,6 +5,7 @@ import { redirectToCheckout, previewUpgrade, upgradePlan, PRICE_IDS } from "../s
 import { isIAPAvailable, getIAPPlans, purchaseIAPPlan, syncIAPEntitlement, type IAPPlan } from "../services/revenuecat";
 import "../styles/MembershipGate.css";
 import { useAuthFirst } from "../hooks/useAuthFirst";
+import { TierPlanSheet, usePhoneWidth } from "./PlanSheet";
 
 interface Props {
   onClose: () => void;
@@ -50,6 +51,7 @@ export function EliteUpsellModal({ onClose, onOpenAuth }: Props) {
   // Signed out → the sign-in window opens instead of this offer; it appears
   // once signed in, and closes if sign-in is dismissed.
   const signedIn = useAuthFirst(true, onOpenAuth, onClose);
+  const phone = usePhoneWidth();
 
   const isProUser = user !== null && tier === "pro";
   const iapPlan = iapPlans.find(p => p.tier === "elite");
@@ -118,6 +120,8 @@ export function EliteUpsellModal({ onClose, onOpenAuth }: Props) {
   const trustLine= isProUser ? t("membershipGate.blurGate.pro_trust")    : t("membershipGate.blurGate.trust");
 
   if (!signedIn) return null;
+  // Phones: the full-screen plan screen, opened on Elite.
+  if (phone) return <TierPlanSheet open onClose={onClose} promoted="elite" onOpenAuth={onOpenAuth} />;
   return (
     <div className="bg-modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="bg-elite-card bg-elite-card--modal">

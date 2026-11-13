@@ -1,0 +1,270 @@
+/* Full-screen plan screen (PlanSheet.tsx) — phones only. Above bottom
+   sheets (200030), below the sign-in window (200100). */
+.ps-root {
+  --ps-bg: #000;
+  --ps-fg: #fff;
+  --ps-muted: rgba(255, 255, 255, 0.6);
+  --ps-card: #161616;
+  --ps-line: rgba(255, 255, 255, 0.12);
+  --ps-tabs: rgba(255, 255, 255, 0.06);
+  --ps-tab-on: rgba(255, 255, 255, 0.24);
+  --ps-cta-bg: #fff;
+  --ps-cta-fg: #000;
+  --ps-close-bg: rgba(255, 255, 255, 0.12);
+  /* Plan colours — Pro (blue) by default, Elite / ProVision below. Same
+     as the old banners (MembershipGate.css .bg-elite-badge / -cta). */
+  --ps-accent: #38bdf8;
+  --ps-pill-fg: #7dd3fc;
+  --ps-pill-bg: rgba(14, 165, 233, 0.15);
+  --ps-pill-line: rgba(56, 189, 248, 0.4);
+  --ps-plan-cta: linear-gradient(135deg, #4f46e5, #0284c7);
+  position: fixed;
+  inset: 0;
+  z-index: 200050;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  padding: calc(env(safe-area-inset-top, 0px) + 8px) 16px calc(env(safe-area-inset-bottom, 0px) + 10px);
+  background: var(--ps-bg);
+  color: var(--ps-fg);
+  animation: ps-in 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  overscroll-behavior: contain;
+}
+.ps-root--elite,
+.ps-root--pv {
+  --ps-accent: #a78bfa;
+  --ps-pill-fg: #c4b5fd;
+  --ps-pill-bg: rgba(124, 58, 237, 0.18);
+  --ps-pill-line: rgba(167, 139, 250, 0.4);
+  --ps-plan-cta: linear-gradient(135deg, #a78bfa, #7c3aed);
+}
+.ps-root--pv { --ps-plan-cta: linear-gradient(90deg, #7c3aed, #3b82f6); }
+html[data-theme="light"] .ps-root {
+  --ps-bg: #fff;
+  --ps-fg: #0b0b0f;
+  --ps-muted: rgba(11, 11, 15, 0.58);
+  --ps-card: #f3f3f6;
+  --ps-line: rgba(11, 11, 15, 0.1);
+  --ps-tabs: rgba(11, 11, 15, 0.05);
+  --ps-tab-on: #fff;
+  --ps-cta-bg: #0b0b0f;
+  --ps-cta-fg: #fff;
+  --ps-close-bg: rgba(11, 11, 15, 0.07);
+  --ps-accent: #0284c7;
+  --ps-pill-fg: #0369a1;
+  --ps-pill-bg: rgba(14, 165, 233, 0.1);
+  --ps-pill-line: rgba(56, 189, 248, 0.3);
+}
+html[data-theme="light"] .ps-root--elite,
+html[data-theme="light"] .ps-root--pv {
+  --ps-accent: #7c3aed;
+  --ps-pill-fg: #6d28d9;
+  --ps-pill-bg: rgba(124, 58, 237, 0.1);
+  --ps-pill-line: rgba(124, 58, 237, 0.25);
+}
+@keyframes ps-in {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: none; }
+}
+html.ps-open, html.ps-open body { overflow: hidden; }
+
+/* ✕ | plan name | empty slot the ✕'s width — the name is centred on the
+   screen whatever the ✕ does */
+.ps-top {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  height: 52px;
+  flex-shrink: 0;
+}
+.ps-close {
+  all: unset;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--ps-close-bg);
+  color: var(--ps-fg);
+  cursor: pointer;
+}
+/* Plan name at the top: the old banner badge's text and colour, no pill */
+.ps-tier-name {
+  justify-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  text-transform: uppercase;
+  color: var(--ps-pill-fg);
+  transition: color 0.2s;
+}
+.ps-tier-name svg { flex-shrink: 0; }
+.ps-tier-word {
+  letter-spacing: 0.14em;
+  /* letter-spacing also adds a gap after the last letter; cancel it so
+     the name is exactly centred */
+  margin-right: -0.14em;
+}
+/* One line: shrinks a little on narrow phones / longer languages */
+.ps-title {
+  margin: 14px 0 18px;
+  text-align: center;
+  font-size: min(25px, 5.8vw);
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+.ps-benefits-mark { color: var(--ps-accent); }
+
+/* The card: tabs fixed at its top, benefits scroll under the bottom area */
+.ps-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--ps-card);
+  border-radius: 28px 28px 0 0;
+  padding: 12px 12px 0;
+  margin: 0 -4px;
+}
+.ps-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--ps-tabs);
+  flex-shrink: 0;
+}
+.ps-tab {
+  all: unset;
+  flex: 1;
+  text-align: center;
+  padding: 11px 0;
+  border-radius: 999px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ps-muted);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.ps-tab--on { background: var(--ps-pill-bg); color: var(--ps-pill-fg); box-shadow: inset 0 0 0 1px var(--ps-pill-line); }
+.ps-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding: 16px 8px 56px;
+}
+.ps-intro { margin: 0 0 14px; font-size: 16px; color: var(--ps-muted); }
+.ps-benefits {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--ps-line);
+  font-size: 16.5px;
+  font-weight: 600;
+  color: var(--ps-pill-fg);
+  transition: color 0.2s;
+}
+.ps-benefits-mark { font-size: 18px; }
+.ps-list { list-style: none; margin: 6px 0 0; padding: 0; }
+.ps-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+  font-size: 15.5px;
+  line-height: 1.3;
+}
+.ps-list svg { flex-shrink: 0; color: var(--ps-fg); }
+
+/* Bottom: price, button, legal — over the card's lower edge with a fade */
+.ps-bottom {
+  position: relative;
+  flex-shrink: 0;
+  margin: -44px -16px 0;
+  padding: 44px 16px 0;
+  background: linear-gradient(to bottom, transparent, var(--ps-bg) 44px);
+}
+.ps-price {
+  box-sizing: border-box;
+  border-radius: 20px;
+  padding: 14px 18px;
+  min-height: 64px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  background: color-mix(in srgb, var(--ps-accent) 10%, var(--ps-bg));
+  box-shadow: inset 0 0 0 2.5px var(--ps-accent);
+}
+.ps-amount { font-size: 20px; font-weight: 700; }
+.ps-period { font-size: 16px; color: var(--ps-muted); }
+.ps-price-sub { display: flex; gap: 8px; font-size: 13.5px; color: var(--ps-muted); }
+.ps-badge { color: var(--ps-accent); font-weight: 600; }
+.ps-cta {
+  all: unset;
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  padding: 16px 0;
+  border-radius: 999px;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 600;
+  background: var(--ps-plan-cta);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.ps-cta:active { transform: scale(0.98); }
+.ps-cta:disabled { opacity: 0.45; cursor: default; }
+.ps-secondary {
+  all: unset;
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ps-accent);
+  cursor: pointer;
+}
+.ps-error { margin: 8px 0 0; text-align: center; font-size: 13px; color: #ef4444; }
+.ps-legal {
+  margin: 10px 4px 0;
+  text-align: center;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--ps-muted);
+}
+.ps-legal a,
+.ps-restore {
+  all: unset;
+  color: var(--ps-fg);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.ps-restore:disabled { opacity: 0.5; }
+
+/* Short phones (SE / mini): tighter so everything still fits */
+@media (max-height: 720px) {
+  .ps-title { margin: 4px 0 10px; }
+  .ps-list li { padding: 7px 0; font-size: 14.5px; }
+  .ps-cta { padding: 13px 0; margin-top: 10px; }
+  .ps-price { min-height: 54px; padding: 10px 16px; }
+}

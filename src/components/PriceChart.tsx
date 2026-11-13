@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import ReactDOM from "react-dom";
 import { BottomSheet } from "./BottomSheet";
+import { isIAPAvailable } from "../services/revenuecat";
+// iOS trial goes through Apple (payment on the Apple ID), so "no card"
+// texts get an "Apple" variant there.
+const pvTrialKey = (key: string) => (isIAPAvailable() ? `${key}Apple` : key);
 import { useTranslation, Trans } from "react-i18next";
 import i18next from "i18next";
 import { Capacitor } from "@capacitor/core";
@@ -7089,7 +7093,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   ? t("priceChart.pvbar.usedCoins", { n: pvGate.access.usedCoins.length })
                   // Server said no but no coins were used: not a daily-limit case.
                   : t("priceChart.pvbar.notIncluded"))
-                : pvBannerReason === "trial-ended" ? t("priceChart.pvbar.keepFor", { price: pvPrice }) : t("priceChart.pvbar.noCard")}
+                : pvBannerReason === "trial-ended" ? t("priceChart.pvbar.keepFor", { price: pvPrice }) : t(pvTrialKey("priceChart.pvbar.noCard"))}
             </span>
             <span className="chart-tv-pvbar-cta">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
@@ -8872,7 +8876,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     <svg className="pv-float-spark" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
                     <span className="pv-ghost-btn-text">
                       <strong>{t("priceChart.pvbar.unlock")}</strong>
-                      <span>{t("priceChart.promo.ghostSub")}</span>
+                      <span>{t(pvTrialKey("priceChart.promo.ghostSub"))}</span>
                     </span>
                   </span>
                 </button>
@@ -8926,7 +8930,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     <svg className="pv-float-spark" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
                     {t("priceChart.pvbar.unlock")}
                   </span>
-                  <span className="pv-float-sub">{t("priceChart.promo.floatSub")}</span>
+                  <span className="pv-float-sub">{t(pvTrialKey("priceChart.promo.floatSub"))}</span>
                 </span>
                 <span className="pv-float-cta">{t("priceChart.promo.tryFree")}</span>
               </button>
@@ -9378,7 +9382,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   <svg className="pv-float-spark" width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
                   {t("priceChart.pvbar.unlock")}
                 </span>
-                <span className="pv-float-sub">{t("priceChart.promo.mobileSub")}</span>
+                <span className="pv-float-sub">{t(pvTrialKey("priceChart.promo.mobileSub"))}</span>
               </span>
               <span className="pv-float-cta pv-mpromo-cta">{t("priceChart.promo.tryFree")}</span>
             </span>
@@ -9403,7 +9407,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   ? (pvGate.access.usedCoins.length
                     ? t("priceChart.pvbar.usedCoinsList", { n: pvGate.access.usedCoins.length, list: pvGate.access.usedCoins.join(", ") })
                     : t("priceChart.pvbar.notIncluded"))
-                  : pvBannerReason === "trial-ended" ? t("priceChart.pvbar.keepFor", { price: pvPrice }) : t("priceChart.pvbar.noCard")}
+                  : pvBannerReason === "trial-ended" ? t("priceChart.pvbar.keepFor", { price: pvPrice }) : t(pvTrialKey("priceChart.pvbar.noCard"))}
               </span>
             </span>
             <span className="pv-locked-cta">{pvBannerReason === "trial-available" || pvBannerReason === "signin" ? t("priceChart.pvbar.start") : t("priceChart.pill.unlock")}</span>
