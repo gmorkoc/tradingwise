@@ -135,7 +135,9 @@ import TermsGateModal from "./components/TermsGateModal";
 import UsernameGateModal from "./components/UsernameGateModal";
 import { PortfolioValueChart } from "./components/PortfolioValueChart";
 import { setPendingPredict } from "./services/pendingPredict";
-import { isIAPAvailable } from "./services/revenuecat";
+import { isIAPAvailable, knownProVisionTrialEligible } from "./services/revenuecat";
+// iOS: Apple says this Apple ID gets no free ProVision trial (had it before).
+const pvNoAppleTrial = () => isIAPAvailable() && knownProVisionTrialEligible() === false;
 import "./App.css";
 
 // Coins the chart has candle data for (the app's COINS roster).
@@ -3959,7 +3961,7 @@ function AppDashboard({
                           <span className="pv-callout-head">
                             <svg className="pv-float-spark" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
                             <span className="pv-float-title">{t("appShell.pv.turnMeOn")}</span>
-                            <span className="pv-callout-free">{t("appShell.pv.daysFree")}</span>
+                            <span className="pv-callout-free">{t(pvNoAppleTrial() ? "appShell.pv.daysFreeNoTrial" : "appShell.pv.daysFree")}</span>
                           </span>
                           <span className="pv-float-preview pv-callout-preview" aria-hidden="true">
                             <svg viewBox="0 0 120 64" preserveAspectRatio="none">
@@ -3977,8 +3979,8 @@ function AppDashboard({
                             </svg>
                             <span className="pv-float-buy">▲ {t("appShell.pv.buy")}</span>
                           </span>
-                          <span className="pv-float-sub">{t(isIAPAvailable() ? "appShell.pv.subApple" : "appShell.pv.sub")}</span>
-                          <span className="pv-float-cta pv-callout-cta">{t("appShell.pv.cta")}</span>
+                          <span className="pv-float-sub">{t(pvNoAppleTrial() ? "appShell.pv.subNoTrial" : isIAPAvailable() ? "appShell.pv.subApple" : "appShell.pv.sub")}</span>
+                          <span className="pv-float-cta pv-callout-cta">{t(pvNoAppleTrial() ? "appShell.pv.ctaNoTrial" : "appShell.pv.cta")}</span>
                         </button>
                       </div>
                     );

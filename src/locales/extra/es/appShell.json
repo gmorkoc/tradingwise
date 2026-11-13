@@ -89,6 +89,9 @@
       "buy": "COMPRA",
       "sub": "Colores de tendencia, señales de compra/venta y una verificación de señal en vivo. Sin tarjeta.",
       "subApple": "Colores de tendencia, señales de compra/venta y una verificación de señal en vivo. 3 días gratis, cancela cuando quieras.",
+      "subNoTrial": "Colores de tendencia, señales de compra/venta y una verificación de señal en vivo.",
+      "daysFreeNoTrial": "Plan anual",
+      "ctaNoTrial": "Consigue ProVision",
       "cta": "Prueba ProVision gratis",
       "onTip": "ProVision activado — haz clic para volver al gráfico normal",
       "offTip": "ProVision: velas de tendencia, señales de compra/venta y verificación de señal en vivo"

@@ -53,6 +53,11 @@
       "ghostSubApple": "Guardalo sul grafico reale · 3 giorni gratis · annulla quando vuoi",
       "floatSubApple": "Segnali Pro · 3 giorni gratis · annulla quando vuoi",
       "mobileSubApple": "3 giorni gratis · annulla quando vuoi",
+      "ghostSubNoTrial": "Guardalo sul grafico reale · tutte le monete e i timeframe",
+      "floatSubNoTrial": "Segnali Pro su tutte le monete e i timeframe",
+      "mobileSubNoTrial": "Tutte le monete e i timeframe",
+      "tryFreeNoTrial": "Ottienilo",
+      "freeTrialNoTrial": "ProVision",
       "tryFree": "Prova gratis"
     },
     "intro": {
@@ -383,6 +388,10 @@
       "keepFor": "Mantieni tutte le monete e i timeframe a {{price}}/anno.",
       "noCard": "Tutte le monete e i timeframe. Nessuna carta richiesta.",
       "noCardApple": "Tutte le monete e i timeframe. 3 giorni gratis, annulla quando vuoi.",
+      "noCardNoTrial": "Tutte le monete e i timeframe.",
+      "tryFreeNoTrial": "Ottieni ProVision su ogni moneta",
+      "tryNoTrial": "Ottieni ProVision",
+      "startNoTrial": "Ottieni",
       "try": "Prova ProVision",
       "unlock": "Sblocca ProVision"
     },

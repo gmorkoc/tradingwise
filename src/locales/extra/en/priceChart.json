@@ -53,6 +53,11 @@
       "ghostSubApple": "See this on the real chart · 3 days free · cancel anytime",
       "floatSubApple": "Pro signals · 3 days free · cancel anytime",
       "mobileSubApple": "3 days free · cancel anytime",
+      "ghostSubNoTrial": "See this on the real chart · every coin and timeframe",
+      "floatSubNoTrial": "Pro signals on every coin and timeframe",
+      "mobileSubNoTrial": "Every coin and timeframe",
+      "tryFreeNoTrial": "Get it",
+      "freeTrialNoTrial": "ProVision",
       "tryFree": "Try free"
     },
     "intro": {
@@ -383,6 +388,10 @@
       "keepFor": "Keep every coin and timeframe for {{price}}/year.",
       "noCard": "Every coin and timeframe. No card needed.",
       "noCardApple": "Every coin and timeframe. 3 days free, cancel anytime.",
+      "noCardNoTrial": "Every coin and timeframe.",
+      "tryFreeNoTrial": "Get ProVision on every coin",
+      "tryNoTrial": "Get ProVision",
+      "startNoTrial": "Get",
       "try": "Try ProVision",
       "unlock": "Unlock ProVision"
     },

@@ -1,10 +1,15 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import ReactDOM from "react-dom";
 import { BottomSheet } from "./BottomSheet";
-import { isIAPAvailable } from "../services/revenuecat";
+import { isIAPAvailable, knownProVisionTrialEligible } from "../services/revenuecat";
+// iOS: Apple says this Apple ID gets no free trial (subscribed before).
+const pvNoAppleTrial = () => isIAPAvailable() && knownProVisionTrialEligible() === false;
 // iOS trial goes through Apple (payment on the Apple ID), so "no card"
-// texts get an "Apple" variant there.
-const pvTrialKey = (key: string) => (isIAPAvailable() ? `${key}Apple` : key);
+// texts get an "Apple" variant there — or a "NoTrial" one when Apple won't
+// give this Apple ID a trial.
+const pvTrialKey = (key: string) => (pvNoAppleTrial() ? `${key}NoTrial` : isIAPAvailable() ? `${key}Apple` : key);
+// Texts that promise a trial on every platform: "NoTrial" variant only.
+const pvNoTrialKey = (key: string) => (pvNoAppleTrial() ? `${key}NoTrial` : key);
 import { useTranslation, Trans } from "react-i18next";
 import i18next from "i18next";
 import { Capacitor } from "@capacitor/core";
@@ -7085,7 +7090,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
             </span>
             <strong>
-              {pvBannerReason === "pro-limit" ? t("priceChart.pvbar.lockedOn", { coin }) : pvBannerReason === "trial-ended" ? t("priceChart.pvbar.trialEnded") : t("priceChart.pvbar.tryFree")}
+              {pvBannerReason === "pro-limit" ? t("priceChart.pvbar.lockedOn", { coin }) : pvBannerReason === "trial-ended" ? t("priceChart.pvbar.trialEnded") : t(pvNoTrialKey("priceChart.pvbar.tryFree"))}
             </strong>
             <span className="chart-tv-pvbar-sub">
               {pvBannerReason === "pro-limit"
@@ -7097,7 +7102,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             </span>
             <span className="chart-tv-pvbar-cta">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
-              {pvBannerReason === "trial-available" || pvBannerReason === "signin" ? t("priceChart.pvbar.try") : t("priceChart.pvbar.unlock")}
+              {pvBannerReason === "trial-available" || pvBannerReason === "signin" ? t(pvNoTrialKey("priceChart.pvbar.try")) : t("priceChart.pvbar.unlock")}
             </span>
           </button>
         )}
@@ -8932,7 +8937,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   </span>
                   <span className="pv-float-sub">{t(pvTrialKey("priceChart.promo.floatSub"))}</span>
                 </span>
-                <span className="pv-float-cta">{t("priceChart.promo.tryFree")}</span>
+                <span className="pv-float-cta">{t(pvNoTrialKey("priceChart.promo.tryFree"))}</span>
               </button>
             </div>
           )}
@@ -9220,7 +9225,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           } else if (pvReason && !pvActive) {
             items.push({
               id: "pv", name: "ProVision", tone: null, pos: null, locked: true,
-              label: pvReason === "trial-available" || pvReason === "signin" ? t("priceChart.promo.tryFree") : t("priceChart.pill.unlock"),
+              label: pvReason === "trial-available" || pvReason === "signin" ? t(pvNoTrialKey("priceChart.promo.tryFree")) : t("priceChart.pill.unlock"),
               onClick: () => openProVisionPaywall({ reason: pvReason, coin }),
             });
           } else {
@@ -9348,7 +9353,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <span className="pv-mpromo-text">
                 <span className="pv-float-title">
                   <svg className="pv-float-spark" width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
-                  {t("priceChart.promo.freeTrial")}
+                  {t(pvNoTrialKey("priceChart.promo.freeTrial"))}
                 </span>
                 <span className="pv-float-sub">{t("priceChart.trial.leftThen", { left: pvTrialLeftLabel(pvTrialLeftMs), price: pvPrice })}</span>
               </span>
@@ -9384,7 +9389,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 </span>
                 <span className="pv-float-sub">{t(pvTrialKey("priceChart.promo.mobileSub"))}</span>
               </span>
-              <span className="pv-float-cta pv-mpromo-cta">{t("priceChart.promo.tryFree")}</span>
+              <span className="pv-float-cta pv-mpromo-cta">{t(pvNoTrialKey("priceChart.promo.tryFree"))}</span>
             </span>
           </button>
         )}
@@ -9400,7 +9405,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             </span>
             <span className="pv-locked-text">
               <strong>
-                {pvBannerReason === "pro-limit" ? t("priceChart.pvbar.lockedOn", { coin }) : pvBannerReason === "trial-ended" ? t("priceChart.pvbar.trialEnded") : t("priceChart.pvbar.tryFree")}
+                {pvBannerReason === "pro-limit" ? t("priceChart.pvbar.lockedOn", { coin }) : pvBannerReason === "trial-ended" ? t("priceChart.pvbar.trialEnded") : t(pvNoTrialKey("priceChart.pvbar.tryFree"))}
               </strong>
               <span>
                 {pvBannerReason === "pro-limit"
@@ -9410,7 +9415,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   : pvBannerReason === "trial-ended" ? t("priceChart.pvbar.keepFor", { price: pvPrice }) : t(pvTrialKey("priceChart.pvbar.noCard"))}
               </span>
             </span>
-            <span className="pv-locked-cta">{pvBannerReason === "trial-available" || pvBannerReason === "signin" ? t("priceChart.pvbar.start") : t("priceChart.pill.unlock")}</span>
+            <span className="pv-locked-cta">{pvBannerReason === "trial-available" || pvBannerReason === "signin" ? t(pvNoTrialKey("priceChart.pvbar.start")) : t("priceChart.pill.unlock")}</span>
           </button>
         )}
 

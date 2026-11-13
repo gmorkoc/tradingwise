@@ -53,6 +53,11 @@
       "ghostSubApple": "Míralo en el gráfico real · 3 días gratis · cancela cuando quieras",
       "floatSubApple": "Señales Pro · 3 días gratis · cancela cuando quieras",
       "mobileSubApple": "3 días gratis · cancela cuando quieras",
+      "ghostSubNoTrial": "Míralo en el gráfico real · todas las monedas y temporalidades",
+      "floatSubNoTrial": "Señales Pro en todas las monedas y temporalidades",
+      "mobileSubNoTrial": "Todas las monedas y temporalidades",
+      "tryFreeNoTrial": "Obtener",
+      "freeTrialNoTrial": "ProVision",
       "tryFree": "Probar gratis"
     },
     "intro": {
@@ -383,6 +388,10 @@
       "keepFor": "Mantén todas las monedas y temporalidades por {{price}}/año.",
       "noCard": "Todas las monedas y temporalidades. Sin tarjeta.",
       "noCardApple": "Todas las monedas y temporalidades. 3 días gratis, cancela cuando quieras.",
+      "noCardNoTrial": "Todas las monedas y temporalidades.",
+      "tryFreeNoTrial": "Consigue ProVision en todas las monedas",
+      "tryNoTrial": "Consigue ProVision",
+      "startNoTrial": "Obtener",
       "try": "Probar ProVision",
       "unlock": "Desbloquear ProVision"
     },

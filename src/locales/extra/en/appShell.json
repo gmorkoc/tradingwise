@@ -89,6 +89,9 @@
       "buy": "BUY",
       "sub": "Trend colors, buy/sell signals and a live signal check. No card needed.",
       "subApple": "Trend colors, buy/sell signals and a live signal check. 3 days free, cancel anytime.",
+      "subNoTrial": "Trend colors, buy/sell signals and a live signal check.",
+      "daysFreeNoTrial": "Yearly plan",
+      "ctaNoTrial": "Get ProVision",
       "cta": "Try ProVision free",
       "onTip": "ProVision on — click to go back to the normal chart",
       "offTip": "ProVision: trend candles, buy/sell signals and a live signal check"
