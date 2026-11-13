@@ -679,6 +679,19 @@ function AppDashboard({
     mql.addEventListener("change", handler);
     return () => mql.removeEventListener("change", handler);
   }, []);
+  // 961–1149px (iPad 13" portrait, narrow desktop windows): too narrow for
+  // the chart page's three columns — the chart ran under the Paper Trading
+  // column. There the left coin-info column becomes a "Statistics" tab /
+  // section under the chart, and its price + stats show in the chart
+  // header. Wider and narrower layouts are unchanged.
+  const MID_WIDE = "(min-width: 961px) and (max-width: 1149px)";
+  const [isMidWide, setIsMidWide] = useState(() => window.matchMedia(MID_WIDE).matches);
+  useEffect(() => {
+    const mql = window.matchMedia(MID_WIDE);
+    const handler = (e: MediaQueryListEvent) => setIsMidWide(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
   const [notificationsEnabled, setNotificationsEnabled] = useNotificationsEnabled();
   // The only switch that mutes alerts is the (hidden) Focus button, so a
   // "muted" left over from when it was visible would silence price toasts,
@@ -4388,12 +4401,13 @@ function AppDashboard({
                         onToggleCoinChat={SHOW_COIN_CHAT ? () => setShowCoinChat((v) => !v) : undefined}
                         // Desktop CMC layout: these stats sit in the left info
                         // column (same compact row) instead of the chart header.
-                        headerStats={isWideDesktop && !distractionFree && chartLayoutMode === "2col" ? undefined : mchBodyEl}
+                        headerStats={isWideDesktop && !distractionFree && chartLayoutMode === "2col" && !isMidWide ? undefined : mchBodyEl}
                         pageTabBar={activeSection !== "chart" ? undefined : isDesktopWidth
                           ? <CoinPageTabBar
                               tab={coinTab}
                               onChange={goCoinSection}
                               hasCycles={coin === "BTC"}
+                              hasStats={isMidWide}
                               // ProVision on / off right here on the chart
                               // (on also switches to the Chart tab + candles).
                               proVisionOn={pvGate.on}
@@ -4458,6 +4472,25 @@ function AppDashboard({
                             Fundamentals on the page; the tabs scroll here. */}
                         {activeSection === "chart" && isDesktopWidth && (
                           <>
+                            {/* iPad 13" portrait width: the left coin-info
+                                column lives here, as the "Statistics" tab. */}
+                            {isMidWide && (
+                              <section id="coin-sec-stats" className="cps-desk-sec">
+                                <CoinInfoPanel
+                                  coin={coin}
+                                  ticker={coinTickers.get(coin)}
+                                  noHeader
+                                  onTrade={() => setTradeColTab("paper")}
+                                  peersShown={peersOpen}
+                                  onCompare={() => {
+                                    setPeersOpen((o) => {
+                                      if (!o) setTimeout(() => peersRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+                                      return !o;
+                                    });
+                                  }}
+                                />
+                              </section>
+                            )}
                             {/* Bitcoin only (renders nothing otherwise). */}
                             <MarketCycles coin={coin} theme={theme} />
                             <CoinPageDesktopSections coin={coin} />
@@ -4544,6 +4577,9 @@ function AppDashboard({
                     // CoinMarketCap-style: coin info column (left), chart +
                     // tabs (middle), Paper Trading | Order Book (right).
                     <div className="chart-layout chart-layout--cmc">
+                      {/* 961–1149px: shown as the "Statistics" section under
+                          the chart instead (isMidWide). */}
+                      {!isMidWide && (
                       <div className="chart-cmc-left">
                         <CoinInfoPanel
                           coin={coin}
@@ -4563,6 +4599,7 @@ function AppDashboard({
                           }}
                         />
                       </div>
+                      )}
                       {chartColumnEl}
                       {chartTradeColEl}
                     </div>

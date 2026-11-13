@@ -32,6 +32,35 @@
     <meta name="twitter:image" content="https://www.coinhintz.io/og-image.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
     <script>
+      // iPad mini / 11" (shorter side < 1000pt) held upright: lay the page
+      // out at a phone width and let WebKit scale it to fill the screen, so
+      // it runs the exact iPhone layout (header, tabs, floating nav…) — just
+      // bigger. 13" iPads (and larger) always keep the normal viewport (the
+      // desktop layout). Doesn't run on iPhones or desktops.
+      (function () {
+        var ua = navigator.userAgent;
+        // iPads report "iPad", or (iPadOS / Chrome's iPad presets) a Mac with
+        // touch. Real Macs have 0 touch points, so desktops never match.
+        var isIPad = /iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 0);
+        if (!isIPad) return;
+        if (Math.min(screen.width, screen.height) >= 1000) return; // 13" and up: desktop layout
+        var meta = document.querySelector('meta[name="viewport"]');
+        if (!meta) return;
+        var base = meta.getAttribute("content");
+        var PHONE_WIDTH = 640; // widest width every phone breakpoint still covers (≤ 640px)
+        function apply() {
+          // window.orientation says how it's held (0/180 upright, ±90 sideways).
+          var o = window.orientation;
+          var portrait = typeof o === "number" ? (o === 0 || o === 180) : window.innerHeight >= window.innerWidth;
+          meta.setAttribute("content", portrait
+            ? "width=" + PHONE_WIDTH + ", user-scalable=no, viewport-fit=cover"
+            : base);
+        }
+        apply();
+        window.addEventListener("orientationchange", function () { setTimeout(apply, 60); });
+      })();
+    </script>
+    <script>
       // Snap fractional devicePixelRatio to the nearest integer BEFORE any
       // library runs.  fancy-canvas (inside lightweight-charts v5) calculates
       // the initial canvas bitmap using DPR directly (before its async

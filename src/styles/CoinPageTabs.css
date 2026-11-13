@@ -103,6 +103,10 @@
   display: flex;
   gap: 24px;
   overflow-x: auto;
+  /* Sideways only: without this the row also scrolls up/down/diagonally
+     on touch screens (iPad). Vertical swipes still scroll the page. */
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
   scrollbar-width: none;
   touch-action: pan-x pan-y;
 }
@@ -121,7 +125,11 @@
   -webkit-tap-highlight-color: transparent;
   transition: color 0.15s ease;
 }
-.cpt-tab:hover { color: var(--color-text); }
+/* Hover only with a mouse — on touch screens it stuck after a tap and a
+   tab looked selected when it wasn't. */
+@media (hover: hover) and (pointer: fine) {
+  .cpt-tab:hover { color: var(--color-text); }
+}
 .cpt-tab--active { color: var(--color-text); }
 /* Desktop: "✦ ProVision" at the end of the section tabs — the brand purple,
    turns ProVision on and opens Advance Chart (it's an action, never active). */

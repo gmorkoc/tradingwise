@@ -55,17 +55,20 @@ const fmtNum = (v: number | null | undefined): string => {
 
 // Desktop tab bar: the phone's "More" sections, in page order — minus
 // Statistics, which desktop always shows in its side column.
-export type DeskTab = CoinPageTab | "cycles" | "traders";
-export const DESK_ANCHORS = ["cycles", "news", "technicals", "seasonals", "markets", "fundamentals", "traders"] as const;
+// "stats" (Statistics) only exists on iPad 13" portrait-width screens, where
+// the left coin-info column is moved into a section under the chart.
+export type DeskTab = CoinPageTab | "stats" | "cycles" | "traders";
+export const DESK_ANCHORS = ["stats", "cycles", "news", "technicals", "seasonals", "markets", "fundamentals", "traders"] as const;
 const DESK_TABS: { id: DeskTab; label: string }[] = [
   { id: "overview", label: "Chart" },
+  { id: "stats", label: "Statistics" },
   { id: "cycles", label: "Market Cycles" },
   ...COIN_PAGE_TABS.filter((t) => t.id !== "overview"),
   { id: "traders", label: "Top Traders" },
 ];
 
 // ── Tab bar ─────────────────────────────────────────────────────────────
-export function CoinPageTabBar({ tab, onChange, onProVision, proVisionOn, hasCycles }: {
+export function CoinPageTabBar({ tab, onChange, onProVision, proVisionOn, hasCycles, hasStats }: {
   tab: DeskTab;
   onChange: (t: DeskTab) => void;
   /** Desktop: a "ProVision" toggle after Chart — draws it on this chart. */
@@ -73,11 +76,13 @@ export function CoinPageTabBar({ tab, onChange, onProVision, proVisionOn, hasCyc
   proVisionOn?: boolean;
   /** Market Cycles only exists for Bitcoin. */
   hasCycles?: boolean;
+  /** Statistics tab: only when the coin-info column is shown as a section. */
+  hasStats?: boolean;
 }) {
   const { t } = useTranslation();
   return (
     <div className="cpt-bar" role="tablist" aria-label={t("coinTabs.coinSections")}>
-      {DESK_TABS.filter((tb) => tb.id !== "cycles" || hasCycles).map((tb) => (
+      {DESK_TABS.filter((tb) => (tb.id !== "cycles" || hasCycles) && (tb.id !== "stats" || hasStats)).map((tb) => (
         <Fragment key={tb.id}>
           <button
             type="button"

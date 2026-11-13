@@ -64,8 +64,11 @@ function readWatch(): string[] {
   try { const v = JSON.parse(localStorage.getItem(WATCH_KEY) ?? "null"); return Array.isArray(v) ? v : []; } catch { return []; }
 }
 
-export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone, onCompare, peersShown }: {
+export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone, onCompare, peersShown, noHeader }: {
   coin: string;
+  /** Leave out the name/star/share row and the price row (the chart header
+   *  right above already shows them — iPad 13" "Statistics" section). */
+  noHeader?: boolean;
   /** Desktop: the panel's main button becomes "Compare {coin}" (toggles the
    *  Peers for comparison section) instead of Paper trade. */
   onCompare?: () => void;
@@ -235,7 +238,9 @@ export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone,
   return (
     <aside id={phone ? "coin-sec-stats" : undefined} className={`cip${phone ? " cip--phone" : ""}`} aria-label={t("coinInfo.overviewAria", { name })}>
       {phone && <h2 className="cip-phone-h">{t("coinInfo.statsTitle", { name })}</h2>}
-      {/* Name row + star / share */}
+      {/* Name row + star / share (left out when the chart header right
+          above already shows them — the iPad "Statistics" section). */}
+      {!noHeader && (<>
       <div className="cip-top">
         {/* Coin name block: opens the coin picker. */}
         <button
@@ -275,6 +280,7 @@ export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone,
         <strong>{price != null ? fmtPrice(price) : "—"}</strong>
         {chg != null && <span className={`cip-chg ${chg >= 0 ? "cip-up" : "cip-dn"}`}>{chg >= 0 ? "▲" : "▼"} {Math.abs(chg).toFixed(2)}% (24h)</span>}
       </div>
+      </>)}
 
       {/* Market stats: the chart header's own row (.chart-bar-stats), so
           size and spacing match it exactly; scrolls sideways. */}

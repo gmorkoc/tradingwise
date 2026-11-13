@@ -11,6 +11,17 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return true
     }
 
+    // Orientation: iPhones and smaller iPads (mini, 11") stay portrait-only.
+    // Large iPads (13" iPad Pro / Air and up — short side ≥ 1000pt) may also
+    // rotate to landscape, where the web layer shows the desktop layout
+    // (portrait shows the scaled iPhone layout — see index.html).
+    // Info.plist allows landscape for iPads; this narrows it per screen size.
+    func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
+        guard UIDevice.current.userInterfaceIdiom == .pad else { return .portrait }
+        let size = UIScreen.main.bounds.size
+        return min(size.width, size.height) >= 1000 ? [.portrait, .landscapeLeft, .landscapeRight] : .portrait
+    }
+
     func applicationWillResignActive(_ application: UIApplication) {
         // Sent when the application is about to move from active to inactive state. This can occur for certain types of temporary interruptions (such as an incoming phone call or SMS message) or when the user quits the application and it begins the transition to the background state.
         // Use this method to pause ongoing tasks, disable timers, and invalidate graphics rendering callbacks. Games should use this method to pause the game.
