@@ -85,9 +85,9 @@
 /* One plan card with two text-sized benefit columns, sized to the content.
    Both plans share one grid cell (see below), so the height is the same on
    both tabs — it never changes on switch. */
-html:root .upgrade-card.upgrade-card--promo { max-width: 720px !important; }
+html:root .upgrade-card.upgrade-card--promo { max-width: 800px !important; }
 @media (min-width: 1200px) and (max-width: 1512px) {
-  html:root .upgrade-card.upgrade-card--promo { max-width: 680px !important; }
+  html:root .upgrade-card.upgrade-card--promo { max-width: 760px !important; }
 }
 /* Elite's big Agent ready block is left out here (it's the first line of
    Elite's list instead), so Elite is about as tall as Pro. */
@@ -222,13 +222,16 @@ html[data-theme="light"] .upgrade-tab--on.upgrade-tab--elite { color: #6d28d9; b
   margin: 14px 0 0;
   text-align: left;
   font-size: 0.72rem;
-  font-weight: 600;
+  font-weight: 500;
   color: #38bdf8;
   cursor: pointer;
 }
-.upgrade-all-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+/* Hover: no underline — the whole line turns Elite purple. */
+.upgrade-all-link { transition: color 0.15s; }
+.upgrade-all-link:hover { text-decoration: none; color: #a78bfa; }
+html[data-theme="light"] .upgrade-all-link:hover { color: #7c3aed; }
 .upgrade-all-link-word { color: #a78bfa; }
-.upgrade-all-link-plans { text-decoration: underline; text-underline-offset: 3px; }
+.upgrade-all-link-plans { display: inline-flex; align-items: center; gap: 2px; }
 html[data-theme="light"] .upgrade-all-link { color: #0284c7; }
 html[data-theme="light"] .upgrade-all-link-word { color: #7c3aed; }
 

@@ -797,7 +797,12 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth, focus, feat
               >
                 <Trans i18nKey="upgradeModal2.promoGoElite" components={{ e: <span className="upgrade-all-link-word" /> }} />
                 {" · "}
-                <span className="upgrade-all-link-plans">{t("upgradeModal2.promoSeePlans")} →</span>
+                <span className="upgrade-all-link-plans">
+                  {t("upgradeModal2.promoSeePlans")}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="m9 6 6 6-6 6" />
+                  </svg>
+                </span>
               </button>
             )}
 
