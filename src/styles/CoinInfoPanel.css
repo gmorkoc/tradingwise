@@ -2,6 +2,9 @@
    chart): it sits right under the Consensus row, which already has a bottom
    line — so no top divider of its own (avoids a double line). */
 #coin-sec-stats.cps-desk-sec { border-top: none; }
+/* Its "Bitcoin Statistics" title (Market Cycles' title style) — that one
+   relies on a flex gap for the space below; this section isn't flex. */
+#coin-sec-stats.cps-desk-sec > .mcyc-h { margin-bottom: 14px !important; }
 
 /* ── Chart page desktop layout: info (left) · chart · trade tabs (right) ── */
 /* Height of everything above the page: the 66px header, plus the 44px

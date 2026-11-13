@@ -2618,6 +2618,17 @@ body {
   overflow: hidden;
   background: var(--color-background);
 }
+/* Tablet / desktop layout: size the frame to the VISIBLE height. On iPad
+   Safari 100vh also covers the area behind Safari's toolbar, so the page
+   could scroll up under the address bar and cut off the header (worst
+   when the sign-up strip closed). Desktop browsers: dvh = vh, no change.
+   Phones (≤ 640px, incl. iPad mini / 11" in portrait) aren't affected. */
+@media (min-width: 641px) {
+  @supports (height: 100dvh) {
+    .app-shell { height: 100dvh; }
+    body { min-height: 100dvh; }
+  }
+}
 
 .app-shell-body {
   display: flex;

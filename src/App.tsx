@@ -4476,6 +4476,8 @@ function AppDashboard({
                                 column lives here, as the "Statistics" tab. */}
                             {isMidWide && (
                               <section id="coin-sec-stats" className="cps-desk-sec">
+                                {/* Same title style as "Bitcoin Market Cycles". */}
+                                <h2 className="mcyc-h">{t("coinInfo.statsTitle", { name: COINS.find((c) => c.symbol === coin)?.name ?? coin })}</h2>
                                 <CoinInfoPanel
                                   coin={coin}
                                   ticker={coinTickers.get(coin)}
