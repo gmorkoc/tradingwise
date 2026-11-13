@@ -61,6 +61,8 @@ interface ShellProps {
   open: boolean;
   onClose: () => void;
   title: string;
+  /** Small line under the title (e.g. "Cancel anytime · Instant access"). */
+  subtitle?: string;
   tabs?: { id: string; label: string }[];
   activeTab?: string;
   onTab?: (id: string) => void;
@@ -78,7 +80,7 @@ interface ShellProps {
   busy?: boolean;
   /** "pro" | "elite" | "pv" — the plan's colours (pill, price card, button). */
   tone: string;
-  /** Plan name at the top, e.g. "Elite Plan" (shown in capitals). */
+  /** Plan name on the plan card, e.g. "Elite". */
   badgeLabel: string;
 }
 
@@ -106,17 +108,14 @@ export function PlanSheet(p: ShellProps) {
             <path d="M6 6l12 12M18 6L6 18" />
           </svg>
         </button>
-        <span className="ps-tier-name">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M12 1.5l2.6 7.9 7.9 2.6-7.9 2.6L12 22.5l-2.6-7.9L1.5 12l7.9-2.6z" />
-          </svg>
-          <span className="ps-tier-word">{p.badgeLabel}</span>
-        </span>
-        <span aria-hidden="true" />
       </div>
-      <h2 className="ps-title">{p.title}</h2>
 
-      <div className="ps-card">
+      {/* Header + switcher stay put; only the plan content below scrolls */}
+      <div className="ps-head">
+        <h2 className="ps-title">{p.title}</h2>
+        {p.subtitle && <p className="ps-subtitle">{p.subtitle}</p>}
+
+        {/* Segmented plan switcher */}
         {p.tabs && p.tabs.length > 1 && (
           <div className="ps-tabs" role="tablist">
             {p.tabs.map((tab) => (
@@ -133,15 +132,43 @@ export function PlanSheet(p: ShellProps) {
             ))}
           </div>
         )}
-        <div className="ps-scroll">
-          <p className="ps-intro">{p.intro}</p>
-          <p className="ps-benefits"><span className="ps-benefits-mark">✦</span> {p.benefits}</p>
+      </div>
+
+      <div className="ps-scroll">
+
+        {/* The plan card: name, badge, price, tagline over a fine wave pattern */}
+        <div className="ps-plan-card" key={p.tone}>
+          <svg className="ps-plan-waves" viewBox="0 0 400 220" preserveAspectRatio="none" aria-hidden="true">
+            {Array.from({ length: 14 }, (_, i) => (
+              <path key={i} d={`M ${140 + i * 6} -10 C ${220 + i * 9} ${60 + i * 4}, ${260 + i * 4} ${150 - i * 3}, ${420} ${120 + i * 9}`} />
+            ))}
+          </svg>
+          <div className="ps-plan-head">
+            <span className="ps-plan-name">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 1.5l2.6 7.9 7.9 2.6-7.9 2.6L12 22.5l-2.6-7.9L1.5 12l7.9-2.6z" />
+              </svg>
+              {p.badgeLabel}
+            </span>
+            {p.price.badge && <span className="ps-plan-badge">{p.price.badge}</span>}
+          </div>
+          <div className="ps-plan-price">
+            <span className="ps-amount">{p.price.amount}</span>
+            <span className="ps-period">/{p.price.period}</span>
+          </div>
+          <p className="ps-plan-tagline">{p.intro}</p>
+
+          {/* Benefits: clean rows with dividers — inside the card, whose
+              tint fades into the page as it goes down */}
+          <p className="ps-benefits">{p.benefits}</p>
           <ul className="ps-list">
             {p.features.map((f) => (
-              <li key={f.key}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  {ICONS[f.icon]}
-                </svg>
+              <li key={f.key} className={f.key === "everythingPro" ? "ps-list-hi" : undefined}>
+                <span className="ps-list-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    {ICONS[f.icon]}
+                  </svg>
+                </span>
                 <span>{f.label}</span>
               </li>
             ))}
@@ -150,18 +177,6 @@ export function PlanSheet(p: ShellProps) {
       </div>
 
       <div className="ps-bottom">
-        <div className="ps-price" aria-current="true">
-          <div>
-            <span className="ps-amount">{p.price.amount}</span>
-            <span className="ps-period"> {p.price.period}</span>
-          </div>
-          {(p.price.sub || p.price.badge) && (
-            <div className="ps-price-sub">
-              {p.price.sub && <span>{p.price.sub}</span>}
-              {p.price.badge && <span className="ps-badge">{p.price.badge}</span>}
-            </div>
-          )}
-        </div>
         <button type="button" className="ps-cta" onClick={p.cta.onClick} disabled={p.cta.disabled || p.busy}>
           {p.busy ? t("planSheet.working") : p.cta.label}
         </button>
@@ -197,9 +212,10 @@ const PRO_ICONS: Record<string, PlanFeature["icon"]> = {
   assistant: "chat", analyzeChart: "camera", altAnalysis: "layers", options: "options",
   correlation: "grid", strategyAlerts: "bell", pvCoins: "eye", aiQuota: "gauge",
 };
+// "Everything in Pro" leads (and is highlighted), then Elite's extras.
 const ELITE_FEATURES: [string, PlanFeature["icon"]][] = [
-  ["agent", "orb"], ["unlimitedAi", "infinity"], ["unlimitedPv", "eye"],
-  ["earlyAccess", "rocket"], ["everythingPro", "check"],
+  ["everythingPro", "check"], ["agent", "orb"], ["unlimitedAi", "infinity"],
+  ["unlimitedPv", "eye"], ["earlyAccess", "rocket"],
 ];
 
 type TierTab = "pro" | "elite";
@@ -286,18 +302,19 @@ export function TierPlanSheet({ open, onClose, promoted, onOpenAuth, withAnalyze
       open={open}
       onClose={onClose}
       tone={tab}
-      badgeLabel={t("planSheet.tierPlan", { tier: tab === "pro" ? "Pro" : "Elite" })}
-      title={t(tab === "pro" ? "planSheet.titlePro" : "planSheet.titleElite")}
+      badgeLabel={tab === "pro" ? "Pro" : "Elite"}
+      title={t("planSheet.chooseTitle")}
+      subtitle={t("planSheet.chooseSub")}
       tabs={tabs}
       activeTab={tab}
       onTab={(id) => { setTab(id as TierTab); setError(null); }}
-      intro={t(tab === "pro" ? "planSheet.introPro" : "planSheet.introElite")}
+      intro={t(`upgradeModal.plans.${tab}.tagline`, { defaultValue: t(`upgradeModal2.taglines.${tab}`) })}
       benefits={t(tab === "pro" ? "planSheet.benefitsPro" : "planSheet.benefitsElite")}
       features={features}
       price={{
         amount: tab === "pro" ? prices.pro : prices.elite,
-        period: t("planSheet.monthly"),
-        sub: t(tab === "pro" ? "planSheet.aiWeekly" : "planSheet.includesPro"),
+        period: t("planSheet.mo"),
+        badge: tab === "pro" ? t("planSheet.mostPopular") : undefined,
       }}
       cta={{ label: ctaLabel, onClick: buy, disabled: current || included }}
       error={error}

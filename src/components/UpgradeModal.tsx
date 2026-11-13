@@ -229,6 +229,11 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth, focus, feat
   // Opened from a locked feature → that feature's plan (never a plan the
   // user already has or is below).
   const [focusPlan, setFocusPlan] = useState<string>(() => (tier === "pro" || tier === "elite" ? "elite" : focus ?? "pro"));
+  // Promo: the plan being sold, shown next to the user's own. Free users
+  // switch it with the Pro | Elite tabs (starting on the feature's plan);
+  // Pro users always see Elite.
+  const [pick, setPick] = useState<"pro" | "elite">(focus === "elite" ? "elite" : "pro");
+  const promoted: "pro" | "elite" = tier === "free" ? pick : "elite";
   const plansRef = useRef<HTMLDivElement>(null);
   const iap = isIAPAvailable();
 
@@ -595,19 +600,18 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth, focus, feat
               <p className="upgrade-sub">
                 {isPaid ? t("upgradeModal.subManage") : t("upgradeModal.subChoose")}
               </p>
-              {/* Promo: Pro | Elite switcher at the right of the header (the
-                  promoted plan first). Free accounts only — a Pro member
-                  just sees Elite. */}
+              {/* Promo, free users: Pro | Elite switcher (the feature's plan
+                  first) — swaps the plan shown next to Free. */}
               {promo && tier === "free" && (
                 <div className="upgrade-tabs" role="tablist">
-                  {(focus === "elite" ? ["elite", "pro"] : ["pro", "elite"]).map((id) => (
+                  {(focus === "elite" ? ["elite", "pro"] as const : ["pro", "elite"] as const).map((id) => (
                     <button
                       key={id}
                       type="button"
                       role="tab"
-                      aria-selected={focusPlan === id}
-                      className={`upgrade-tab upgrade-tab--${id}${focusPlan === id ? " upgrade-tab--on" : ""}`}
-                      onClick={() => setFocusPlan(id)}
+                      aria-selected={pick === id}
+                      className={`upgrade-tab upgrade-tab--${id}${pick === id ? " upgrade-tab--on" : ""}`}
+                      onClick={() => setPick(id)}
                     >
                       {t(`upgradeModal.plans.${id}.label`)}
                     </button>
@@ -616,13 +620,13 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth, focus, feat
               )}
             </div>
 
-            {/* Promo: only the selected plan's card shows; both share one
-                grid cell so the popup keeps the same height on either tab. */}
+            {/* Promo: your current plan (left) next to the promoted one
+                (right) — Free vs Pro, Free vs Elite or Pro vs Elite. */}
             <div
-              className={`upgrade-plans${promo ? (tier === "free" ? " upgrade-plans--duo" : " upgrade-plans--solo") : ""}`}
+              className={`upgrade-plans${promo ? " upgrade-plans--compare" : ""}`}
               ref={plansRef}
             >
-              {PLANS.filter((p) => !promo || p.id === "elite" || (p.id === "pro" && tier === "free")).map(plan => {
+              {PLANS.filter((p) => !promo || p.id === tier || (tier === "free" ? p.id !== "free" : p.id === "elite")).map(plan => {
                 const planLabel = t(`upgradeModal.plans.${plan.id}.label`);
                 const planFeatures = t(`upgradeModal.plans.${plan.id}.features`, { returnObjects: true }) as string[];
                 const isCurrent = tier === plan.id;
@@ -639,15 +643,16 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth, focus, feat
                 return (
                   <div
                     key={plan.id}
-                    className={`upgrade-plan${plan.popular ? " upgrade-plan--popular" : ""}${isCurrent ? " upgrade-plan--current" : ""}${focusPlan === plan.id ? " upgrade-plan--focus" : ""}${promo && focusPlan !== plan.id ? " upgrade-plan--muted" : ""}`}
-                    aria-disabled={promo && focusPlan !== plan.id ? true : undefined}
+                    className={`upgrade-plan${plan.popular ? " upgrade-plan--popular" : ""}${isCurrent ? " upgrade-plan--current" : ""}${(promo ? promoted : focusPlan) === plan.id ? " upgrade-plan--focus" : ""}${promo && plan.id !== tier ? " upgrade-plan--promoted" : ""}${promo && plan.id !== tier && plan.id !== promoted ? " upgrade-plan--muted" : ""}`}
+                    aria-hidden={promo && plan.id !== tier && plan.id !== promoted ? true : undefined}
                     style={{
                       "--plan-color": plan.color,
                       "--i": planIndex,
                       // Promo slide direction: the plan's tab side (left tab → -1).
                       "--slide-dir": (focus === "elite" ? plan.id === "elite" : plan.id === "pro") ? -1 : 1,
                     } as any}
-                    onClick={() => setFocusPlan(plan.id)}
+                    // Promo: the promoted plan stays highlighted.
+                    onClick={promo ? undefined : () => setFocusPlan(plan.id)}
                     {...tiltHandlers()}
                   >
                     <span className="upgrade-plan-sheen" aria-hidden="true" />
@@ -724,7 +729,9 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth, focus, feat
                       // Promo popup, Elite: list every Pro benefit too (after
                       // Elite's own, which are highlighted) — minus Pro's
                       // first "Everything in Free" line and last weekly AI cap.
-                      const proAll = promo && plan.id === "elite"
+                      // (Free vs Elite only — in Pro vs Elite the Pro card
+                      // beside it already lists them: "Everything in Pro, plus".)
+                      const proAll = promo && plan.id === "elite" && tier === "free"
                         ? (t("upgradeModal.plans.pro.features", { returnObjects: true }) as string[]).slice(1, -1)
                         : [];
                       const extra = proAll.length > 0;
@@ -784,16 +791,16 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth, focus, feat
 
             {/* Promo, Pro tab: "Go Elite for unlimited AI…" — opens the full
                 Free / Pro / Elite comparison in the larger screen. */}
-            {/* Always takes its space in the promo (hidden on the Elite tab)
-                so the popup's height stays the same on both tabs. */}
-            {promo && (
+            {/* Free users: always takes its space (hidden while Elite is
+                shown) so the popup's height doesn't change between tabs. */}
+            {promo && tier === "free" && (
               <button
                 type="button"
                 className="upgrade-all-link"
                 onClick={() => setShowAll(true)}
-                style={focusPlan === "pro" ? undefined : { visibility: "hidden" }}
-                tabIndex={focusPlan === "pro" ? undefined : -1}
-                aria-hidden={focusPlan === "pro" ? undefined : true}
+                style={promoted === "pro" ? undefined : { visibility: "hidden" }}
+                tabIndex={promoted === "pro" ? undefined : -1}
+                aria-hidden={promoted === "pro" ? undefined : true}
               >
                 <Trans i18nKey="upgradeModal2.promoGoElite" components={{ e: <span className="upgrade-all-link-word" /> }} />
                 {" · "}

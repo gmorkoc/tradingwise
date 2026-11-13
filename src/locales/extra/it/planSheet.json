@@ -1,6 +1,11 @@
 {
   "planSheet": {
     "close": "Chiudi",
+    "chooseTitle": "Scegli il tuo piano",
+    "chooseSub": "Annulla quando vuoi · Accesso immediato",
+    "mostPopular": "Più popolare",
+    "mo": "mese",
+    "yr": "anno",
     "tierPlan": "Piano {{tier}}",
     "titlePro": "Opera meglio con l'IA",
     "titleElite": "Il tuo agente IA di trading",

@@ -125,13 +125,13 @@ export function ProVisionPaywall({
         tone="pv"
         badgeLabel="ProVision"
         title={t("planSheet.titlePv")}
-        intro={sub}
+        subtitle={sub}
+        intro={t("planSheet.everyCoin")}
         benefits={t("planSheet.benefitsPv")}
         features={PV_SHEET_FEATURES.map(([k, icon]) => ({ key: k, icon, label: t(`planSheet.features.${k}`) }))}
         price={{
           amount: PV_PLAN_PRICE,
-          period: t("planSheet.yearly"),
-          sub: showsTrial ? undefined : t("planSheet.everyCoin"),
+          period: t("planSheet.yr"),
           badge: showsTrial ? t("planSheet.daysFree", { days: PV_TRIAL_DAYS }) : undefined,
         }}
         cta={cta}

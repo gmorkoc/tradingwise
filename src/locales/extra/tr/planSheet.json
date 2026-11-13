@@ -1,6 +1,11 @@
 {
   "planSheet": {
     "close": "Kapat",
+    "chooseTitle": "Planını seç",
+    "chooseSub": "İstediğin zaman iptal et · Anında erişim",
+    "mostPopular": "En popüler",
+    "mo": "ay",
+    "yr": "yıl",
     "tierPlan": "{{tier}} Planı",
     "titlePro": "Yapay zekâyla akıllı işlem",
     "titleElite": "Kendi yapay zekâ ajanın",

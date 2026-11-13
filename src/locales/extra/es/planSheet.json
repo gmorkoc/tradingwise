@@ -1,6 +1,11 @@
 {
   "planSheet": {
     "close": "Cerrar",
+    "chooseTitle": "Elige tu plan",
+    "chooseSub": "Cancela cuando quieras · Acceso inmediato",
+    "mostPopular": "Más popular",
+    "mo": "mes",
+    "yr": "año",
     "tierPlan": "Plan {{tier}}",
     "titlePro": "Opera mejor con IA",
     "titleElite": "Tu agente de trading con IA",
