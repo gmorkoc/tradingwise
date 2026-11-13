@@ -51,17 +51,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Elite already includes unlimited ProVision — never sell it on top.
-    if (priceId === Deno.env.get("STRIPE_PROVISION_PRICE_ID")) {
-      const { data: tierRow } = await supabaseAdmin.from("profiles").select("tier").eq("id", user.id).single();
-      if (tierRow?.tier === "elite") {
-        return new Response(JSON.stringify({ error: "ProVision is already included in Elite" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-    }
-
     // Send people back only to our own site after checkout (no open redirect).
     const ALLOWED_ORIGINS = new Set([
       "https://coinhintz.io",
