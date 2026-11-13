@@ -8,6 +8,8 @@
       "elite": "Sınırsız YZ ve kendi trading ajanın."
     },
     "plus": "{{base}}, ek olarak:",
+    "promoGoElite": "Sınırsız YZ için <e>Elite</e>'e geç",
+    "promoSeePlans": "Tüm planları gör",
     "includes": "İçerir:",
     "planUnavailable": "Bu plan şu anda satın alınamıyor. Lütfen birazdan tekrar dene.",
     "paymentFailed": "Ödeme başarısız — planın yükseltilmedi.",

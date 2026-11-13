@@ -8,6 +8,8 @@
       "elite": "IA illimitata più il tuo agente di trading."
     },
     "plus": "{{base}}, più:",
+    "promoGoElite": "Passa a <e>Elite</e> per IA illimitata",
+    "promoSeePlans": "Vedi tutti i piani",
     "includes": "Include:",
     "planUnavailable": "Questo piano non è acquistabile al momento. Riprova tra poco.",
     "paymentFailed": "Pagamento non riuscito — il tuo piano non è stato aggiornato.",

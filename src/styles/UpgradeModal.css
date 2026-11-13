@@ -82,10 +82,17 @@
    side, same card design as the full plan picker. The selected plan is
    wide (features in two columns); the other is narrow, faded and not
    clickable — switch with the Pro | Elite tabs at the top right. ── */
-html:root .upgrade-card.upgrade-card--promo { max-width: 1040px !important; }
+/* One plan card with two text-sized benefit columns, sized to the content.
+   Both plans share one grid cell (see below), so the height is the same on
+   both tabs — it never changes on switch. */
+html:root .upgrade-card.upgrade-card--promo { max-width: 720px !important; }
 @media (min-width: 1200px) and (max-width: 1512px) {
-  html:root .upgrade-card.upgrade-card--promo { max-width: 940px !important; }
+  html:root .upgrade-card.upgrade-card--promo { max-width: 680px !important; }
 }
+/* Elite's big Agent ready block is left out here (it's the first line of
+   Elite's list instead), so Elite is about as tall as Pro. */
+html:root .upgrade-card--promo .upgrade-agent-callout { display: none; }
+html:root .upgrade-plan-check .upgrade-plan-orb { width: 14px; height: 14px; display: inline-block; }
 /* Pro member: just the Elite card, so a narrower popup. */
 html:root .upgrade-card.upgrade-card--promo:has(.upgrade-plans--solo) { max-width: 560px !important; }
 /* Header: title on the left, switcher on the right */
@@ -100,13 +107,23 @@ html:root .upgrade-card--promo .upgrade-header {
 html:root .upgrade-card--promo .upgrade-header > :not(.upgrade-tabs) { grid-column: 1; }
 html:root .upgrade-card--promo .upgrade-header > .upgrade-tabs { grid-column: 2; grid-row: 1 / span 3; margin: 0; }
 /* Cards: selected wide, other narrow (columns set inline, animated) */
-html:root .upgrade-plans.upgrade-plans--duo { transition: grid-template-columns 0.35s cubic-bezier(0.22, 1, 0.36, 1); align-items: stretch; }
+html:root .upgrade-plans.upgrade-plans--duo { grid-template-columns: minmax(0, 1fr); }
 html:root .upgrade-plans--solo { grid-template-columns: minmax(0, 1fr); }
-html:root .upgrade-plans--duo .upgrade-plan--focus .upgrade-plan-features {
+/* Both cards (also the hidden one — it sets the shared height) list their
+   benefits in two columns. */
+html:root .upgrade-plans--duo .upgrade-plan .upgrade-plan-features,
+html:root .upgrade-plans--solo .upgrade-plan .upgrade-plan-features {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: 24px;
+  /* Columns as wide as their text (shared out if space is short), rows
+     packed at the top — no stretching to the card's height. */
+  grid-template-columns: repeat(2, minmax(0, auto));
+  justify-content: start;
+  align-content: start;
+  grid-auto-rows: auto;
+  column-gap: 28px;
+  row-gap: 10px;
 }
+html:root :is(.upgrade-plans--duo, .upgrade-plans--solo) .upgrade-plan .upgrade-plan-features li { padding-top: 0; padding-bottom: 0; }
 html:root .upgrade-plans .upgrade-plan.upgrade-plan--muted {
   opacity: 0.38;
   filter: saturate(0.5);
@@ -114,19 +131,61 @@ html:root .upgrade-plans .upgrade-plan.upgrade-plan--muted {
   pointer-events: none;
   user-select: none;
 }
+/* Promo popup: every benefit on one line (slightly smaller; "…" only if a
+   line still can't fit). */
+html:root .upgrade-card--promo .upgrade-plan-features li { font-size: 0.78rem; min-width: 0; }
+html:root .upgrade-card--promo .upgrade-plan-features .upgrade-plan-check svg { width: 14px; height: 14px; }
+html:root .upgrade-card--promo .upgrade-plan-includes { font-size: 0.78rem; }
+html:root .upgrade-card--promo .upgrade-plan-feature-text {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Elite's list has 7 rows to Pro's 5: slightly smaller text and tighter
+   rows so it fills exactly the same height — both cards look full. */
+html:root .upgrade-plans--duo .upgrade-plan .upgrade-plan-features.upgrade-plan-features--all { row-gap: 4px; }
+html:root .upgrade-card--promo .upgrade-plan-features--all li { font-size: 0.72rem; line-height: 1.3; }
+html:root .upgrade-card--promo .upgrade-plan-features--all .upgrade-plan-check svg { width: 12px; height: 12px; }
+html:root .upgrade-card--promo .upgrade-plan-features--all .upgrade-plan-orb { width: 12px; height: 12px; }
 /* Elite in the promo: its own extras first, highlighted in Elite purple,
    then every Pro benefit. */
 html:root .upgrade-plan-features--all li.upgrade-plan-feature--extra { color: #c4b5fd; font-weight: 600; }
 html:root .upgrade-plan-features--all li.upgrade-plan-feature--extra .upgrade-plan-check { color: #c4b5fd; }
 html[data-theme="light"] .upgrade-plan-features--all li.upgrade-plan-feature--extra,
 html[data-theme="light"] .upgrade-plan-features--all li.upgrade-plan-feature--extra .upgrade-plan-check { color: #6d28d9; }
-/* Faded card's list: first few items, fading out, so both cards stay
-   about the same height. */
-html:root .upgrade-plan--muted .upgrade-plan-features {
-  max-height: 10.5em;
-  overflow: hidden;
-  -webkit-mask-image: linear-gradient(#000 55%, transparent);
-  mask-image: linear-gradient(#000 55%, transparent);
+/* Both cards in one grid cell: the popup is always as tall as the taller
+   plan, so its height never changes between tabs. The unselected card is
+   invisible (still takes room); the selected one grows/fades in. */
+html:root .upgrade-plans--duo > .upgrade-plan { grid-area: 1 / 1; }
+/* Horizontal swap: each card sits off to its tab's side (--slide-dir: -1
+   for the left tab, 1 for the right) while hidden, and slides to the
+   middle as it's selected — the other slides out its own way. */
+/* (!important: the full picker's focus/dim/tilt rules would otherwise
+   pin the cards in place and keep the hidden one at 88% opacity.) */
+html:root .upgrade-plans--duo > .upgrade-plan {
+  opacity: 1 !important;
+  filter: none !important;
+  transform: translateX(0) !important;
+  transition:
+    opacity 0.32s ease,
+    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s linear 0s !important;
+}
+html:root .upgrade-plans--duo > .upgrade-plan.upgrade-plan--muted {
+  visibility: hidden;
+  opacity: 0 !important;
+  transform: translateX(calc(var(--slide-dir, 1) * 60px)) !important;
+  pointer-events: none;
+  transition:
+    opacity 0.26s ease,
+    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s linear 0.4s !important;
+}
+html:root .upgrade-plans--duo { overflow: hidden; margin: -16px; padding: 16px; }
+@media (prefers-reduced-motion: reduce) {
+  html:root .upgrade-plans--duo > .upgrade-plan,
+  html:root .upgrade-plans .upgrade-plan.upgrade-plan--muted { transition: none; transform: none; }
 }
 .upgrade-tabs {
   display: flex;
@@ -160,15 +219,16 @@ html[data-theme="light"] .upgrade-tab--on.upgrade-tab--elite { color: #6d28d9; b
 .upgrade-all-link {
   all: unset;
   display: block;
-  margin: 16px auto 0;
-  text-align: center;
-  font-size: 0.9rem;
+  margin: 14px 0 0;
+  text-align: left;
+  font-size: 0.72rem;
   font-weight: 600;
   color: #38bdf8;
   cursor: pointer;
 }
 .upgrade-all-link:hover { text-decoration: underline; text-underline-offset: 3px; }
 .upgrade-all-link-word { color: #a78bfa; }
+.upgrade-all-link-plans { text-decoration: underline; text-underline-offset: 3px; }
 html[data-theme="light"] .upgrade-all-link { color: #0284c7; }
 html[data-theme="light"] .upgrade-all-link-word { color: #7c3aed; }
 
@@ -1177,10 +1237,10 @@ html:root .upgrade-agent-callout-icon {
 html:root .upgrade-agent-callout-icon .ta-trigger-orb { width: 40px; height: 40px; }
 html:root .upgrade-agent-callout-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .upgrade-agent-callout-name {
-  font-size: 0.68rem;
+  font-size: 0.78rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  /* Written as-is ("Agent ready", lowercase r) — never all caps. */
   color: #7c3aed;
 }
 html:root .upgrade-agent-callout-title {

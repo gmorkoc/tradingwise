@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 import {
   redirectToCheckout,
@@ -616,11 +616,10 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth, focus, feat
               )}
             </div>
 
-            {/* Promo: both plans side by side — the selected one wide, the
-                other narrow, faded and not clickable (switch with the tabs). */}
+            {/* Promo: only the selected plan's card shows; both share one
+                grid cell so the popup keeps the same height on either tab. */}
             <div
               className={`upgrade-plans${promo ? (tier === "free" ? " upgrade-plans--duo" : " upgrade-plans--solo") : ""}`}
-              style={promo && tier === "free" ? { gridTemplateColumns: focusPlan === "pro" ? "1.8fr 1fr" : "1fr 1.8fr" } : undefined}
               ref={plansRef}
             >
               {PLANS.filter((p) => !promo || p.id === "elite" || (p.id === "pro" && tier === "free")).map(plan => {
@@ -642,7 +641,12 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth, focus, feat
                     key={plan.id}
                     className={`upgrade-plan${plan.popular ? " upgrade-plan--popular" : ""}${isCurrent ? " upgrade-plan--current" : ""}${focusPlan === plan.id ? " upgrade-plan--focus" : ""}${promo && focusPlan !== plan.id ? " upgrade-plan--muted" : ""}`}
                     aria-disabled={promo && focusPlan !== plan.id ? true : undefined}
-                    style={{ "--plan-color": plan.color, "--i": planIndex } as any}
+                    style={{
+                      "--plan-color": plan.color,
+                      "--i": planIndex,
+                      // Promo slide direction: the plan's tab side (left tab → -1).
+                      "--slide-dir": (focus === "elite" ? plan.id === "elite" : plan.id === "pro") ? -1 : 1,
+                    } as any}
                     onClick={() => setFocusPlan(plan.id)}
                     {...tiltHandlers()}
                   >
@@ -730,20 +734,28 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth, focus, feat
                             {extra ? t("upgradeModal2.includes") : inherits ? t("upgradeModal2.plus", { base: inherits.split(" — ")[0] }) : t("upgradeModal2.includes")}
                           </p>
                           <ul className={`upgrade-plan-features${extra ? " upgrade-plan-features--all" : ""}`}>
+                            {/* Promo: Agent ready as the first highlighted line
+                                (its big block is left out to keep Elite compact). */}
+                            {extra && (
+                              <li className="upgrade-plan-feature--extra">
+                                <span className="upgrade-plan-check"><span className="ta-trigger-orb upgrade-plan-orb" /></span>
+                                <span className="upgrade-plan-feature-text">{t("upgradeModal.eliteCallout.title").replace(" — ", " · ")}</span>
+                              </li>
+                            )}
                             {inherits && inherits.includes(" — ") && (
                               <li className={extra ? "upgrade-plan-feature--extra" : undefined}>
                                 <span className="upgrade-plan-check"><FeatureIcon text={inherits.split(" — ")[1]} /></span>
-                                {inherits.split(" — ")[1].replace(/^./, (c) => c.toUpperCase())}
+                                <span className="upgrade-plan-feature-text">{inherits.split(" — ")[1].replace(/^./, (c) => c.toUpperCase())}</span>
                               </li>
                             )}
                             {items.map((f, fi) => (
                               <li key={f} className={extra ? "upgrade-plan-feature--extra" : undefined} style={{ "--fi": fi + (inherits && inherits.includes(" — ") ? 1 : 0) } as any}>
-                                <span className="upgrade-plan-check"><FeatureIcon text={f} /></span>{f}
+                                <span className="upgrade-plan-check"><FeatureIcon text={f} /></span><span className="upgrade-plan-feature-text">{f}</span>
                               </li>
                             ))}
                             {proAll.map((f, fi) => (
                               <li key={`pro-${f}`} style={{ "--fi": fi + items.length + 1 } as any}>
-                                <span className="upgrade-plan-check"><FeatureIcon text={f} /></span>{f}
+                                <span className="upgrade-plan-check"><FeatureIcon text={f} /></span><span className="upgrade-plan-feature-text">{f}</span>
                               </li>
                             ))}
                           </ul>
@@ -772,11 +784,20 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth, focus, feat
 
             {/* Promo, Pro tab: "Go Elite for unlimited AI…" — opens the full
                 Free / Pro / Elite comparison in the larger screen. */}
-            {promo && focusPlan === "pro" && (
-              <button type="button" className="upgrade-all-link" onClick={() => setShowAll(true)}>
-                {t("membershipGate.pro.eliteLinkPre", "Go")}{" "}
-                <span className="upgrade-all-link-word">Elite</span>{" "}
-                {t("membershipGate.pro.eliteLinkPost", "for unlimited AI and access to Agent ready")}
+            {/* Always takes its space in the promo (hidden on the Elite tab)
+                so the popup's height stays the same on both tabs. */}
+            {promo && (
+              <button
+                type="button"
+                className="upgrade-all-link"
+                onClick={() => setShowAll(true)}
+                style={focusPlan === "pro" ? undefined : { visibility: "hidden" }}
+                tabIndex={focusPlan === "pro" ? undefined : -1}
+                aria-hidden={focusPlan === "pro" ? undefined : true}
+              >
+                <Trans i18nKey="upgradeModal2.promoGoElite" components={{ e: <span className="upgrade-all-link-word" /> }} />
+                {" · "}
+                <span className="upgrade-all-link-plans">{t("upgradeModal2.promoSeePlans")} →</span>
               </button>
             )}
 
