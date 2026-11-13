@@ -60,6 +60,8 @@ export function useWhaleToast(enabled: boolean) {
 
   // Local dev only: fake whale alerts for checking the banner.
   //   open  http://localhost:5173/?fakewhale   (10 whales, one every 4s)
+  //   open  http://localhost:5173/?fakealerts  (in-app notification banners
+  //         alternating with whales, every 8s)
   //   or in the console: fakeWhale(count, gapMs)
   // A phone test build made with VITE_FAKE_NOTIFS=1 runs them on launch,
   // alternating with fake price-alert banners. Skips the sign-in / switch /
@@ -93,7 +95,9 @@ export function useWhaleToast(enabled: boolean) {
     };
     (window as unknown as { fakeWhale?: typeof run }).fakeWhale = run;
     if (new URLSearchParams(window.location.search).has("fakewhale")) run();
-    if (fakeBuild) {
+    // Local dev: http://localhost:5173/?fakealerts — the same mix as the
+    // phone test build (in-app notification banners alternating with whales).
+    if (fakeBuild || new URLSearchParams(window.location.search).has("fakealerts")) {
       // Phone test build: price alerts and whales, alternating every 8s.
       const PRICE = [
         ["BTC price alert", "Bitcoin reached $75,000 — up 1.2% in the last hour"],
