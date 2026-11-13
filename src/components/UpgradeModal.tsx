@@ -208,8 +208,10 @@ function tiltHandlers() {
 const focusPlanColor = (focus?: "pro" | "elite") => (focus === "elite" ? "#a78bfa" : "#38bdf8");
 
 export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth, focus, feature }) => {
-  // Opened from a locked feature: one plan at a time behind Pro | Elite tabs.
-  const promo = !!focus;
+  // Opened from a locked feature: one plan at a time behind Pro | Elite tabs,
+  // until "Go Elite…" switches to the full three-plan screen.
+  const [showAll, setShowAll] = useState(false);
+  const promo = !!focus && !showAll;
   const { t, i18n } = useTranslation();
   const legalSuffix = LOCALIZED_LEGAL_LANGS.includes(i18n.language) ? `.${i18n.language}` : "";
   const { user, tier, profile, refreshProfile } = useAuth();
@@ -749,6 +751,15 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth, focus, feat
 
             {error && <p className="upgrade-error">{error}</p>}
 
+            {/* Promo, Pro tab: "Go Elite for unlimited AI…" — opens the full
+                Free / Pro / Elite comparison in the larger screen. */}
+            {promo && focusPlan === "pro" && (
+              <button type="button" className="upgrade-all-link" onClick={() => setShowAll(true)}>
+                {t("membershipGate.pro.eliteLinkPre", "Go")}{" "}
+                <span className="upgrade-all-link-word">Elite</span>{" "}
+                {t("membershipGate.pro.eliteLinkPost", "for unlimited AI and access to Agent ready")}
+              </button>
+            )}
 
             <p className="upgrade-footer">
               {isPaid

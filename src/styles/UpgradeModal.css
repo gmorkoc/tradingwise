@@ -117,6 +117,22 @@ html:root .upgrade-plans--stack > .upgrade-plan { grid-area: 1 / 1; }
 html:root .upgrade-plans--stack > .upgrade-plan--hidden { visibility: hidden; pointer-events: none; }
 html:root .upgrade-plans--stack .upgrade-plan:not(.upgrade-plan--focus) { opacity: 1; transform: none; filter: none; }
 
+/* Pro tab: "Go Elite for unlimited AI…" link → full plan comparison */
+.upgrade-all-link {
+  all: unset;
+  display: block;
+  margin: 16px auto 0;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #38bdf8;
+  cursor: pointer;
+}
+.upgrade-all-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.upgrade-all-link-word { color: #a78bfa; }
+html[data-theme="light"] .upgrade-all-link { color: #0284c7; }
+html[data-theme="light"] .upgrade-all-link-word { color: #7c3aed; }
+
 /* "Candle Insights is part of Pro" — when opened from a locked feature */
 .upgrade-eyebrow {
   display: inline-flex;
