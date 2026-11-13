@@ -1,7 +1,7 @@
 {
   "tradingAgent": {
     "connecting": "Agent is connecting",
-    "callout": "Meet Agent Ready — your AI trading copilot",
+    "callout": "Meet Agent ready — your AI trading copilot",
     "time": {
       "now": "now",
       "minAgo": "{{n}}m ago",

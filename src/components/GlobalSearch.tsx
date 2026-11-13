@@ -79,7 +79,7 @@ const SECTIONS: { id: SectionId; label: string; desc: string; icon: string; keyw
 // haystack" matching) so it shows up in results identically; only its
 // action differs — no onSectionSelect, just dispatch-and-close.
 const AGENT_READY = {
-  label: "Agent Ready", desc: "Chat with the AI trading agent — ask about any coin, get trade ideas", icon: "🤖",
+  label: "Agent ready", desc: "Chat with the AI trading agent — ask about any coin, get trade ideas", icon: "🤖",
   keywords: ["ai agent", "trading agent", "trading assistant", "ai assistant", "ai chat", "paper trading", "trade ideas", "ask ai", "chatbot", "assistant"],
 };
 

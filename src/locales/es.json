@@ -646,7 +646,7 @@
       "features": [
         {
           "icon": "agentOrb",
-          "title": "Agent Ready",
+          "title": "Agent ready",
           "desc": "Chat IA de trading en vivo, sin límites de cuota"
         },
         {
@@ -669,10 +669,10 @@
       "upgradeBtn": "Activar Elite — {{price}}/mes",
       "redirecting": "Redirigiendo…",
       "trust": "Acceso inmediato · Incluye todo de Pro",
-      "free_headline": "Desbloquea Agent Ready",
+      "free_headline": "Desbloquea Agent ready",
       "free_sub": "Elite te da el agente de trading IA en vivo, más solicitudes IA ilimitadas en todas las funciones.",
-      "pro_headline": "A un Paso de Agent Ready",
-      "pro_sub": "Estás en Pro. Agent Ready y la IA ilimitada están a un upgrade de distancia — $29 más al mes.",
+      "pro_headline": "A un Paso de Agent ready",
+      "pro_sub": "Estás en Pro. Agent ready y la IA ilimitada están a un upgrade de distancia — $29 más al mes.",
       "pro_upgradeBtn": "Actualizar desde Pro — {{price}}/mes",
       "pro_trust": "+$29/mes · Conserva todas las funciones Pro"
     }
@@ -753,7 +753,7 @@
       "yourPlan": "Tu plan"
     },
     "eliteCallout": {
-      "title": "Agent Ready — Chat IA de Trading Ilimitado",
+      "title": "Agent ready — Chat IA de Trading Ilimitado",
       "desc": "Chatea en vivo con el agente de trading IA — pregunta sobre cualquier moneda, recibe ideas de trading, sin límites de cuota."
     },
     "footer": {
@@ -781,7 +781,7 @@
     "perMonth": "/mes",
     "lf": {
       "elitePro": "Solicitudes IA ilimitadas",
-      "agentReady": "Agent Ready — Chat IA de Trading",
+      "agentReady": "Agent ready — Chat IA de Trading",
       "candleai": "Análisis de Velas",
       "coinbase": "Coinbase Premium IA",
       "earlyAccess": "Acceso anticipado a nuevas funciones",

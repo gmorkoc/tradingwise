@@ -54,6 +54,20 @@ export function PaywallPromo({ open, onClose, requiredTier, featureName, onOpenA
   );
 }
 
+// Pro items Elite replaces with unlimited versions (not repeated on Elite).
+const PRO_ONLY = new Set(["aiQuota", "pvCoins"]);
+
+/** Desktop list: Pro's benefits; Elite's extras (highlighted) followed by
+ *  everything in Pro, so "Everything in Pro" isn't needed as a line. */
+function desktopFeatures(id: "pro" | "elite", t: (k: string) => string, withAnalyzeChart: boolean) {
+  const row = (f: ReturnType<typeof tierFeatures>[number], highlight = false) =>
+    ({ key: f.key, icon: <PlanIcon name={f.icon} size={18} />, label: f.label, highlight });
+  if (id === "pro") return tierFeatures("pro", t, withAnalyzeChart).map((f) => row(f));
+  const extras = tierFeatures("elite", t).filter((f) => f.key !== "everythingPro").map((f) => row(f, true));
+  const pro = tierFeatures("pro", t, withAnalyzeChart).filter((f) => !PRO_ONLY.has(f.key)).map((f) => row(f));
+  return [...extras, ...pro];
+}
+
 /**
  * Desktop upgrade popup: the Pro / Elite card (BlurGate's, so pricing,
  * checkout and Pro→Elite proration are the same as everywhere) with
@@ -118,7 +132,7 @@ export function DesktopTierPopup({ open, onClose, promoted, featureName, onOpenA
                 onOpenUpgrade={() => { onClose(); onOpenUpgrade(); }}
                 className="bg-root--promo"
                 // Same benefits as the phone plan screen, as a compact list.
-                featureList={tierFeatures(id, t, !!extraFeature).map((f) => ({ key: f.key, icon: <PlanIcon name={f.icon} size={18} />, label: f.label }))}
+                featureList={desktopFeatures(id, t, !!extraFeature)}
                 // "Candle Insights is part of Pro" — only on the plan it's about.
                 eyebrow={featureName && id === promoted ? t("paywallPromo.eyebrow", { feature: featureName, plan: name }) : undefined}
               >

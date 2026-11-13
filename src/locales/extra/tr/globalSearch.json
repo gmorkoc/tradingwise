@@ -2,7 +2,7 @@
   "globalSearch": {
     "placeholder": "Coin, bölüm, özellik ara…",
     "ask": "Sor",
-    "askAgentTitle": "Agent Ready'ye sor",
+    "askAgentTitle": "Agent ready'ye sor",
     "clear": "Temizle",
     "cancel": "İptal",
     "recent": "Son aramalar",
@@ -32,7 +32,7 @@
       "options": { "label": "Opsiyonlar", "desc": "BTC/ETH opsiyon verileri — açık pozisyon, max pain, IV" },
       "correlation": { "label": "Korelasyon", "desc": "Altın, DXY ve S&P 500'e karşı varlıklar arası korelasyon" },
       "strategyalerts": { "label": "Strateji Uyarıları", "desc": "Özel kural motoru — gösterge ve fiyat uyarıları" },
-      "agentReady": { "label": "Agent Ready", "desc": "YZ işlem asistanıyla sohbet et — herhangi bir coini sor, işlem fikirleri al" }
+      "agentReady": { "label": "Agent ready", "desc": "YZ işlem asistanıyla sohbet et — herhangi bir coini sor, işlem fikirleri al" }
     }
   }
 }

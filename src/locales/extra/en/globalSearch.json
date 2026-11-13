@@ -2,7 +2,7 @@
   "globalSearch": {
     "placeholder": "Search coins, sections, features…",
     "ask": "Ask",
-    "askAgentTitle": "Ask Agent Ready",
+    "askAgentTitle": "Ask Agent ready",
     "clear": "Clear",
     "cancel": "Cancel",
     "recent": "Recent",
@@ -32,7 +32,7 @@
       "options": { "label": "Options", "desc": "BTC/ETH options data — open interest, max pain, IV" },
       "correlation": { "label": "Correlation", "desc": "Cross-asset correlation vs gold, DXY and the S&P 500" },
       "strategyalerts": { "label": "Strategy Alerts", "desc": "Custom rules engine — indicator and price alerts" },
-      "agentReady": { "label": "Agent Ready", "desc": "Chat with the AI trading agent — ask about any coin, get trade ideas" }
+      "agentReady": { "label": "Agent ready", "desc": "Chat with the AI trading agent — ask about any coin, get trade ideas" }
     }
   }
 }

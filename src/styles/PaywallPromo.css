@@ -298,6 +298,11 @@ html[data-theme="light"] .bg-feat-list { border-color: rgba(15, 15, 30, 0.08); b
 .bg-elite-card--pro .bg-feat-list-icon { color: #38bdf8; }
 html[data-theme="light"] .bg-feat-list-icon { color: #7c3aed; }
 html[data-theme="light"] .bg-elite-card--pro .bg-feat-list-icon { color: #0284c7; }
+/* Elite's extras, highlighted in the Elite purple. */
+.bg-feat-list li.bg-feat-list-hi { font-weight: 600; color: #c4b5fd; }
+.bg-feat-list li.bg-feat-list-hi .bg-feat-list-icon { color: #c4b5fd; }
+html[data-theme="light"] .bg-feat-list li.bg-feat-list-hi,
+html[data-theme="light"] .bg-feat-list li.bg-feat-list-hi .bg-feat-list-icon { color: #6d28d9; }
 /* The shorter list stretches to the shared height (no gap under it). */
 html .pp-card-slot .bg-root--promo .bg-feat-list { flex: 1; }
 @media (min-width: 1200px) and (max-width: 1512px) {

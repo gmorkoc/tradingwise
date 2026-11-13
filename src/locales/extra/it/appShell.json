@@ -1,7 +1,7 @@
 {
   "appShell": {
     "dismiss": "Chiudi",
-    "askAgent": "Chiedi ad Agent Ready",
+    "askAgent": "Chiedi ad Agent ready",
     "fetchError": "Impossibile recuperare i dati. Controlla la connessione all'API.",
     "thisCoin": "Questa moneta",
     "fullscreenHint": "Doppio clic sul grafico per lo schermo intero",

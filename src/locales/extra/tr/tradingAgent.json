@@ -1,7 +1,7 @@
 {
   "tradingAgent": {
     "connecting": "Agent bağlanıyor",
-    "callout": "Agent Ready ile tanış — YZ destekli işlem yardımcın",
+    "callout": "Agent ready ile tanış — YZ destekli işlem yardımcın",
     "time": {
       "now": "şimdi",
       "minAgo": "{{n}} dk önce",

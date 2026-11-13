@@ -651,7 +651,7 @@
       "features": [
         {
           "icon": "agentOrb",
-          "title": "Agent Ready",
+          "title": "Agent ready",
           "desc": "Chat IA di trading in diretta, senza limiti di quota"
         },
         {
@@ -674,10 +674,10 @@
       "upgradeBtn": "Sblocca Elite — {{price}}/mese",
       "redirecting": "Reindirizzamento…",
       "trust": "Accesso immediato · Include tutto di Pro",
-      "free_headline": "Sblocca Agent Ready",
+      "free_headline": "Sblocca Agent ready",
       "free_sub": "Elite ti dà l'agente di trading IA in diretta, più richieste IA illimitate su ogni funzione.",
-      "pro_headline": "A un Passo da Agent Ready",
-      "pro_sub": "Sei su Pro. Agent Ready e l'IA illimitata sono a un aggiornamento di distanza — $29 in più al mese.",
+      "pro_headline": "A un Passo da Agent ready",
+      "pro_sub": "Sei su Pro. Agent ready e l'IA illimitata sono a un aggiornamento di distanza — $29 in più al mese.",
       "pro_upgradeBtn": "Aggiorna da Pro — {{price}}/mese",
       "pro_trust": "+$29/mese · Mantieni tutte le funzioni Pro"
     }
@@ -758,7 +758,7 @@
       "yourPlan": "Il tuo Piano"
     },
     "eliteCallout": {
-      "title": "Agent Ready — Chat AI di Trading Illimitata",
+      "title": "Agent ready — Chat AI di Trading Illimitata",
       "desc": "Chatta in diretta con l'agente di trading AI — chiedi di qualsiasi coin, ricevi idee di trading, senza limiti di quota."
     },
     "footer": {
@@ -786,7 +786,7 @@
     "perMonth": "/mese",
     "lf": {
       "elitePro": "Richieste IA illimitate",
-      "agentReady": "Agent Ready — Chat AI di Trading",
+      "agentReady": "Agent ready — Chat AI di Trading",
       "candleai": "Analisi Candele",
       "coinbase": "Coinbase Premium AI",
       "earlyAccess": "Accesso anticipato alle nuove funzionalità",

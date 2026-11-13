@@ -651,7 +651,7 @@
       "features": [
         {
           "icon": "agentOrb",
-          "title": "Agent Ready",
+          "title": "Agent ready",
           "desc": "Canlı YZ trading sohbeti, kota sınırı yok"
         },
         {
@@ -674,10 +674,10 @@
       "upgradeBtn": "Elite'i Aç — {{price}}/ay",
       "redirecting": "Yönlendiriliyor…",
       "trust": "Anında erişim · Pro'daki her şeyi içerir",
-      "free_headline": "Agent Ready'nin Kilidini Aç",
+      "free_headline": "Agent ready'nin Kilidini Aç",
       "free_sub": "Elite sana canlı YZ trading ajanını ve her özellikte sınırsız YZ isteğini verir.",
-      "pro_headline": "Agent Ready'ye Bir Adım",
-      "pro_sub": "Pro'dasın. Agent Ready ve sınırsız YZ bir yükseltme uzağında — ayda $29 daha.",
+      "pro_headline": "Agent ready'ye Bir Adım",
+      "pro_sub": "Pro'dasın. Agent ready ve sınırsız YZ bir yükseltme uzağında — ayda $29 daha.",
       "pro_upgradeBtn": "Pro'dan Yükselt — {{price}}/ay",
       "pro_trust": "+$29/ay · Pro özelliklerini koru"
     }
@@ -758,7 +758,7 @@
       "yourPlan": "Planınız"
     },
     "eliteCallout": {
-      "title": "Agent Ready — Sınırsız YZ Trading Sohbeti",
+      "title": "Agent ready — Sınırsız YZ Trading Sohbeti",
       "desc": "YZ trading ajanıyla canlı sohbet et — herhangi bir coin hakkında sor, trade fikirleri al, kota sınırı yok."
     },
     "footer": {
@@ -786,7 +786,7 @@
     "perMonth": "/ay",
     "lf": {
       "elitePro": "Sınırsız YZ isteği",
-      "agentReady": "Agent Ready — YZ Trading Sohbeti",
+      "agentReady": "Agent ready — YZ Trading Sohbeti",
       "candleai": "Mum Analizi",
       "coinbase": "Coinbase Premium YZ",
       "earlyAccess": "Yeni özelliklere erken erişim",

@@ -2290,7 +2290,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
       <div className="ta-head">
         <span className="ta-head-title-row">
           <span className="ta-head-online-badge" aria-hidden="true" />
-          <span className="ta-head-title">Agent Ready</span>
+          <span className="ta-head-title">Agent ready</span>
         </span>
         {isMobile ? (
           <div className="ta-head-actions">

@@ -2,7 +2,7 @@
   "globalSearch": {
     "placeholder": "Cerca monete, sezioni, funzioni…",
     "ask": "Chiedi",
-    "askAgentTitle": "Chiedi ad Agent Ready",
+    "askAgentTitle": "Chiedi ad Agent ready",
     "clear": "Cancella",
     "cancel": "Annulla",
     "recent": "Recenti",
@@ -32,7 +32,7 @@
       "options": { "label": "Opzioni", "desc": "Dati sulle opzioni BTC/ETH — open interest, max pain, IV" },
       "correlation": { "label": "Correlazione", "desc": "Correlazione tra asset rispetto a oro, DXY e S&P 500" },
       "strategyalerts": { "label": "Avvisi Strategia", "desc": "Motore di regole personalizzato — avvisi su indicatori e prezzo" },
-      "agentReady": { "label": "Agent Ready", "desc": "Chatta con l'agente di trading IA — chiedi di qualsiasi moneta e ricevi idee di trading" }
+      "agentReady": { "label": "Agent ready", "desc": "Chatta con l'agente di trading IA — chiedi di qualsiasi moneta e ricevi idee di trading" }
     }
   }
 }

@@ -1,7 +1,7 @@
 {
   "appShell": {
     "dismiss": "Kapat",
-    "askAgent": "Agent Ready'ye sor",
+    "askAgent": "Agent ready'ye sor",
     "fetchError": "Veriler alınamadı. Lütfen API bağlantınızı kontrol edin.",
     "thisCoin": "Bu coin",
     "fullscreenHint": "Tam ekran için grafiğe çift tıklayın",

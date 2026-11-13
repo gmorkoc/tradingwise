@@ -1,7 +1,7 @@
 {
   "appShell": {
     "dismiss": "Dismiss",
-    "askAgent": "Ask Agent Ready",
+    "askAgent": "Ask Agent ready",
     "fetchError": "Failed to fetch data. Please check your API connection.",
     "thisCoin": "This coin",
     "fullscreenHint": "Double-click chart for fullscreen",

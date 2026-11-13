@@ -34,7 +34,7 @@ interface Props {
   autoAuth?: boolean;
   /** Replaces the 2×2 feature tiles with a compact one-line list in
    *  columns (desktop upgrade popup — same benefits as the phone screen). */
-  featureList?: { key: string; icon: ReactNode; label: string }[];
+  featureList?: { key: string; icon: ReactNode; label: string; highlight?: boolean }[];
 }
 
 function CheckIcon({ color }: { color: string }) {
@@ -461,7 +461,7 @@ export const BlurGate: React.FC<Props> = ({ requiredTier, children, onOpenAuth, 
               {featureList ? (
                 <ul className={`bg-feat-list${featureList.length > 6 ? " bg-feat-list--3" : ""}`}>
                   {featureList.map((f) => (
-                    <li key={f.key}>
+                    <li key={f.key} className={f.highlight ? "bg-feat-list-hi" : undefined}>
                       <span className="bg-feat-list-icon">{f.icon}</span>
                       <span>{f.label}</span>
                     </li>
@@ -511,7 +511,7 @@ export const BlurGate: React.FC<Props> = ({ requiredTier, children, onOpenAuth, 
                     >
                       {t("membershipGate.pro.eliteLinkPre", "Go")}{" "}
                       <span className="bg-elite-link-word">Elite</span>{" "}
-                      {t("membershipGate.pro.eliteLinkPost", "for unlimited AI and access to Agent Ready")}
+                      {t("membershipGate.pro.eliteLinkPost", "for unlimited AI and access to Agent ready")}
                     </button>
                   </>
                 )}

@@ -1,7 +1,7 @@
 {
   "appShell": {
     "dismiss": "Descartar",
-    "askAgent": "Preguntar a Agent Ready",
+    "askAgent": "Preguntar a Agent ready",
     "fetchError": "No se pudieron obtener los datos. Revisa tu conexión a la API.",
     "thisCoin": "Esta moneda",
     "fullscreenHint": "Haz doble clic en el gráfico para pantalla completa",

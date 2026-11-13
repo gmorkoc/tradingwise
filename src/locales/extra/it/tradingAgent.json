@@ -1,7 +1,7 @@
 {
   "tradingAgent": {
     "connecting": "L'Agent si sta connettendo",
-    "callout": "Ecco Agent Ready — il tuo copilota di trading con IA",
+    "callout": "Ecco Agent ready — il tuo copilota di trading con IA",
     "time": {
       "now": "ora",
       "minAgo": "{{n}} min fa",

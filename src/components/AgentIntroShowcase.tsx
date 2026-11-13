@@ -38,7 +38,7 @@ export function AgentIntroShowcase() {
           ))}
           <span className="ais-orb" aria-hidden="true" />
         </div>
-        <div className="ais-title">Agent Ready</div>
+        <div className="ais-title">Agent ready</div>
         <div className="ais-subtitle">Your AI trading copilot is here</div>
       </div>
     </div>,
