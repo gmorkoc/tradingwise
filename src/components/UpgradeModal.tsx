@@ -595,27 +595,34 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth, focus, feat
               <p className="upgrade-sub">
                 {isPaid ? t("upgradeModal.subManage") : t("upgradeModal.subChoose")}
               </p>
+              {/* Promo: Pro | Elite switcher at the right of the header (the
+                  promoted plan first). Free accounts only — a Pro member
+                  just sees Elite. */}
+              {promo && tier === "free" && (
+                <div className="upgrade-tabs" role="tablist">
+                  {(focus === "elite" ? ["elite", "pro"] : ["pro", "elite"]).map((id) => (
+                    <button
+                      key={id}
+                      type="button"
+                      role="tab"
+                      aria-selected={focusPlan === id}
+                      className={`upgrade-tab upgrade-tab--${id}${focusPlan === id ? " upgrade-tab--on" : ""}`}
+                      onClick={() => setFocusPlan(id)}
+                    >
+                      {t(`upgradeModal.plans.${id}.label`)}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Promo: Pro | Elite tabs (the promoted plan first). Free
-                accounts only — a Pro member just sees Elite. */}
-            {promo && tier === "free" && (
-              <div className="upgrade-tabs" role="tablist">
-                {(focus === "elite" ? ["elite", "pro"] : ["pro", "elite"]).map((id) => (
-                  <button
-                    key={id}
-                    type="button"
-                    role="tab"
-                    aria-selected={focusPlan === id}
-                    className={`upgrade-tab upgrade-tab--${id}${focusPlan === id ? " upgrade-tab--on" : ""}`}
-                    onClick={() => setFocusPlan(id)}
-                  >
-                    {t(`upgradeModal.plans.${id}.label`)}
-                  </button>
-                ))}
-              </div>
-            )}
-            <div className={`upgrade-plans${promo ? " upgrade-plans--stack" : ""}`} ref={plansRef}>
+            {/* Promo: both plans side by side — the selected one wide, the
+                other narrow, faded and not clickable (switch with the tabs). */}
+            <div
+              className={`upgrade-plans${promo ? (tier === "free" ? " upgrade-plans--duo" : " upgrade-plans--solo") : ""}`}
+              style={promo && tier === "free" ? { gridTemplateColumns: focusPlan === "pro" ? "1.8fr 1fr" : "1fr 1.8fr" } : undefined}
+              ref={plansRef}
+            >
               {PLANS.filter((p) => !promo || p.id === "elite" || (p.id === "pro" && tier === "free")).map(plan => {
                 const planLabel = t(`upgradeModal.plans.${plan.id}.label`);
                 const planFeatures = t(`upgradeModal.plans.${plan.id}.features`, { returnObjects: true }) as string[];
@@ -633,8 +640,8 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth, focus, feat
                 return (
                   <div
                     key={plan.id}
-                    className={`upgrade-plan${plan.popular ? " upgrade-plan--popular" : ""}${isCurrent ? " upgrade-plan--current" : ""}${focusPlan === plan.id ? " upgrade-plan--focus" : ""}${promo && focusPlan !== plan.id ? " upgrade-plan--hidden" : ""}`}
-                    aria-hidden={promo && focusPlan !== plan.id ? true : undefined}
+                    className={`upgrade-plan${plan.popular ? " upgrade-plan--popular" : ""}${isCurrent ? " upgrade-plan--current" : ""}${focusPlan === plan.id ? " upgrade-plan--focus" : ""}${promo && focusPlan !== plan.id ? " upgrade-plan--muted" : ""}`}
+                    aria-disabled={promo && focusPlan !== plan.id ? true : undefined}
                     style={{ "--plan-color": plan.color, "--i": planIndex } as any}
                     onClick={() => setFocusPlan(plan.id)}
                     {...tiltHandlers()}

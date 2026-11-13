@@ -78,21 +78,55 @@
   text-align: center;
   margin-bottom: 36px;
 }
-/* ── Promo mode (opened from a locked feature): one plan card behind
-   Pro | Elite tabs, same card design as the full plan picker. ── */
-/* As wide as two of the full screen's three plan cards (narrower on
-   1200–1512px laptops, like the full screen). */
-html:root .upgrade-card.upgrade-card--promo { max-width: 810px; }
+/* ── Promo mode (opened from a locked feature): Pro and Elite side by
+   side, same card design as the full plan picker. The selected plan is
+   wide (features in two columns); the other is narrow, faded and not
+   clickable — switch with the Pro | Elite tabs at the top right. ── */
+html:root .upgrade-card.upgrade-card--promo { max-width: 1040px !important; }
 @media (min-width: 1200px) and (max-width: 1512px) {
-  html:root .upgrade-card.upgrade-card--promo { max-width: 680px; }
+  html:root .upgrade-card.upgrade-card--promo { max-width: 940px !important; }
 }
-.upgrade-card--promo .upgrade-header { margin-bottom: 20px; }
+/* Pro member: just the Elite card, so a narrower popup. */
+html:root .upgrade-card.upgrade-card--promo:has(.upgrade-plans--solo) { max-width: 560px !important; }
+/* Header: title on the left, switcher on the right */
+html:root .upgrade-card--promo .upgrade-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 24px;
+  align-items: center;
+  margin-bottom: 22px;
+  padding-right: 40px; /* clear of the ✕ */
+}
+html:root .upgrade-card--promo .upgrade-header > :not(.upgrade-tabs) { grid-column: 1; }
+html:root .upgrade-card--promo .upgrade-header > .upgrade-tabs { grid-column: 2; grid-row: 1 / span 3; margin: 0; }
+/* Cards: selected wide, other narrow (columns set inline, animated) */
+html:root .upgrade-plans.upgrade-plans--duo { transition: grid-template-columns 0.35s cubic-bezier(0.22, 1, 0.36, 1); align-items: stretch; }
+html:root .upgrade-plans--solo { grid-template-columns: minmax(0, 1fr); }
+html:root .upgrade-plans--duo .upgrade-plan--focus .upgrade-plan-features {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 24px;
+}
+html:root .upgrade-plans .upgrade-plan.upgrade-plan--muted {
+  opacity: 0.38;
+  filter: saturate(0.5);
+  transform: none;
+  pointer-events: none;
+  user-select: none;
+}
+/* Faded card's list: first few items, fading out, so both cards stay
+   about the same height. */
+html:root .upgrade-plan--muted .upgrade-plan-features {
+  max-height: 10.5em;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(#000 55%, transparent);
+  mask-image: linear-gradient(#000 55%, transparent);
+}
 .upgrade-tabs {
   display: flex;
   gap: 4px;
-  width: 300px;
+  width: 240px;
   max-width: 100%;
-  margin: 0 auto 4px;
   padding: 4px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.06);
@@ -115,12 +149,6 @@ html[data-theme="light"] .upgrade-tabs { background: rgba(15, 15, 30, 0.06); }
 .upgrade-tab--on.upgrade-tab--elite { color: #c4b5fd; background: rgba(124, 58, 237, 0.18); box-shadow: inset 0 0 0 1px rgba(167, 139, 250, 0.4); }
 html[data-theme="light"] .upgrade-tab--on.upgrade-tab--pro { color: #0369a1; background: rgba(14, 165, 233, 0.1); box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.3); }
 html[data-theme="light"] .upgrade-tab--on.upgrade-tab--elite { color: #6d28d9; background: rgba(124, 58, 237, 0.1); box-shadow: inset 0 0 0 1px rgba(124, 58, 237, 0.25); }
-/* Both cards share one grid cell — the popup is as tall as the taller one,
-   so it never changes size when switching tabs. */
-html:root .upgrade-plans.upgrade-plans--stack { grid-template-columns: minmax(0, 1fr); }
-html:root .upgrade-plans--stack > .upgrade-plan { grid-area: 1 / 1; }
-html:root .upgrade-plans--stack > .upgrade-plan--hidden { visibility: hidden; pointer-events: none; }
-html:root .upgrade-plans--stack .upgrade-plan:not(.upgrade-plan--focus) { opacity: 1; transform: none; filter: none; }
 
 /* Pro tab: "Go Elite for unlimited AI…" link → full plan comparison */
 .upgrade-all-link {
