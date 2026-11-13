@@ -717,20 +717,32 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth, focus, feat
                       // (worded differently per language, so not matched by text).
                       const inherits = plan.id !== "free" && planFeatures[0] ? planFeatures[0] : null;
                       const items = inherits ? planFeatures.slice(1) : planFeatures;
+                      // Promo popup, Elite: list every Pro benefit too (after
+                      // Elite's own, which are highlighted) — minus Pro's
+                      // first "Everything in Free" line and last weekly AI cap.
+                      const proAll = promo && plan.id === "elite"
+                        ? (t("upgradeModal.plans.pro.features", { returnObjects: true }) as string[]).slice(1, -1)
+                        : [];
+                      const extra = proAll.length > 0;
                       return (
                         <>
                           <p className="upgrade-plan-includes">
-                            {inherits ? t("upgradeModal2.plus", { base: inherits.split(" — ")[0] }) : t("upgradeModal2.includes")}
+                            {extra ? t("upgradeModal2.includes") : inherits ? t("upgradeModal2.plus", { base: inherits.split(" — ")[0] }) : t("upgradeModal2.includes")}
                           </p>
-                          <ul className="upgrade-plan-features">
+                          <ul className={`upgrade-plan-features${extra ? " upgrade-plan-features--all" : ""}`}>
                             {inherits && inherits.includes(" — ") && (
-                              <li>
+                              <li className={extra ? "upgrade-plan-feature--extra" : undefined}>
                                 <span className="upgrade-plan-check"><FeatureIcon text={inherits.split(" — ")[1]} /></span>
                                 {inherits.split(" — ")[1].replace(/^./, (c) => c.toUpperCase())}
                               </li>
                             )}
                             {items.map((f, fi) => (
-                              <li key={f} style={{ "--fi": fi + (inherits && inherits.includes(" — ") ? 1 : 0) } as any}>
+                              <li key={f} className={extra ? "upgrade-plan-feature--extra" : undefined} style={{ "--fi": fi + (inherits && inherits.includes(" — ") ? 1 : 0) } as any}>
+                                <span className="upgrade-plan-check"><FeatureIcon text={f} /></span>{f}
+                              </li>
+                            ))}
+                            {proAll.map((f, fi) => (
+                              <li key={`pro-${f}`} style={{ "--fi": fi + items.length + 1 } as any}>
                                 <span className="upgrade-plan-check"><FeatureIcon text={f} /></span>{f}
                               </li>
                             ))}

@@ -114,6 +114,12 @@ html:root .upgrade-plans .upgrade-plan.upgrade-plan--muted {
   pointer-events: none;
   user-select: none;
 }
+/* Elite in the promo: its own extras first, highlighted in Elite purple,
+   then every Pro benefit. */
+html:root .upgrade-plan-features--all li.upgrade-plan-feature--extra { color: #c4b5fd; font-weight: 600; }
+html:root .upgrade-plan-features--all li.upgrade-plan-feature--extra .upgrade-plan-check { color: #c4b5fd; }
+html[data-theme="light"] .upgrade-plan-features--all li.upgrade-plan-feature--extra,
+html[data-theme="light"] .upgrade-plan-features--all li.upgrade-plan-feature--extra .upgrade-plan-check { color: #6d28d9; }
 /* Faded card's list: first few items, fading out, so both cards stay
    about the same height. */
 html:root .upgrade-plan--muted .upgrade-plan-features {
