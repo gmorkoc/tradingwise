@@ -8,8 +8,8 @@ interface Props {
 }
 
 // Elite offer — shown when a non-Elite user taps an Elite-only feature
-// (Agent Ready), opened on Elite with Pro one tab away: the full-screen
-// plan screen on phones, the upgrade popup with tabs on desktop.
+// (Agent ready), opened on Elite: the full-screen plan screen on phones,
+// the "Choose your plan" screen with Elite highlighted on desktop.
 export function EliteUpsellModal({ onClose, onOpenAuth }: Props) {
   // Signed out → the sign-in window opens instead of this offer; it appears
   // once signed in, and closes if sign-in is dismissed.
@@ -17,14 +17,5 @@ export function EliteUpsellModal({ onClose, onOpenAuth }: Props) {
   const phone = usePhoneWidth();
   if (!signedIn) return null;
   if (phone) return <TierPlanSheet open onClose={onClose} promoted="elite" onOpenAuth={onOpenAuth} />;
-  return (
-    <DesktopTierPopup
-      open
-      onClose={onClose}
-      promoted="elite"
-      onOpenAuth={onOpenAuth}
-      // Pro → Elite and other cases: the full upgrade screen.
-      onOpenUpgrade={() => window.dispatchEvent(new Event("open-upgrade-modal"))}
-    />
-  );
+  return <DesktopTierPopup open onClose={onClose} promoted="elite" featureName="Agent ready" onOpenAuth={onOpenAuth} />;
 }
