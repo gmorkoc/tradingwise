@@ -204,6 +204,23 @@ const ELITE_FEATURES: [string, PlanFeature["icon"]][] = [
 
 type TierTab = "pro" | "elite";
 
+/** The benefits list for Pro or Elite (shared with the desktop popup). */
+export function tierFeatures(tab: TierTab, t: (k: string) => string, withAnalyzeChart?: boolean): PlanFeature[] {
+  const proKeys = withAnalyzeChart ? ["analyzeChart", ...PRO_FEATURES] : PRO_FEATURES;
+  return tab === "pro"
+    ? proKeys.map((k) => ({ key: k, icon: PRO_ICONS[k], label: t(`planSheet.features.${k}`) }))
+    : ELITE_FEATURES.map(([k, icon]) => ({ key: k, icon, label: t(`planSheet.features.${k}`) }));
+}
+
+/** One benefits-list icon (24×24 line icon). */
+export function PlanIcon({ name, size = 22 }: { name: PlanFeature["icon"]; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {ICONS[name]}
+    </svg>
+  );
+}
+
 /**
  * Pro | Elite plan screen. Opens on the plan being promoted (its tab
  * first); the other plan is one tap away.

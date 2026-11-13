@@ -32,6 +32,9 @@ interface Props {
   eyebrow?: string;
   /** Full-page gate: signed out → open the sign-in window on arrival. */
   autoAuth?: boolean;
+  /** Replaces the 2×2 feature tiles with a compact one-line list in
+   *  columns (desktop upgrade popup — same benefits as the phone screen). */
+  featureList?: { key: string; icon: ReactNode; label: string }[];
 }
 
 function CheckIcon({ color }: { color: string }) {
@@ -229,7 +232,7 @@ export function LockCard({ featureName, plan = "pro", onOpenAuth, className, var
   );
 }
 
-export const BlurGate: React.FC<Props> = ({ requiredTier, children, onOpenAuth, onOpenUpgrade, previewSrc, className, extraFeature, eyebrow, featureName, autoAuth }) => {
+export const BlurGate: React.FC<Props> = ({ requiredTier, children, onOpenAuth, onOpenUpgrade, previewSrc, className, extraFeature, eyebrow, featureName, autoAuth, featureList }) => {
   const { t } = useTranslation();
   const { user, tier, loading } = useAuth();
   const prices = useStorePrices();
@@ -454,7 +457,17 @@ export const BlurGate: React.FC<Props> = ({ requiredTier, children, onOpenAuth, 
             </div>
           ) : (
             <>
-              {/* Feature grid */}
+              {/* Feature grid (or the compact list) */}
+              {featureList ? (
+                <ul className={`bg-feat-list${featureList.length > 6 ? " bg-feat-list--3" : ""}`}>
+                  {featureList.map((f) => (
+                    <li key={f.key}>
+                      <span className="bg-feat-list-icon">{f.icon}</span>
+                      <span>{f.label}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
               <div className="bg-elite-features">
                 {features.map(f => (
                   <div key={f.title} className="bg-elite-feature">
@@ -468,6 +481,7 @@ export const BlurGate: React.FC<Props> = ({ requiredTier, children, onOpenAuth, 
                   </div>
                 ))}
               </div>
+              )}
 
               {/* CTA button */}
               <button

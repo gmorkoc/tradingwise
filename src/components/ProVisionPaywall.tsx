@@ -5,7 +5,6 @@
 //   trial-ended      → buy the ProVision plan ($99/yr)
 //   pro-limit        → buy the plan for unlimited, or move up to Elite
 import { useEffect, useState } from "react";
-import { BottomSheet } from "./BottomSheet";
 import type { PvLockReason } from "../hooks/useProVisionAccess";
 import { PV_PRO_COINS_PER_DAY, PV_TRIAL_DAYS } from "../hooks/useProVisionAccess";
 import { onProVisionPaywall, useProVisionGate } from "../hooks/useProVisionGate";
@@ -19,19 +18,13 @@ import type { TFunction } from "i18next";
 import "../styles/MembershipGate.css";
 import "../styles/PaywallPromo.css";
 import { useAuthFirst } from "../hooks/useAuthFirst";
+import { BottomSheet } from "./BottomSheet";
 import { PlanSheet, usePhoneWidth, type PlanFeature } from "./PlanSheet";
-
-// Benefits list on the phone plan screen.
-const PV_SHEET_FEATURES: [string, PlanFeature["icon"]][] = [
-  ["pvChart", "trend"], ["pvSignals", "arrows"], ["pvStrong", "bolt"], ["pvTakeProfit", "target"],
-  ["pvInvalidation", "band"], ["pvSignalCheck", "gauge"], ["pvTimeframes", "clock"],
-  ["pvSafeguards", "shield"], ["pvTrack", "bars"],
-];
 
 // Terms / Privacy pages exist in these languages (same as UpgradeModal).
 const LOCALIZED_LEGAL_LANGS = ["es", "it", "tr"];
 
-// Title/text per key in the "pvPaywall.features" translations.
+// Desktop popup: title/text per key in the "pvPaywall.features" translations.
 const FEATURES: { key: string; icon: React.ReactNode }[] = [
   { key: "chart", icon: <><path d="M3 17l5-5 4 3 8-8" /><path d="M15 7h5v5" /></> },
   { key: "signals", icon: <><path d="M7 17V7M17 7v10" /><path d="m4 10 3-3 3 3M14 14l3 3 3-3" /></> },
@@ -39,6 +32,13 @@ const FEATURES: { key: string; icon: React.ReactNode }[] = [
   { key: "signalCheck", icon: <><path d="M12 20a8 8 0 1 1 8-8" /><path d="M12 12l4-4" /></> },
   { key: "safeguards", icon: <><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z" /><path d="m9 12 2 2 4-4" /></> },
   { key: "track", icon: <><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></> },
+];
+
+// Phone plan screen: benefits list.
+const PV_SHEET_FEATURES: [string, PlanFeature["icon"]][] = [
+  ["pvChart", "trend"], ["pvSignals", "arrows"], ["pvStrong", "bolt"], ["pvTakeProfit", "target"],
+  ["pvInvalidation", "band"], ["pvSignalCheck", "gauge"], ["pvTimeframes", "clock"],
+  ["pvSafeguards", "shield"], ["pvTrack", "bars"],
 ];
 
 interface Props {
@@ -88,6 +88,7 @@ export function ProVisionPaywall({
   }, [open, iap, reason]);
   const appleNoTrial = iap && reason === "trial-available" && appleTrial !== true;
 
+  // Desktop popup headline.
   const head =
     appleNoTrial
       ? { kicker: t("pvPaywall.kickerYearly"), title: t("pvPaywall.titleGet") }
@@ -148,8 +149,8 @@ export function ProVisionPaywall({
   }
 
   return (
-    // Same card as the Pro / Elite upgrade popup (BlurGate's .bg-elite-card,
-    // laid out by PaywallPromo.css), in ProVision purple.
+    // Desktop: same card as the Pro / Elite upgrade popup (BlurGate's
+    // .bg-elite-card, laid out by PaywallPromo.css), in ProVision purple.
     <BottomSheet
       open={open}
       onClose={onClose}
@@ -203,9 +204,6 @@ export function ProVisionPaywall({
                 {t("pvPaywall.ctaSignUp")}
               </button>
             )}
-            {/* iOS: one button that buys the yearly plan through the App
-                Store, with Apple's 3-day free trial (introductory offer)
-                applied. Web keeps our own no-card trial. */}
             {reason === "trial-available" && (
               <button type="button" className="bg-elite-cta bg-elite-cta--pv" onClick={iap ? onBuyPlan : onStartTrial} disabled={busy}>
                 {busy
@@ -243,8 +241,7 @@ export function ProVisionPaywall({
                 <span>{t("pvPaywall.notAdvice")}</span>
               )}
             </p>
-            {/* Required on subscription screens (App Store 3.1.2): Terms,
-                Privacy, and on iOS a way to restore an earlier purchase. */}
+            {/* Terms, Privacy, and on iOS a way to restore an earlier purchase. */}
             <p className="bg-card-trust bg-pv-legal">
               <a href={`https://coinhintz.io/terms${legalSuffix}.html`} target="_blank" rel="noopener noreferrer">{t("upgradeModal.footer.termsLink")}</a>
               {" · "}

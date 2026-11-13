@@ -724,7 +724,7 @@
         }
       ],
       "signInBtn": "Login to Upgrade Now",
-      "upgradeBtn": "Upgrade to Elite",
+      "upgradeBtn": "Unlock Elite — {{price}}/mo",
       "redirecting": "Redirecting…",
       "trust": "Instant access · Includes everything in Pro",
       "free_headline": "Unlock Agent Ready",
