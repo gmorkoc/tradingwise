@@ -233,18 +233,27 @@ html[data-theme="light"] .upgrade-plan-features--all li.upgrade-plan-feature--ex
   margin: 14px 0 0;
   text-align: left;
   font-size: 0.72rem;
-  font-weight: 500;
-  color: #38bdf8;
+  font-weight: 400;
+  color: #a78bfa; /* Elite purple, the whole line */
   cursor: pointer;
 }
-/* Hover: no underline — the whole line turns Elite purple. */
+/* Hover: no underline — just a slightly lighter (dark) / deeper (light) purple. */
 .upgrade-all-link { transition: color 0.15s; }
-.upgrade-all-link:hover { text-decoration: none; color: #a78bfa; }
-html[data-theme="light"] .upgrade-all-link:hover { color: #7c3aed; }
-.upgrade-all-link-word { color: #a78bfa; }
+.upgrade-all-link:hover { text-decoration: none; color: #c4b5fd; }
+html[data-theme="light"] .upgrade-all-link { color: #7c3aed; }
+html[data-theme="light"] .upgrade-all-link:hover { color: #5b21b6; }
+.upgrade-all-link-word { color: inherit; }
+/* Every part of the line (words, "See all plans", chevron) in Elite purple —
+   beats the picker's general button/text colours. */
+html:root .upgrade-card .upgrade-all-link,
+html:root .upgrade-card .upgrade-all-link * { color: #a78bfa !important; }
+html:root .upgrade-card .upgrade-all-link:hover,
+html:root .upgrade-card .upgrade-all-link:hover * { color: #c4b5fd !important; }
+html[data-theme="light"] .upgrade-card .upgrade-all-link,
+html[data-theme="light"] .upgrade-card .upgrade-all-link * { color: #7c3aed !important; }
+html[data-theme="light"] .upgrade-card .upgrade-all-link:hover,
+html[data-theme="light"] .upgrade-card .upgrade-all-link:hover * { color: #5b21b6 !important; }
 .upgrade-all-link-plans { display: inline-flex; align-items: center; gap: 2px; }
-html[data-theme="light"] .upgrade-all-link { color: #0284c7; }
-html[data-theme="light"] .upgrade-all-link-word { color: #7c3aed; }
 
 /* "Candle Insights is part of Pro" — when opened from a locked feature */
 .upgrade-eyebrow {
