@@ -80,7 +80,12 @@
 }
 /* ── Promo mode (opened from a locked feature): one plan card behind
    Pro | Elite tabs, same card design as the full plan picker. ── */
-.upgrade-card.upgrade-card--promo { max-width: 600px; }
+/* As wide as two of the full screen's three plan cards (narrower on
+   1200–1512px laptops, like the full screen). */
+html:root .upgrade-card.upgrade-card--promo { max-width: 810px; }
+@media (min-width: 1200px) and (max-width: 1512px) {
+  html:root .upgrade-card.upgrade-card--promo { max-width: 680px; }
+}
 .upgrade-card--promo .upgrade-header { margin-bottom: 20px; }
 .upgrade-tabs {
   display: flex;
